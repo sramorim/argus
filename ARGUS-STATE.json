@@ -1,0 +1,388 @@
+{
+  "projeto": "ARGUS",
+  "raiz": "/data/data/com.termux/files/home/central-amorim/probe",
+  "actualizado_em": "2026-09-30T06:30:00Z",
+  "fase": "pronto-a-publicar",
+  "estado": "verde",
+  "resumo": "26 ferramentas registadas e provadas com 49 casos contra alvos reais; 221 verificacoes automaticas a passar; interface, identidade visual, administracao, persistencia e deploy estao prontos. Corrigidos 8 defeitos reais, quatro deles suficientes para impedir o deploy. Falta apenas o que exige a conta do dono: commitar a pasta, criar o servico no Render e apontar o dominio.",
+  "ambiente": {
+    "node": "v26.4.0",
+    "npm": "11.19.1",
+    "sistema": "Termux / Android arm64",
+    "nota_de_velocidade": "typecheck e build demoram 2-4 min neste dispositivo (I/O do Android, nao bloqueio). Correm em paralelo e com cache incremental.",
+    "base_de_dados": "apps/server/data/argus.db (SQLite, node:sqlite nativo, sem dependencias)"
+  },
+  "ferramentas": {
+    "registadas": 26,
+    "cobertas_por_casos_de_teste": 26,
+    "casos_de_auditoria": 49,
+    "resultado_auditoria": {
+      "OK": 49,
+      "PARCIAL": 0,
+      "VAZIO": 0,
+      "ERRO": 0,
+      "PROV": 0
+    },
+    "latencia": {
+      "mediana_ms": 357,
+      "max_ms": 8846,
+      "pior_caso": "tls-audit (handshake de dominio que nao responde)"
+    },
+    "plano_minimo": {
+      "free": 21,
+      "pro": 5,
+      "pro_max": 0
+    },
+    "por_categoria": {
+      "infra": [
+        "domain-analyzer",
+        "ip-analyzer",
+        "port-scanner",
+        "asn-lookup",
+        "tls-audit"
+      ],
+      "web": [
+        "url-scanner",
+        "web-crawler",
+        "reverse-image"
+      ],
+      "pessoa": [
+        "username-finder",
+        "email-analyzer",
+        "phone-analyzer",
+        "telegram-osint",
+        "dorks-generator",
+        "graph-investigation"
+      ],
+      "ameaca": [
+        "password-check",
+        "reputation-check",
+        "cve-lookup",
+        "paste-search"
+      ],
+      "arquivo": [
+        "hash-analyzer",
+        "metadata-extractor"
+      ],
+      "dev": [
+        "package-audit",
+        "github-osint"
+      ],
+      "financeiro": [
+        "crypto-tracer"
+      ],
+      "br": [
+        "company-br",
+        "zipcode-br"
+      ],
+      "geo": [
+        "geo-lookup"
+      ]
+    }
+  },
+  "verificacoes": {
+    "npm test": {
+      "seguranca": "79/79",
+      "parsers": "16/16",
+      "interface": "14/14",
+      "total": 109,
+      "estado": "passa"
+    },
+    "npm run test:api": {
+      "total": 48,
+      "estado": "passa"
+    },
+    "npm run test:prod": {
+      "total": 15,
+      "estado": "passa"
+    },
+    "npm run test:audit": {
+      "total": 49,
+      "estado": "passa",
+      "nota": "precisa de rede; ~1 min"
+    },
+    "npm run typecheck": {
+      "server": "ok",
+      "web": "ok",
+      "estado": "passa",
+      "nota": "scripts/typecheck.mjs, paralelo + incremental"
+    },
+    "npm run build": {
+      "estado": "passa",
+      "saida": "apps/web/dist",
+      "gzip_kb": 94
+    },
+    "npm ci": {
+      "estado": "passa",
+      "nota": "verificado de raiz com NODE_ENV=production --include=dev: 98 pacotes; sem --include=dev seriam 9 e o build falharia"
+    },
+    "TOTAL": 221,
+    "render.buildCommand": "npm ci --include=dev && npm run build (com teste de regressao)"
+  },
+  "corrigido_nesta_sessao": [
+    {
+      "id": "toast-host",
+      "gravidade": "critica",
+      "problema": "ToastHost estava exportado em components/ui.tsx e NENHUM ficheiro o montava. useToast() devolvia a funcao vazia do contexto: todos os avisos das 8 paginas (plano alterado, investigacao apagada, chave guardada, ficheiro grande, erro ao copiar) desapareciam sem sinal.",
+      "correccao": "Montado em main.tsx dentro do ErrorBoundary. Dois testes de DOM novo: um prova que o aviso chega ao ecrã, outro prova que sem provider nada aparece.",
+      "ficheiros": [
+        "apps/web/src/main.tsx",
+        "apps/web/test/ui.test.mts",
+        "apps/web/test/harness.tsx"
+      ]
+    },
+    {
+      "id": "npm-ci-partido",
+      "gravidade": "critica",
+      "problema": "apps/server/package.json pedia @types/jpeg-js@^0.4.1, versao que NAO existe no registo (existem 0.3.0 e 0.3.7); o lock tinha ^0.3.0. Como o render.yaml faz 'npm ci && npm run build', o deploy falhava antes de arrancar.",
+      "correccao": "Corrigido para ^0.3.0 e confirmado com npm ci limpo. Teste novo que compara package.json com package-lock.json.",
+      "ficheiros": [
+        "apps/server/package.json",
+        "apps/web/test/ui.test.mts"
+      ]
+    },
+    {
+      "id": "db-no-git",
+      "gravidade": "critica",
+      "problema": "O .gitignore da raiz nao ignorava os .db. Um 'git add .' da pasta probe/ punha no historico emails, hashes scrypt das senhas, hashes de sessao e chaves BYOK cifradas.",
+      "correccao": "Criado probe/.gitignore. Confirmado com git status --untracked-files=all: nenhum .db aparece; entram 74 ficheiros.",
+      "ficheiros": [
+        "probe/.gitignore"
+      ]
+    },
+    {
+      "id": "build-sem-devdeps",
+      "gravidade": "critica",
+      "problema": "O render.yaml põe NODE_ENV=production nas envVars, e com isso o npm ci OMITE as devDependencies — que sao exatamente o que o npm run build precisa (vite, typescript). Verificado com um npm ci real: instala 9 pacotes e nao encontra o vite. O build morria e o servico nunca subia. Independe do bug do lockfile: acontecia mesmo com o lock certo.",
+      "correccao": "buildCommand passou a 'npm ci --include=dev && npm run build' (98 pacotes, vite e tsc presentes). Teste novo que confirma o --include=dev, o healthCheckPath e o ARGUS_DB a apontar para o disco montado.",
+      "ficheiros": [
+        "render.yaml",
+        "apps/web/test/ui.test.mts"
+      ]
+    },
+    {
+      "id": "menu-telemovel",
+      "gravidade": "alta",
+      "problema": "AppShell decidia a visibilidade do botao de menu lendo window.innerWidth durante o render. So reavaliado quando outra coisa forca um render, por que redimensionar a janela ou rodar o telemovel deixava a sidebar inacessivel em ecrans estreitos.",
+      "correccao": "Passou a .only-narrow resolvido em CSS (media query 1000px, .only-wide a 700px). Removida condicao morta no aria-current da barra inferior. Gaveta agora trava a rolagem de fundo.",
+      "ficheiros": [
+        "apps/web/src/pages/AppShell.tsx",
+        "apps/web/src/styles.css"
+      ]
+    },
+    {
+      "id": "og-cover",
+      "gravidade": "alta",
+      "problema": "og-cover.png era 512x512 (as plataformas cortam a 1.91:1) e o og:image era uma URL relativa, que os crawlers nao resolvem: a partilha do link saia sem imagem.",
+      "correccao": "Capa gerada a 1200x630 com o simbolo e o logotipo ARGUS desenhado em traco. Etiquetas OG absolutas, com width/height, twitter:summary_large_image e rel=canonical.",
+      "ficheiros": [
+        "scripts/make-icons.mjs",
+        "apps/web/index.html"
+      ]
+    },
+    {
+      "id": "planos-mentira",
+      "gravidade": "alta",
+      "problema": "O modal de ativacao confirmava 'Pedido registado. Falamos contigo' sem registar nada nem ter canal. Numa aplicacao cuja regra e nao inventar nada, era o pior sitio para estar a mentir.",
+      "correccao": "Abre o WhatsApp com a mensagem ja escrita e percent-encoded (pedidoPlanoLink) + botao de copiar. Texto honesto sobre quem ativa o plano.",
+      "ficheiros": [
+        "apps/web/src/pages/Plans.tsx",
+        "apps/web/src/api.ts",
+        "apps/web/src/pages/Landing.tsx"
+      ]
+    },
+    {
+      "id": "menores",
+      "gravidade": "baixa",
+      "problema": "Comentario corrompido em config.ts ('eJL relativo'); Auth.tsx mapeia 'demais_tentativas' mas o servidor devolve 'demasiadas_tentativas' (a mensagem simpática nunca aparecia); .tool-toolbar e .topbar-landing usados sem regra no CSS; feeds.ts reportava '1 ms' para downloads de 6 MB e uma nota de cache de '1 h' fixa.",
+      "correccao": "Todos corrigidos. O tempo dos feeds passa a ser medido e guardado com o texto, para o cache continuar a declarar quanto tempo levou.",
+      "ficheiros": [
+        "apps/server/src/config.ts",
+        "apps/web/src/pages/Auth.tsx",
+        "apps/web/src/styles.css",
+        "apps/server/src/net/feeds.ts",
+        "apps/web/src/components/ResultPanel.tsx"
+      ]
+    },
+    {
+      "id": "codigo-morto",
+      "gravidade": "baixa",
+      "problema": "Cinco ficheiros de depuracao de sessoes anteriores seriam publicados: _body.ts, _dbg2.ts, _diag.ts, _quality.ts e um rascunho de teste de UI.",
+      "correccao": "Removidos. Nenhum era referenciado; a logica util ja esta coberta pelos testes reais.",
+      "ficheiros": [
+        "apps/server/test/",
+        "apps/web/test/"
+      ]
+    },
+    {
+      "id": "performance-typecheck",
+      "gravidade": "media",
+      "problema": "'tsc && tsc' em sequencia: mais de 5 minutos no total neste dispositivo (real 2m33s server + 3m05s web, com so 30-37s de CPU: e I/O do Android, nao travamento).",
+      "correccao": "scripts/typecheck.mjs corre as duas workspaces em paralelo e com --incremental. 4m55s na 1.a passagem, ~2m30s depois. Exit code 1 em erro (verificado com um erro introduzido de proposito).",
+      "ficheiros": [
+        "scripts/typecheck.mjs",
+        "package.json"
+      ]
+    },
+    {
+      "id": "verificacao-manual",
+      "gravidade": "n/a",
+      "problema": "n/a",
+      "correccao": "Sessao completa contra servidor real (verificacao_manual): registo, catalogo, ferramentas, grafo, admin, CSRF, 402/401/403 e o efeito de mudar de plano a desbloquear trancas na hora. Detalhe no campo verificacao_manual.",
+      "ficheiros": []
+    },
+    {
+      "id": "flag-strip-types",
+      "gravidade": "media",
+      "problema": "Todos os scripts usavam 'node --experimental-strip-types'. O .node-version e 24 e o engines exige >=22.18, onde o strip-types ja esta ligado por omissao: a flag e redundante e, se o Render escolhesse uma versao onde tivesse mudado de nome, o servico nao arrancava.",
+      "correccao": "Todos os comandos passaram a 'node src/index.ts' (start, dev, run.sh e os cinco testes). Reverificado: 221/221 a passar.",
+      "ficheiros": [
+        "apps/server/package.json",
+        "run.sh",
+        "apps/server/test/api.test.ts",
+        "apps/server/test/smoke-prod.ts"
+      ]
+    }
+  ],
+  "verificacao_manual": {
+    "nota": "Sessao completa contra servidor real com cookies, para alem dos testes automaticos.",
+    "resultados": [
+      "registo + /api/me + catalogo: 26 ferramentas, 5 trancadas no Free, 9 categorias",
+      "domain-analyzer em github.com: 11 achados, 10 fontes (9 ok, 1 empty, 1 skipped com motivo)",
+      "graph-investigation em github.com: 100 nos, 99 arestas, 3 ferramentas",
+      "investigacao guardada e relida; historico com 2 execucoes",
+      "port-scanner no Free: HTTP 402",
+      "/api/admin/estado sem ser admin: HTTP 403",
+      "POST de outra origem: HTTP 403 (CSRF)",
+      "/api/keys sem sessao: HTTP 401",
+      "admin mudar para pro_max: trancadas 5 -> 0 e port-scanner 402 -> 200 no mesmo instante",
+      "admin tirar o proprio acesso: recusado com auto_bloqueio",
+      "admin suspender: sessoes apagadas e /api/me devolve {user:null} de imediato"
+    ]
+  },
+  "identidade_visual": {
+    "simbolo": "o olho do guardiao; geometria unica 0..32 espelhada por scripts/make-icons.mjs",
+    "ficheiros": [
+      "apps/web/public/logo-mark.svg",
+      "favicon.svg",
+      "favicon.png",
+      "apple-touch-icon.png",
+      "icon-192.png",
+      "icon-512.png",
+      "og-cover.png",
+      "site.webmanifest"
+    ],
+    "paleta": "grafite #07080A..#22272E · prata #C8CDD4 · vermelho profundo #B91C1C · SEM VERDE",
+    "logotipo": "traco geometrico original em scripts/make-icons.mjs (SVG nao controla texto num PNG social)",
+    "icones_interface": "40 glifos SVG proprios, 24x24, currentColor, 1.6 de espessura",
+    "mobile_first": "barra inferior de 4 destinos + gaveta; tabelas empilhadas; env(safe-area-inset-bottom); gaveta trava a rolagem de fundo",
+    "regenerar": "npm run icons"
+  },
+  "bloqueios": [
+    {
+      "id": "commit",
+      "problema": "A pasta probe/ ainda nao esta no repositorio Git. O render.yaml so funciona se o codigo estiver no repo.",
+      "acao": "git add probe/ && git commit && git push",
+      "estado": "aguardando o dono (commit nao foi pedido)",
+      "verificado": "74 ficheiros entram; nenhum .db incluido"
+    },
+    {
+      "id": "render",
+      "problema": "Servico Render nao criado.",
+      "acao": "New + > Blueprint > escolher o repositorio. Gerar ARGUS_SECRET com openssl rand -hex 32 e guardar em seguranca.",
+      "estado": "aguardando o dono",
+      "pronto": "render.yaml completo: disco de 1 GB em /var/data, ARGUS_DB=/var/data/argus.db, rootDir=probe, plan=starter, healthCheckPath=/api/health"
+    },
+    {
+      "id": "primeiro-admin",
+      "problema": "Nao ha administrador em producao.",
+      "acao": "render.yaml agora pede ARGUS_ADMIN_EMAILS na criacao do servico: escrever o teu email e registar-se com ele da acesso de admin no primeiro login. Alternativa: sqlite3 /var/data/argus.db \"UPDATE users SET is_admin=1 WHERE email=...;\"",
+      "estado": "pronto — so falta o dono escrever o email no painel do Render",
+      "pronto": "as duas vias implementadas e testadas; a via ARGUS_ADMIN_EMAILS foi acrescentada ao render.yaml"
+    },
+    {
+      "id": "dominio",
+      "problema": "argus.senhoramorim.com.br nao aponta para o servico.",
+      "acao": "Render Settings > Custom Domains > argus.senhoramorim.com.br; criar o CNAME dado pelo Render no DNS de senhoramorim.com.br. O TLS e emitido pelo Render quando o dominio resolver.",
+      "estado": "aguardando o dono",
+      "pronto": "index.html ja tem rel=canonical e etiquetas OG absolutas; HSTS ligado; cookie passa a __Host- com Secure"
+    },
+    {
+      "id": "pagamento",
+      "problema": "Nao ha gateway de pagamento. Ativacao e manual, a partir do WhatsApp.",
+      "estado": "decisao de produto assumida (nenhum cartao passa pelo site). Mudar = integracao com conta externa = autorizacao necessaria."
+    }
+  ],
+  "fraco_conhecido": [
+    {
+      "item": "phone-analyzer",
+      "problema": "nao obtem operadora nem titularidade",
+      "decisao": "exige API paga; mantido com nota explicita"
+    },
+    {
+      "item": "reputation-check",
+      "problema": "7s a frio com feeds grandes",
+      "decisao": "cache 1h; feeds sao a fonte confiavel"
+    },
+    {
+      "item": "tls-audit",
+      "problema": "8.8s no pior caso (dominio que nao responde)",
+      "decisao": "handshake com timeout; degrada com aviso"
+    },
+    {
+      "item": "crt.sh",
+      "problema": "lento e instavel -> skipped com motivo",
+      "decisao": "CertSpotter e a fonte primaria"
+    },
+    {
+      "item": "reverse-image",
+      "problema": "nao faz busca inversa real",
+      "decisao": "pHash DCT 64-bit local + links para Lens/TinEye/Yandex, declarado"
+    },
+    {
+      "item": "byok",
+      "problema": "so 3 provedores (Leak-Lookup, github-pat, shodan)",
+      "decisao": "lista fechada, para nao guardar chaves inuteis"
+    },
+    {
+      "item": "ssrf",
+      "problema": "janela TOCTOU de DNS rebinding: o fetch nativo volta a resolver o hostname",
+      "decisao": "documentado no codigo; fechar exige Agent com lookup fixo"
+    }
+  ],
+  "rejeitado": [
+    {
+      "item": "Spamhaus DBL",
+      "motivo": "devolve NXDOMAIN via DoH publico"
+    },
+    {
+      "item": "onion-finder (Ahmia)",
+      "motivo": "0 resultados em todos os testes; removido pela regra 5"
+    },
+    {
+      "item": "leak-check",
+      "motivo": "nao entregava nada sem chave BYOK; removido pela regra 5"
+    },
+    {
+      "item": "Feodo Tracker",
+      "motivo": "responde 200 com 565 bytes so de comentarios; substituido por abuse.ch ThreatFox"
+    }
+  ],
+  "como_retomar": {
+    "servidor": "./run.sh start | stop | restart | status | log | reset",
+    "tudo": "npm ci && npm test && npm run typecheck && npm run build",
+    "api": "npm run test:api",
+    "producao": "npm run test:prod",
+    "auditoria_real": "npm run test:audit",
+    "interface": "npm run test:ui",
+    "icones": "npm run icons",
+    "planos_de_teste": "UPDATE users SET plan='pro_max';  /  UPDATE users SET is_admin=1 WHERE email='...'"
+  },
+  "ficheiros_de_contexto": [
+    "COMO-POR-ONLINE.md",
+    "CONCLUSAO-ARGUS.md",
+    "ARGUS-CHECKPOINT.md",
+    "CONTEXTO-ARGUS.md"
+  ],
+  "guia_online": "COMO-POR-ONLINE.md — passo a passo para o dono, com o que fazer, o que escrever e o que ver no ecra"
+}

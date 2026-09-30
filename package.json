@@ -1,0 +1,32 @@
+{
+  "name": "argus",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "ARGUS — plataforma OSINT de fontes abertas: resultados reais, proveniencia obrigatoria, mobile-first",
+  "workspaces": [
+    "apps/server",
+    "apps/web"
+  ],
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "dev": "npm run dev --workspace=@probe/server",
+    "dev:web": "npm run dev --workspace=@probe/web",
+    "build": "npm run build --workspace=@probe/web",
+    "start": "npm run start --workspace=@probe/server",
+    "test": "npm run test --workspace=@probe/server && npm run test --workspace=@probe/web",
+    "test:unit": "npm run test:unit --workspace=@probe/server",
+    "test:api": "npm run test:api --workspace=@probe/server",
+    "test:ui": "npm run test --workspace=@probe/web",
+    "test:prod": "npm run test:prod --workspace=@probe/server",
+    "test:audit": "npm run test:audit --workspace=@probe/server",
+    "test:all": "npm run test:all --workspace=@probe/server && npm run test --workspace=@probe/web",
+    "typecheck": "node scripts/typecheck.mjs",
+    "icons": "node scripts/make-icons.mjs"
+  },
+  "allowScripts": {
+    "esbuild@0.25.12": true
+  }
+}

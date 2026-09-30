@@ -1,0 +1,22 @@
+# Base de dados local. NUNCA entra no Git.
+#
+# Este ficheiro contém contas (email, nome, hash da senha em scrypt), sessões,
+# execuções guardadas e as chaves BYOK cifradas. Um `git add .` sem isto punha
+# tudo isso no histórico do repositório — e o histórico não se apaga fácil.
+apps/server/data/
+*.db
+*.db-wal
+*.db-shm
+
+# Build e dependências
+node_modules/
+apps/web/dist/
+
+# Ambiente
+.env
+.env.*
+!.env.example
+
+# Ruído
+*.log
+.DS_Store

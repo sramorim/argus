@@ -1,0 +1,61 @@
+# ARGUS — configuração do serviço no Render (Blueprint).
+#
+# Como usar: no Render, "New +" → "Blueprint" → escolher este repositório.
+# O Render lê este ficheiro e cria o serviço, o disco e as variáveis já com os valores certos.
+#
+# IMPORTANTE: este ficheiro só funciona se o código do ARGUS estiver no repositório Git.
+# A pasta probe/ ainda NÃO foi commitada — é o primeiro passo antes de criar o serviço.
+# Passo a passo em CONCLUSAO-ARGUS.md §6.
+
+services:
+  - type: web                     # Web Service (precisa de responder HTTP; nao e Background Worker)
+    name: argus
+    runtime: node
+    plan: starter                 # o plano Free nao tem disco persistente
+    region: oregon
+    rootDir: probe                # o ARGUS vive dentro da pasta probe/ deste repositório
+    branch: main
+    numInstances: 1               # 1 só: SQLite num único ficheiro não aguenta 2 processos a escrever
+
+    # ---- build e arranque ----
+    # `npm ci --include=dev` instala as DUAS coisas:
+    #   - as dependencias (hono, node:sqlite...), que o servidor precisa em runtime;
+    #   - as devDependencies (vite, typescript, linkedom), que o `npm run build`
+    #     precisa para gerar o frontend em apps/web/dist.
+    # O `--include=dev` é obrigatório e não é redundante: as envVars abaixo põem
+    # NODE_ENV=production, e o npm passa a omitir as devDependencies nesse caso.
+    # Sem este `--include=dev` o build instala 9 pacotes, não encontra o vite e
+    # morre — foi verificado, não é teórico.
+    buildCommand: npm ci --include=dev && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+
+    # ---- persistência ----
+    disk:
+      name: argus-data
+      mountPath: /var/data        # o SQLite vive aqui: sobrevive a cada deploy
+      sizeGB: 1
+
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: ARGUS_DB
+        value: /var/data/argus.db
+      # O segredo e do dono (sync: false = o Render pede o valor ao criar o serviço).
+      # Gerar: openssl rand -hex 32
+      # Dar-lho define a chave de cifragem das chaves BYOK e as sessoes. Guardar em seguranca:
+      # se mudar, as sessoes caem e as chaves BYOK guardadas deixam de decifrar.
+      - key: ARGUS_SECRET
+        sync: false
+      # O teu e-mail de administrador. Qualquer conta registada com este endereço
+      # entra como administrador logo no primeiro login — é o caminho mais
+      # simples, sem precisar de entrar por SSH para mexer no banco.
+      # (Pode deixar vazio e promover depois por SQL.)
+      - key: ARGUS_ADMIN_EMAILS
+        sync: false
+      - key: ARGUS_COOKIE_SECURE
+        value: "true"
+      - key: ARGUS_TRUST_PROXY
+        value: "true"
+      - key: ARGUS_PUBLIC_ORIGIN
+        value: https://argus.senhoramorim.com.br
