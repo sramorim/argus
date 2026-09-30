@@ -142,10 +142,10 @@ argus/   (repo https://github.com/sramorim/argus — o ARGUS vive na RAIZ)
 │       │   ├── api.ts            tipos + cliente HTTP + link de pedido de plano
 │       │   ├── styles.css        tema completo (mobile-first)
 │       │   ├── pages/
-│       │   │   ├── Landing.tsx    landing pública (herói, features, ferramentas, planos, FAQ)
+│       │   │   ├── Landing.tsx    landing pública (herói, capacidades, ferramentas, planos, FAQ)
 │       │   │   ├── Auth.tsx       login/registo
-│       │   │   ├── AppShell.tsx   sidebar/gaveta, barra inferior, medidor de cota
-│       │   │   ├── Catalog.tsx    catálogo com busca e filtros
+│       │   │   ├── AppShell.tsx   sidebar por camadas, gaveta, barra inferior, cota
+│       │   │   ├── Dashboard.tsx  PAINEL: primeiro ecrã, ação principal, atalhos, rodapé
 │       │   │   ├── ToolPage.tsx   formulário + resultado
 │       │   │   ├── Investigations.tsx  lista + detalhe com grafo
 │       │   │   ├── History.tsx    histórico de execuções
@@ -159,7 +159,7 @@ argus/   (repo https://github.com/sramorim/argus — o ARGUS vive na RAIZ)
 │       │       ├── Icons.tsx        40 ícones próprios 24x24
 │       │       └── ui.tsx           marca, cartões, estados, avisos, modal, toast
 │       └── test/
-│           ├── ui.test.mts       17 testes (3 com DOM real)
+│           ├── ui.test.mts       26 testes (com DOM real)
 │           └── harness.tsx      o que é montado pelos testes de DOM
 ```
 
@@ -168,7 +168,7 @@ argus/   (repo https://github.com/sramorim/argus — o ARGUS vive na RAIZ)
 # Verificações (ver ARGUS-CHECKPOINT.md para o tempo em cada uma)
 # o repositório de produção é https://github.com/sramorim/argus
 npm ci
-npm test                  # 112: 79 segurança + 16 parsers + 17 interface
+npm test                  # 121: 79 segurança + 16 parsers + 26 interface
 npm run test:api          # 48
 npm run test:prod         # 15
 npm run typecheck         # server + web, em paralelo
@@ -344,10 +344,15 @@ para isso (mudar plano, suspender, dar acesso).
 capacidade, grelha de ferramentas, planos, FAQ honesto e rodapé. O formulário de auth
 vem abaixo, com rolagem suave.
 
-**App** (`AppShell.tsx`): sidebar com catálogo por categoria (desktop) ou gaveta
-(telemóvel), barra de topo, barra inferior de 4 destinos e medidor de cota. Vistas:
-`catalog` · `tool` · `inv` (com detalhe e grafo) · `history` · `plans` · `keys` ·
-`account` · `admin`.
+**App** (`AppShell.tsx`): sidebar com **7 camadas expansíveis** (o grupo da
+ferramenta aberta fica marcado), gaveta no telemóvel, barra de topo, barra inferior de
+4 destinos e medidor de cota. Vistas: `dashboard` · `nova` · `tool` · `inv` (com
+detalhe e grafo) · `history` · `plans` · `keys` · `account` · `admin`.
+
+**Arquitetura de informação** (`ia.ts`): fonte única dos 7 grupos e das 26
+ferramentas. A sidebar, o painel e a busca leem daqui, por isso não podem discordar.
+Instagram, TikTok, X, Reddit, YouTube e `leak-check` **não são ferramentas** e não
+são prometidas em lado nenhum.
 
 **Painel de resultado** (`ResultPanel.tsx`) com 3 abas:
 1. **Resultados** — agrupados por `group`, com ponto colorido de confiança e
@@ -422,12 +427,12 @@ Administradores: `UPDATE users SET is_admin=1 WHERE email='...';` ou a variável
    do banco a cada pedido, e o próprio utilizador não se pode despromover.
 4. **Pagamento**: só quando houver autorização para conta externa. Hoje a ativação é
    manual por WhatsApp, com o pedido já escrito.
-5. **Testes automatizados** — **FEITO.** 224 verificações:
+5. **Testes automatizados** — **FEITO.** 234 verificações:
    - `security.test.ts` — 79 (SSRF, quotas, locks, crypto/BYOK, proveniência, cache, poda).
    - `parsers.test.ts` — 16 (EXIF sobre JPEG real, `detectSeedType`).
    - `api.test.ts` — 48 (HTTP a sério: cookies, CSRF, quotas, admin, estáticos, SPA).
    - `smoke-prod.ts` — 15 (recusa arrancar com config errada; dados sobrevivem a restart).
-   - `apps/web/test/ui.test.mts` — 17 (3 com DOM real; integridade de CSS, ícones, OG, e o `render.yaml` do Render: `rootDir`, workspaces e variáveis de ambiente).
+   - `apps/web/test/ui.test.mts` — 26 (DOM real: app montada, camadas, painel, rodapé; e integridade de CSS, ícones, OG e do `render.yaml`).
 6. **Métricas de latência**: mediana **357 ms** por execução na auditoria; o pior caso é
    `tls-audit` (8,8 s) e `reputation-check` (7,3 s a frio, ~1 ms com cache).
 

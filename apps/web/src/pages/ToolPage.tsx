@@ -1,28 +1,51 @@
 /**
- * Página de ferramenta: formulário à esquerda (fixo em desktop), resultado à
- * direita. No telemóvel o formulário vem primeiro, com a acção principal fixa
- * no fundo — o botão "Investigar" tem de estar sempre ao alcance do polegar.
+ * Página de ferramenta.
+ *
+ * A ordem é a mesma em todas as ferramentas, e é essa ordem que ensina o
+ * utilizador a usar o produto:
+ *
+ *   título → o que faz e quando usar → limitações → campo → analisar →
+ *   resultados → matriz de fontes
+ *
+ * A secção "quando usar / o que finds / limitações" não é decoração: é o que
+ * separa um produto de um formulário. E as limitações estão escritas porque
+ * esconder que `phone-analyzer` não descobre a operadora seria pior que
+ * descobrir isso no resultado.
+ *
+ * Telemóvel: o formulário vem primeiro e a acção principal é fácil de alcançar.
  */
 import { useEffect, useRef, useState } from 'react';
 import { api, type ToolPublic, type ToolRun, type Usage, ApiError } from '../api';
-import { Icon, CATEGORY_ICON } from '../components/Icons';
-import { Empty, Field, Note, PlanTag, Skeleton, useToast, Modal } from '../components/ui';
+import { Icon } from '../components/Icons';
+import { Empty, Field, Note, PlanTag, Skeleton, useToast } from '../components/ui';
+import { GRUPOS } from '../ia';
 import ResultPanel from '../components/ResultPanel';
 
 const INPUT_MODE: Record<string, string> = {
-  email: 'email', url: 'url', wallet: 'text', hash: 'text', cve: 'text', package: 'text', text: 'text', file: 'text',
+  email: 'email', url: 'url', wallet: 'text', hash: 'text',
+  cve: 'text', package: 'text', text: 'text', file: 'text',
 };
 const AUTOCOMPLETE: Record<string, string> = { email: 'email', url: 'url', text: 'off' };
 
-export default function ToolPage({ id, tools, onUsage }: {
-  id: string; tools: ToolPublic[]; onUsage: () => void;
+/** Etiqueta do campo, para o texto de "quando usar" não ficar genérico. */
+const VERBO: Record<string, string> = {
+  Analisar: 'Analisar', Verificar: 'Verificar', Auditar: 'Auditar',
+  Gerar: 'Gerar', Localizar: 'Localizar', Consulta: 'Consultar',
+  Rastrear: 'Rastrear', Exposição: 'Verificar', Scanner: 'Analisar',
+  Rastreador: 'Rastrear', Investigação: 'Investigar', Extrator: 'Extrair',
+};
+
+export default function ToolPage({
+  id, tools, onUsage, comoAlvo,
+}: {
+  id: string; tools: ToolPublic[]; onUsage: () => void; comoAlvo?: boolean;
 }) {
   const t = tools.find((x) => x.id === id);
   const [vals, setVals] = useState<Record<string, string>>({});
   const [files, setFiles] = useState<Record<string, { data: string; name: string; bytes: number }>>({});
   const [run, setRun] = useState<ToolRun | null>(null);
   const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState<string>('');
+  const [err, setErr] = useState('');
   const [usage, setUsage] = useState<Usage | null>(null);
   const [over, setOver] = useState<string | null>(null);
   const toast = useToast();
@@ -45,9 +68,11 @@ export default function ToolPage({ id, tools, onUsage }: {
   }
 
   const locked = t.lock === 'locked';
-  const Ico = CATEGORY_ICON[t.category] ?? Icon.grid;
+  const grupo = GRUPOS.find((g) => g.ferramentas.includes(t.id));
   const restantes = usage ? Math.max(0, usage.daily - usage.today) : null;
   const semEspaco = restantes !== null && restantes === 0;
+  const primeiro = t.fields[0];
+  const verbo = (VERBO[Object.keys(VERBO).find((k) => t.name.startsWith(k)) ?? ''] ?? 'Analisar').toLowerCase();
 
   const readFile = (field: string, file: File) => {
     if (file.size > 12 * 1024 * 1024) { toast('err', 'Ficheiro acima de 12 MB.'); return; }
@@ -75,36 +100,30 @@ export default function ToolPage({ id, tools, onUsage }: {
       if (a.code === 'bloqueada') msg = `Esta ferramenta exige o plano ${a.minPlan === 'pro_max' ? 'Pro Max' : 'Pro'}.`;
       else if (a.code === 'limite') msg = a.message;
       else if (a.code === 'campo_obrigatorio') msg = `Falta preencher “${t.fields.find((f) => f.name === a.field)?.label ?? a.field}”.`;
-      else if (a.code === 'demasiadas_execucoes' || a.code === 'demasiados_pedidos') msg = `${a.message}`;
+      else if (a.code === 'demasiadas_execucoes' || a.code === 'demasiados_pedidos') msg = a.message;
       else if (a.code === 'sem_rede') msg = 'Sem ligação ao servidor.';
       setErr(msg);
     } finally { setBusy(false); busyFor.current = null; }
   };
 
-  const faltam = t.fields.filter((f) => f.required && !(vals[f.name] ?? '').trim() && f.type !== 'file');
-
   return (
     <div className="page page-wide">
+      {!comoAlvo && grupo && (
+        <div className="t-xs dim" style={{ marginBottom: 'var(--s-3)' }}>
+          {grupo.nome} · {grupo.resumo}
+        </div>
+      )}
+
       <div className="tool-layout">
+        {/* ---------------- coluna do formulário ---------------- */}
         <div className="tool-form-col">
           <header className="card">
-            <div style={{ display: 'flex', gap: 11, alignItems: 'flex-start' }}>
-              <span className="tool-glyph" style={{ width: 36, height: 36, flex: '0 0 36px' }}><Ico width={18} height={18} /></span>
-              <div style={{ minWidth: 0 }}>
-                <h1 className="t-h2">{t.name}</h1>
-                <p className="t-sm muted" style={{ marginTop: 4 }}>{t.summary}</p>
-              </div>
-            </div>
-            <details style={{ marginTop: 12 }}>
-              <summary className="t-sm" style={{ color: 'var(--t-4)', cursor: 'pointer', listStyle: 'none' }}>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                  <Icon.chevronRight width={13} height={13} style={{ transform: 'rotate(90deg)' }} /> como funciona
-                </span>
-              </summary>
-              <p className="t-sm muted" style={{ marginTop: 8, lineHeight: 1.6 }}>{t.longDesc}</p>
-            </details>
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 12 }}>
-              {locked ? <PlanTag minPlan={t.minPlan} /> : <span className="tag tag-free">GRÁTIS NO TEU PLANO</span>}
+            <h1 className="t-h1">{t.name}</h1>
+            <p className="t-sm muted" style={{ marginTop: 8, lineHeight: 1.62 }}>{t.longDesc}</p>
+            <div className="row" style={{ marginTop: 13, gap: 6 }}>
+              {locked
+                ? <PlanTag minPlan={t.minPlan} locked />
+                : <span className="tag tag-free">Disponível no teu plano</span>}
               {t.legalGate === 'lgpd' && <span className="tag tag-legal">LGPD · uso defensivo</span>}
               {t.legalGate === 'restricted' && <span className="tag">uso restrito</span>}
             </div>
@@ -113,19 +132,20 @@ export default function ToolPage({ id, tools, onUsage }: {
           {locked ? (
             <div className="card" style={{ textAlign: 'center' }}>
               <div className="empty-ico" style={{ margin: '0 auto 12px' }}><Icon.lock /></div>
-              <h2 className="t-h3">Trancada no teu plano</h2>
-              <p className="t-sm muted" style={{ margin: '8px 0 16px' }}>
-                Precisa do plano {t.minPlan === 'pro_max' ? 'Pro Max' : 'Pro'}. O plano Free nunca expira
-                e não pede cartão — o desbloqueio é só se quiseres mais volume.
+              <h2 className="t-h3">Precisa de um plano superior</h2>
+              <p className="t-sm muted" style={{ margin: '9px 0 16px' }}>
+                Esta ferramenta está no plano {t.minPlan === 'pro_max' ? 'Pro Max' : 'Pro'}.
+                O plano Free nunca expira e não pede cartão — o desbloqueio é só se
+                precisares de mais volume.
               </p>
-              <button className="btn btn-primary btn-block" type="button" onClick={() => { location.href = '#planos'; }}>
+              <button className="btn btn-primary btn-block" type="button" onClick={() => { location.hash = '#planos'; }}>
                 ver planos
               </button>
             </div>
           ) : (
             <div className="card">
-              <div className="card-head">Alvo</div>
-              {err && <div style={{ marginBottom: 12 }}><Note kind="err">{err}</Note></div>}
+              <div className="card-head">{t.fields.length > 1 ? 'Alvo' : 'Alvo a analisar'}</div>
+              {err && <div style={{ marginBottom: 13 }}><Note kind="err">{err}</Note></div>}
 
               {t.fields.map((f) => (
                 <Field key={f.name} label={f.label} hint={f.hint} required={f.required}>
@@ -176,42 +196,52 @@ export default function ToolPage({ id, tools, onUsage }: {
                 className="btn btn-primary btn-lg btn-block" type="button"
                 onClick={go} disabled={busy || semEspaco}
               >
-                {busy ? <><span className="spin" /> a consultar fontes…</> : <><Icon.target /> investigar</>}
+                {busy ? <><span className="spin" /> a analisar…</> : <><Icon.target /> {verbo}</>}
               </button>
-              {semEspaco && <Note kind="warn">A cota de hoje acabou. Volta amanhã, ou sobe de plano.</Note>}
+
+              {semEspaco && (
+                <div style={{ marginTop: 12 }}>
+                  <Note kind="warn">A cota de hoje acabou. Volta amanhã, ou sobe de plano.</Note>
+                </div>
+              )}
               {restantes !== null && restantes > 0 && (
-                <div className="t-xs dim" style={{ marginTop: 9, textAlign: 'center' }}>
+                <div className="t-xs dim" style={{ marginTop: 10, textAlign: 'center' }}>
                   {restantes} {restantes === 1 ? 'execução restante' : 'execuções restantes'} hoje
                 </div>
               )}
-              <p className="t-xs dim" style={{ marginTop: 10, textAlign: 'center', lineHeight: 1.5 }}>
-                Só são consultados fontes públicas. Nada é inventado: o que falhar aparece como falhou.
+
+              <p className="t-xs dim" style={{ marginTop: 11, textAlign: 'center', lineHeight: 1.55 }}>
+                Só fontes públicas. O que não responder aparece como não respondeu —
+                nada é preenchido com um resultado plausível inventado.
               </p>
             </div>
           )}
         </div>
 
+        {/* ---------------- coluna do resultado ---------------- */}
         <div ref={resRef} style={{ minWidth: 0 }}>
           {busy && (
             <div className="card">
               <div className="card-head">A consultar fontes</div>
-              <div className="progress" style={{ marginBottom: 14 }}><i /></div>
+              <div className="progress" style={{ marginBottom: 15 }}><i /></div>
               <Skeleton lines={5} />
-              <p className="t-sm muted" style={{ marginTop: 12 }}>
-                Cada fonte é contactada em tempo real. O resultado só aparece quando todos os
-                pedidos responderam (ou falharam de forma explícita).
+              <p className="t-sm muted" style={{ marginTop: 13, lineHeight: 1.6 }}>
+                Cada fonte é contactada em tempo real, em paralelo. O resultado só
+                aparece quando todas responderam — ou falharam de forma explícita.
               </p>
             </div>
           )}
+
           {!busy && !run && !locked && (
             <div className="card">
-              <Empty icon={Icon.layers} title="Ainda não corriste esta ferramenta">
-                Preenche o alvo e carrega em <b style={{ color: 'var(--t-2)' }}>investigar</b>.
-                Vais ver os achados, a matriz de fontes que os sustenta e, quando houver,
-                o grafo.
+              <Empty icon={Icon.layers} title="Ainda não correste esta ferramenta">
+                {primeiro
+                  ? <>Escreve {primeiro.label.toLowerCase()} no campo ao lado e carrega em <b style={{ color: 'var(--t-2)' }}>{verbo}</b>. Vais ver os achados e a matriz de fontes que os sustenta.</>
+                  : <>Preenche o alvo e carrega em <b style={{ color: 'var(--t-2)' }}>{verbo}</b>.</>}
               </Empty>
             </div>
           )}
+
           {run && <ResultPanel run={run} />}
         </div>
       </div>

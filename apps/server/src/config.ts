@@ -96,6 +96,61 @@ if (allowedOrigins.includes('*')) {
   fatal.push("ARGUS_ALLOWED_ORIGINS nao aceita '*' ( credentials + wildcard sao inseguros). Liste os dominios.");
 }
 
+/**
+ * Canal de contacto público (WhatsApp).
+ *
+ * Fica no ambiente e não no código, para corrigir um número não exigir
+ * reconstruir o frontend. O `label` é derivado do número, por isso não há como
+ * os dois divergirem — que foi exactamente o que aconteceu com o número
+ * anterior, escrito à mão em dois sítios diferentes.
+ *
+ * Aceita só o formato que interessa: 55 + DDD(2) + 9 dígitos (celular BR) ou
+ * + 8 dígitos (fixo). Qualquer outra coisa é recusada no arranque, em vez de
+ * gerar um link de wa.me que não abre para ninguém.
+ */
+const CONTACTO_WA_DEFAULT = '5547997876098';
+function normalizarWa(v: string): { digitos: string; ok: boolean; erro?: string } {
+  let d = v.replace(/[^\d+]/g, '');
+  if (d.startsWith('+')) d = d.slice(1);
+  if (!/^\d{12,13}$/.test(d)) {
+    return { digitos: '', ok: false, erro: `tem de ter 12 ou 13 digitos em formato internacional (ex.: ${CONTACTO_WA_DEFAULT}), recebi "${v}"` };
+  }
+  if (!d.startsWith('55')) {
+    return { digitos: '', ok: false, erro: `tem de começar por 55 (Brasil), recebi "${v}"` };
+  }
+  const ddd = d.slice(2, 4);
+  const resto = d.slice(4);
+  if (resto.length !== 8 && resto.length !== 9) {
+    return { digitos: '', ok: false, erro: `o numero tem de ter 8 (fixo) ou 9 (celular) digitos depois do DDD, recebi "${v}"` };
+  }
+  // Celular tem 9 digitos e começa obrigatoriamente por 9.
+  if (resto.length === 9 && resto[0] !== '9') {
+    return { digitos: '', ok: false, erro: `celular brasileiro tem 9 digitos e comeca por 9, recebi "${v}"` };
+  }
+  // E um fixo NUNCA começa por 9. Um numero de 8 digitos que comece por 9 é um
+  // celular a que falta um digito — foi exactamente o erro que estava em
+  // produção, e que passava despercebido na validação anterior.
+  if (resto.length === 8 && resto[0] === '9') {
+    return { digitos: '', ok: false, erro: `8 digitos a comecar por 9 e um celular com um digito em falta (o numero certo tem 9 digitos), recebi "${v}"` };
+  }
+  return { digitos: d, ok: true };
+}
+
+const waBruto = str('ARGUS_CONTACTO_WHATSAPP') ?? CONTACTO_WA_DEFAULT;
+const wa = normalizarWa(waBruto);
+if (!wa.ok) fatal.push(`ARGUS_CONTACTO_WHATSAPP invalido: ${wa.erro}`);
+
+/** "(47) 99787-6098" a partir de "5547997876098". */
+function rotuloWa(d: string): string {
+  const ddd = d.slice(2, 4);
+  const r = d.slice(4);
+  const g = r.length === 9 ? `${r.slice(0, 5)}-${r.slice(5)}` : `${r.slice(0, 4)}-${r.slice(4)}`;
+  return `WhatsApp (${ddd}) ${g}`;
+}
+
+export const CONTACTO_WHATSAPP = wa.ok ? wa.digitos : CONTACTO_WA_DEFAULT;
+export const CONTACTO_LABEL = wa.ok ? rotuloWa(wa.digitos) : `WhatsApp (47) 99787-6098`;
+
 export const config = {
   isProd,
   env: str('NODE_ENV') ?? 'development',
@@ -108,6 +163,18 @@ export const config = {
   allowedOrigins,
   /** Em producao ha sempre um proxy (Render) a frente. */
   trustProxy: bool('ARGUS_TRUST_PROXY', isProd),
+  contacto: {
+    whatsapp: CONTACTO_WHATSAPP,
+    label: CONTACTO_LABEL,
+  },
+  // A marca é "SR. Amorim" (com ponto). O nome legal da pessoa fica no
+  // ARGUS_AUTHOR_LEGAL, que não é mostrado no site.
+  autor: {
+    nome: str('ARGUS_AUTHOR') ?? 'SR. Amorim',
+    link: str('ARGUS_AUTHOR_LINK'),
+    copyright: `© ${new Date().getFullYear()} ${str('ARGUS_AUTHOR') ?? 'SR. Amorim'}`,
+    legal: str('ARGUS_AUTHOR_LEGAL') ?? 'Daniel Senhor Amorim',
+  },
   cookie: {
     /** __Host- exige Secure + Path=/ + sem Domain: um cookie de sessao nao pode ser plantado por um subdominio. */
     name: cookieSecure ? '__Host-argus_session' : 'argus_session',
@@ -143,6 +210,8 @@ export function configReport(tools: number): string {
     `db=${config.dbPath}`,
     `cookie=${config.cookie.name} secure=${config.cookie.secure} samesite=${config.cookie.sameSite} ${config.cookie.maxAgeDays}d`,
     `origens=${config.allowedOrigins.length ? config.allowedOrigins.join(', ') : 'mesma origem (sem CORS)'}`,
+    `contacto=${config.contacto.label} wa.me/${config.contacto.whatsapp}`,
+    `autor=${config.autor.copyright}`,
     `rate_limit=login ${config.rateLimit.authMax} + registo ${config.rateLimit.registerMax} por ${config.rateLimit.windowMin}min`,
     `trust_proxy=${config.trustProxy}`,
     `ferramentas=${tools}`,

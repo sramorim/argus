@@ -20,7 +20,8 @@ type View2 = View;
 
 const viewToHash = (v: View2): string => {
   switch (v.k) {
-    case 'catalog': return '/';
+    case 'dashboard': return '/';
+    case 'nova': return '/investigar';
     case 'tool': return `/ferramenta/${(v as { id: string }).id}`;
     case 'inv': return '/investigacoes' + ((v as { id?: string }).id ? `/${(v as { id: string }).id}` : '');
     case 'plans': return '/planos';
@@ -36,14 +37,15 @@ const hashToView = (h: string): View2 => {
   const p = h.replace(/^#/, '').replace(/^\/+/, '');
   const [head, arg] = p.split('/');
   switch (head) {
-    case 'ferramenta': return arg ? { k: 'tool', id: arg } : { k: 'catalog' };
+    case 'ferramenta': return arg ? { k: 'tool', id: arg } : { k: 'dashboard' };
     case 'investigacoes': return arg ? { k: 'inv', id: arg } : { k: 'inv' };
     case 'planos': return { k: 'plans' };
     case 'chaves': return { k: 'keys' };
     case 'conta': return { k: 'account' };
     case 'admin': return { k: 'admin' };
     case 'historico': return { k: 'history' };
-    default: return { k: 'catalog' };
+    case 'investigar': return { k: 'nova' };
+    default: return { k: 'dashboard' };
   }
 };
 
@@ -153,7 +155,7 @@ function App() {
       <AppShell
         user={user} tools={tools} usage={usage} view={view} setView={setView}
         refreshUser={refreshUser}
-        onLogout={() => { api.logout().catch(() => {}); setUser(null); setTools([]); setView({ k: 'catalog' }); }}
+        onLogout={() => { api.logout().catch(() => {}); setUser(null); setTools([]); setView({ k: 'dashboard' }); }}
       />
     </>
   );

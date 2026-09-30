@@ -1,10 +1,10 @@
 {
   "projeto": "ARGUS",
   "raiz": "/data/data/com.termux/files/home/argus",
-  "actualizado_em": "2026-09-30T11:40:00Z",
-  "fase": "pronto-a-redeploy",
+  "actualizado_em": "2026-09-30T14:20:00Z",
+  "fase": "interface-reconstruida",
   "estado": "verde",
-  "resumo": "Codigo na raiz do repositorio sramorim/argus. 224 verificacoes automaticas a passar. O primeiro deploy falhou por causa de \"rootDir: probe\" herdado do layout antigo (o ARGUS vivia dentro de central-amorim/probe/); ja foi corrigido, sem renomear nem mascarar nada. Falta so o que exige a conta do dono: criar o servico no Render, o segredo, e apontar o dominio.",
+  "resumo": "Interface e experiencia reconstruidas a partir da referencia OSINT-UI, com identidade propria: sidebar por camadas expansiveis, painel como primeiro ecra com \"Nova investigacao\" como accao principal, ferramentas organizadas por objetivo do utilizador, paleta azul profissional e rodape SR. Amorim. Backend intacto. 234 verificacoes a passar.",
   "ambiente": {
     "node": "v26.4.0",
     "npm": "11.19.1",
@@ -84,8 +84,8 @@
     "npm test": {
       "seguranca": "79/79",
       "parsers": "16/16",
-      "interface": "17/17",
-      "total": 112,
+      "interface": "26/26",
+      "total": 121,
       "estado": "passa"
     },
     "npm run test:api": {
@@ -110,13 +110,13 @@
     "npm run build": {
       "estado": "passa",
       "saida": "apps/web/dist",
-      "gzip_kb": 94
+      "gzip_kb": 97
     },
     "npm ci": {
       "estado": "passa",
       "nota": "verificado de raiz com NODE_ENV=production --include=dev: 98 pacotes; sem --include=dev seriam 9 e o build falharia"
     },
-    "TOTAL": 224,
+    "TOTAL": 234,
     "render.buildCommand": "npm ci --include=dev && npm run build (com teste de regressao)"
   },
   "corrigido_nesta_sessao": [
@@ -256,6 +256,32 @@
         "package-lock.json",
         "apps/web/test/ui.test.mts"
       ]
+    },
+    {
+      "id": "ui-reconstrucao",
+      "gravidade": "produto",
+      "problema": "A interface era uma grelha de ferramentas com um indice; o primeiro ecra era o catalogo, nao o trabalho. Nao havia camadas nem painel, e a paleta era grafite/vermelho em vez da identidade SR. Amorim.",
+      "correccao": "Reconstrucao real: (1) sistema visual novo em azul profissional; (2) AppShell com sidebar de 7 camadas expansiveis, marca do grupo atual e rodape com assinatura; (3) Dashboard como primeiro ecra com 'Nova investigacao' em grande, cota real, sessoes recentes, atalhos e ferramentas agrupadas (nunca 26 cartoes soltos); (4) ToolPage com a ordem titulo->explicacao->limitacoes->campo->analisar->resultados; (5) Landing reescrita; (6) ia.ts como fonte unica da organizacao, usada pela sidebar, pelo painel e pela busca. Codigo morto removido (Catalog.tsx).",
+      "ficheiros": [
+        "apps/web/src/ia.ts",
+        "apps/web/src/styles.css",
+        "apps/web/src/pages/AppShell.tsx",
+        "apps/web/src/pages/Dashboard.tsx",
+        "apps/web/src/pages/ToolPage.tsx",
+        "apps/web/src/pages/Landing.tsx"
+      ]
+    },
+    {
+      "id": "contacto-errado",
+      "gravidade": "alta",
+      "problema": "O numero de WhatsApp estava escrito a mao no frontend (554797876098) e faltava o 9 do celular. Aparecia em tres sitios, o que ja tinha permitido divergir do numero do dono sem ninguem dar por isso.",
+      "correccao": "O numero vem do servidor (/api/contact, que le ARGUS_CONTACTO_WHATSAPP) e e validado no arranque: 8 digitos a comecar por 9 e recusado como 'celular com um digito em falta' — que e exactamente o erro que estava em producao. A marca tambem vem do servidor (ARGUS_AUTHOR).",
+      "ficheiros": [
+        "apps/server/src/config.ts",
+        "apps/server/src/index.ts",
+        "apps/web/src/api.ts",
+        "render.yaml"
+      ]
     }
   ],
   "verificacao_manual": {
@@ -275,22 +301,23 @@
     ]
   },
   "identidade_visual": {
-    "simbolo": "o olho do guardiao; geometria unica 0..32 espelhada por scripts/make-icons.mjs",
-    "ficheiros": [
-      "apps/web/public/logo-mark.svg",
-      "favicon.svg",
-      "favicon.png",
-      "apple-touch-icon.png",
-      "icon-192.png",
-      "icon-512.png",
-      "og-cover.png",
-      "site.webmanifest"
-    ],
-    "paleta": "grafite #07080A..#22272E · prata #C8CDD4 · vermelho profundo #B91C1C · SEM VERDE",
-    "logotipo": "traco geometrico original em scripts/make-icons.mjs (SVG nao controla texto num PNG social)",
-    "icones_interface": "40 glifos SVG proprios, 24x24, currentColor, 1.6 de espessura",
-    "mobile_first": "barra inferior de 4 destinos + gaveta; tabelas empilhadas; env(safe-area-inset-bottom); gaveta trava a rolagem de fundo",
-    "regenerar": "npm run icons"
+    "marca": "ARGUS · ecossistema SR. Amorim",
+    "paleta": {
+      "background": "#07111F",
+      "surface": "#0D1B2A",
+      "surface_2": "#102338",
+      "border": "#1E334A",
+      "azul": "#1677FF",
+      "azul_2": "#2F8CFF",
+      "azul_claro": "#58B0FF",
+      "texto": "#F4F7FB",
+      "texto_2": "#91A4B8",
+      "erro": "#EF4444",
+      "sucesso": "#22C55E"
+    },
+    "nota": "Azul de accao e destaque. Superficies quase neutras com tom azul muito baixo, para o azul ter peso sem a interface ficar toda azul. Sem verde Matrix, sem neon, sem gamer.",
+    "rodape": "SR. AMORIM · Criado e desenvolvido por SR. Amorim · (c) 2026 SR. Amorim. Todos os direitos reservados.",
+    "canais": "WhatsApp (do servidor, ARGUS_CONTACTO_WHATSAPP). Instagram/Telegram/X: NAO declarados — sem link nao aparece. Preparado para configurar."
   },
   "bloqueios": [
     {
@@ -391,7 +418,7 @@
     "ARGUS-CHECKPOINT.md",
     "CONTEXTO-ARGUS.md"
   ],
-  "guia_online": "COMO-POR-ONLINE.md — passo a passo para o dono (o codigo ja esta no GitHub)",
+  "guia_online": "COMO-POR-ONLINE.md — passo a passo para o dono",
   "repositorio": "https://github.com/sramorim/argus (branch main, ARGUS na RAIZ do repositorio)",
   "render": {
     "root_directory": "raiz do repositorio (render.yaml NAO declara rootDir)",
@@ -403,5 +430,47 @@
     "health": "/api/health",
     "disco": "/var/data (1 GB)",
     "db": "/var/data/argus.db"
+  },
+  "arquitetura_de_informacao": {
+    "fonte_unica": "apps/web/src/ia.ts",
+    "grupos": [
+      {
+        "id": "investigar",
+        "nome": "Investigação",
+        "n": 1
+      },
+      {
+        "id": "identidade",
+        "nome": "Identidade",
+        "n": 4
+      },
+      {
+        "id": "social",
+        "nome": "Redes e Comunicação",
+        "n": 2
+      },
+      {
+        "id": "web",
+        "nome": "Web e Ficheiros",
+        "n": 4
+      },
+      {
+        "id": "infra",
+        "nome": "Domínio e Infraestrutura",
+        "n": 5
+      },
+      {
+        "id": "seguranca",
+        "nome": "Segurança",
+        "n": 6
+      },
+      {
+        "id": "fontes",
+        "nome": "Fontes Especiais",
+        "n": 4
+      }
+    ],
+    "total": 26,
+    "nao_listadas": "Instagram, TikTok, X, Reddit, YouTube e Leak Check NAO sao ferramentas do ARGUS. Nao sao prometidas na navegacao nem na landing. A Leak Check foi removida do catalogo (nao entregava nada sem chave BYOK)."
   }
 }

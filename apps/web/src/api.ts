@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react';
+
 /**
  * Cliente da API + tipos partilhados com o servidor.
  *
@@ -95,8 +97,18 @@ async function req<T>(url: string, init?: RequestInit): Promise<T> {
   return data as T;
 }
 
+export interface Contacto {
+  whatsapp: string;
+  label: string;
+  link: string;
+  autor: string;
+  autorLink: string | null;
+  copyright: string;
+}
+
 export const api = {
   health: () => req<{ ok: boolean; tools: number }>('/api/health'),
+  contacto: () => req<Contacto>('/api/contact'),
   me: () => req<{ user: User | null; usage?: Usage }>('/api/me'),
   tools: () => req<{ tools: ToolPublic[]; plan: PlanId; usage: Usage | null }>('/api/tools'),
   tool: (id: string) => req<{ tool: ToolPublic }>(`/api/tools/${encodeURIComponent(id)}`),
@@ -146,27 +158,32 @@ export const api = {
 };
 
 /**
- * Canal de contacto para ativação de planos.
+ * Canal de contacto.
  *
- * Não existe gateway de pagamento (decisão de produto: nenhum cartão passa por
- * este site). O pedido de ativação é mesmo um WhatsApp com a mensagem já
- * escrita — por isso é um link de verdade, e não um botão que finge ter registado
- * um pedido que ninguém recebeu.
+ * O número **não é a fonte da verdade**: vem do servidor, de
+ * `/api/contact`, que o lê de `ARGUS_CONTACTO_WHATSAPP`. Estava escrito aqui
+ * e estava errado (faltava o 9 do celular brasileiro), e para corrigir um número
+ * de telefone não devia ser preciso tocar em código nem reconstruir o frontend.
+ * Mudar o número passa a ser uma variável de ambiente e um reinício.
+ *
+ * O valor de aqui é apenas o que se usa antes de o servidor responder (e se ele
+ * não responder, a app mostra o botão de contacto indisponível em vez de um
+ * número errado).
  */
 export const CONTACTO = {
-  whatsapp: '554797876098',
-  label: 'WhatsApp (47) 97876-098',
+  whatsapp: '5547997876098',
+  label: 'WhatsApp (47) 99787-6098',
 } as const;
 
 /** Link de WhatsApp com a mensagem já preenchida. */
-export function pedidoPlanoLink(plan: Plan, user?: { email?: string; name?: string } | null): string {
+export function pedidoPlanoLink(plan: Plan, user?: { email?: string; name?: string } | null, wa: string = CONTACTO.whatsapp): string {
   const preco = plan.priceBRL === 0 ? 'Grátis' : `R$ ${plan.priceBRL.toFixed(2).replace('.', ',')}/mês`;
   const linhas = [
     `Olá! Quero ativar o plano ${plan.name} (${preco}) no ARGUS.`,
     user?.name ? `Nome: ${user.name}` : '',
     user?.email ? `Conta no ARGUS: ${user.email}` : '',
   ].filter(Boolean);
-  return `https://wa.me/${CONTACTO.whatsapp}?text=${encodeURIComponent(linhas.join('\n'))}`;
+  return `https://wa.me/${wa}?text=${encodeURIComponent(linhas.join('\n'))}`;
 }
 
 export const CONF_LABEL: Record<Confidence, string> = {
@@ -183,3 +200,32 @@ export const STATUS_LABEL: Record<SourceStatus, string> = {
   ok: 'OK', empty: 'Vazio', skipped: 'Ignorada', error: 'Erro', needs_key: 'Precisa de chave', timeout: 'Timeout',
 };
 export const PLAN_NAME: Record<PlanId, string> = { free: 'Free', pro: 'Pro', pro_max: 'Pro Max' };
+
+/**
+ * Contacto e autoria, vindos do servidor.
+ *
+ * Fica num hook para haver **uma** fonte no frontend. Quando o número estava
+ * escrito à mão aparecia em três sítios e divergia do que o dono usava; o hook
+ * elimina a possibilidade de um sítio ficar com o número antigo.
+ *
+ * Devolve `null` enquanto o servidor não responde, para o botão aparecer
+ * desligado em vez de com um número que não é o certo.
+ */
+let _contacto: Contacto | null = null;
+let _contactoPromise: Promise<Contacto | null> | null = null;
+
+export function useContacto(): Contacto | null {
+  const [c, setC] = useState<Contacto | null>(_contacto);
+  useEffect(() => {
+    if (_contacto) return;
+    if (!_contactoPromise) {
+      _contactoPromise = api.contacto()
+        .then((r) => { _contacto = r; return r; })
+        .catch(() => null);
+    }
+    let vivo = true;
+    _contactoPromise.then((r) => { if (vivo) setC(r); });
+    return () => { vivo = false; };
+  }, []);
+  return c;
+}

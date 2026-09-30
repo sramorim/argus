@@ -254,6 +254,25 @@ app.get('/api/me', (c) => {
   });
 });
 
+// ---------- contacto público ----------
+/**
+ * O número de WhatsApp e o nome do autor não vivem no frontend.
+ *
+ * Viviam, escritos à mão em dois sítios, e divergiram — o número de telemóvel
+ * estava com um dígito a menos. Para corrigir isso não devia ser preciso tocar
+ * em código nem reconstruir o bundle (que o browser cacheia para sempre).
+ * Aqui o servidor é a fonte da verdade e o cliente limitamo-nos a mostrar.
+ */
+app.get('/api/contact', (c) => c.json({
+  whatsapp: config.contacto.whatsapp,
+  label: config.contacto.label,
+  link: `https://wa.me/${config.contacto.whatsapp}`,
+  marca: config.autor.nome,
+  autor: config.autor.legal,
+  autorLink: config.autor.link ?? null,
+  copyright: config.autor.copyright,
+}));
+
 // ---------- catálogo ----------
 app.get('/api/tools', (c) => {
   const u = currentUser(c);

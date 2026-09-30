@@ -1,9 +1,48 @@
 # ARGUS — CHECKPOINT
 
-**Data:** 2026-09-30 11:40 UTC · **Estado:** verde · **Fase:** pronto a redeploy
+**Data:** 2026-09-30 14:20 UTC · **Estado:** verde · **Fase:** interface reconstruída, pronto a redeploy
 **Repositório:** https://github.com/sramorim/argus (código na raiz) · **Guia:** `COMO-POR-ONLINE.md`
 **Detalhe máquina-legível:** `ARGUS-STATE.json`
 **Conclusão:** `CONCLUSAO-ARGUS.md` · **Contexto completo:** `CONTEXTO-ARGUS.md`
+
+---
+
+## Reconstrução da interface
+
+Feita a partir da referência OSINT-UI, com implementação e identidade próprias:
+
+- **Sistema visual novo**: azul profissional (`#07111F` / `#0D1B2A` / `#1677FF`),
+  sem verde Matrix, sem neon, sem gamer. Superfícies quase neutras com tom azul
+  muito baixo, para o azul ter peso sem a interface ficar toda azul.
+- **Sidebar por camadas**: 7 grupos expansíveis, com o grupo da ferramenta aberta
+  sempre marcado. Nada de lista de 26 botões.
+- **Painel como primeiro ecrã**: "Nova investigação" em grande, cota real, sessões
+  recentes, atalhos e as ferramentas **agrupadas** (nunca 26 cartões soltos).
+- **Páginas de ferramenta** com a ordem: título → o que faz → limitações → campo →
+  analisar → resultados → matriz de fontes.
+- **Rodapé SR. Amorim** em todas as páginas.
+- **`ia.ts` é a fonte única** da organização: sidebar, painel e busca leem dela,
+  por isso não podem discordar entre si.
+
+**Organização final** (só o que existe e funciona — 26 ferramentas):
+
+| Grupo | N.º | Ferramentas |
+|---|---|---|
+| Investigação | 1 | Investigação (Grafo) |
+| Identidade | 4 | Username · E-mail · Telefone · Dorks |
+| Redes e Comunicação | 2 | GitHub · Telegram |
+| Web e Ficheiros | 4 | URL · Crawler · Metadata · Imagem |
+| Domínio e Infraestrutura | 5 | Domínio · IP · TLS · Portas · ASN |
+| Segurança | 6 | Reputação · Hash · CVE · Pacotes · Password · Exposição |
+| Fontes Especiais | 4 | Crypto · Geo · CEP · Empresa |
+
+> Instagram, TikTok, X, Reddit, YouTube e **Leak Check** não são ferramentas do ARGUS
+> e não aparecem na navegação nem na landing. A `leak-check` saiu do catálogo por não
+> entregar nada sem chave BYOK. Não se promete o que não existe.
+
+Também se corrigiu o **número de WhatsApp**, que estava escrito à mão no frontend e
+com um dígito em falta. Passou a vir do servidor e a ser validado no arranque: um
+número de 8 dígitos a começar por 9 é recusado como "celular com um dígito em falta".
 
 ---
 
@@ -69,14 +108,14 @@ era grande.
 
 | Verificação | Resultado |
 |---|---|
-| `npm test` | 79 segurança + 16 parsers + 17 interface = **112/112** |
+| `npm test` | 79 segurança + 16 parsers + 26 interface = **121/121** |
 | `npm run test:api` | **48/48** |
 | `npm run test:prod` | **15/15** |
 | `npm run test:audit` | **49/49**, 26/26 ferramentas · mediana 375 ms · máx 31,9 s |
 | `npm run typecheck` | server ok · web ok |
 | `npm run build` | ok → `apps/web/dist` (94 kB gzip) |
 | `npm ci` | ok de raiz; **98 pacotes** com `NODE_ENV=production --include=dev` (sem o `--include=dev` seriam 9 e o build do Render falharia) |
-| **Total** | **224 verificações** |
+| **Total** | **234 verificações** |
 
 Comandos: `npm test` · `npm run test:api` · `npm run test:prod` · `npm run typecheck` ·
 `npm run build` · `npm run test:audit` · `npm run icons` · `./run.sh start|stop|restart|status|log|reset`

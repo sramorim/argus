@@ -70,6 +70,23 @@ services:
       - key: ARGUS_PUBLIC_ORIGIN
         value: https://argus.senhoramorim.com.br
 
+      # ---- identidade (o dono muda aqui, sem tocar em código) ----
+      # O número de WhatsApp estava escrito à mão no frontend e estava errado
+      # (faltava o 9 do celular). Vai validado no arranque: se não vier em
+      # formato internacional válido, o servidor recusa arrancar em vez de gerar
+      # um link de wa.me que não abre para ninguém.
+      - key: ARGUS_CONTACTO_WHATSAPP
+        value: "5547997876098"
+      - key: ARGUS_AUTHOR
+        value: SR. Amorim
+      # Nome legal da pessoa. Não é mostrado no site — fica para contratos e
+      # Nota Legal, onde a identidade legal tem de aparecer.
+      - key: ARGUS_AUTHOR_LEGAL
+        value: Daniel Senhor Amorim
+      # O link do autor (site, LinkedIn…). Vazio = não aparece no rodapé.
+      # - key: ARGUS_AUTHOR_LINK
+      #   value: https://exemplo.com
+      #
       # NOTA: ARGUS_ALLOWED_ORIGINS fica de fora de propósito. A app e a API são
       # servidas no mesmo domínio, portanto CORS desligado é o mais seguro
       # (o navegador bloqueia a leitura de qualquer outra origem). Se alguma vez

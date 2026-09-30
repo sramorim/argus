@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { api, type Plan, type User, CONTACTO, pedidoPlanoLink } from '../api';
+import { api, type Plan, type User, CONTACTO, useContacto, pedidoPlanoLink } from '../api';
 import { Icon } from '../components/Icons';
 import { Modal, Note, Skeleton, useToast } from '../components/ui';
 
@@ -7,6 +7,7 @@ export default function Plans({ user }: { user: User }) {
   const [plans, setPlans] = useState<Plan[] | null>(null);
   const [ask, setAsk] = useState<Plan | null>(null);
   const toast = useToast();
+  const wa = useContacto();
 
   useEffect(() => { api.plans().then((r) => setPlans(r.plans)).catch(() => setPlans([])); }, []);
 
@@ -41,10 +42,9 @@ export default function Plans({ user }: { user: User }) {
             <p><b>3.</b> Recarregas a página: o plano, as cotas e as ferramentas trancadas mudam logo.</p>
           </div>
           <div>
-            <a className="btn btn-quiet" href={`https://wa.me/${CONTACTO.whatsapp}`}
-              target="_blank" rel="noopener noreferrer">
-              {CONTACTO.label}
-            </a>
+            {wa && <a className="btn btn-quiet" href={wa.link} target="_blank" rel="noopener noreferrer">
+              {wa.label}
+            </a>}
           </div>
         </div>
       </div>
@@ -55,7 +55,7 @@ export default function Plans({ user }: { user: User }) {
         actions={ask ? (
           <>
             <button className="btn btn-quiet" type="button" onClick={async () => {
-              const link = pedidoPlanoLink(ask, user);
+              const link = pedidoPlanoLink(ask, user, wa?.whatsapp ?? CONTACTO.whatsapp);
               try {
                 await navigator.clipboard.writeText(link);
                 toast('ok', 'Link do pedido copiado. É só abrir e enviar.');
@@ -65,7 +65,7 @@ export default function Plans({ user }: { user: User }) {
             }}>
               <Icon.copy width={15} height={15} /> copiar
             </button>
-            <a className="btn btn-primary" href={pedidoPlanoLink(ask, user)}
+            <a className="btn btn-primary" href={pedidoPlanoLink(ask, user, wa?.whatsapp ?? CONTACTO.whatsapp)}
               target="_blank" rel="noopener noreferrer">
               <Icon.phone width={15} height={15} /> pedir no WhatsApp
             </a>

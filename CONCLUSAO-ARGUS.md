@@ -47,11 +47,11 @@ para dar volume a quem já usa as Pro.
 > **Volte a correr antes de concluir que algo está partido** — e confirme sempre à
 > mão, como foi feito aqui.
 
-### 221 verificações automáticas, todas a passar
+### 234 verificações automáticas, todas a passar
 
 | Comando | Resultado | Custo |
 |---|---|---|
-| `npm test` | 79 segurança + 16 parsers + **14 UI/DOM** = **109** | ~40 s |
+| `npm test` | 79 segurança + 16 parsers + **26 UI/DOM** = **121** | ~50 s |
 | `npm run test:api` | **48** (HTTP a sério, com cookies e CSRF) | ~2 min |
 | `npm run test:prod` | **15** (arranque em condições de produção) | ~2,5 min |
 | `npm run test:audit` | **49** (alvos reais na rede) | ~1 min |
@@ -230,6 +230,34 @@ Uma sessão completa contra um servidor real, com cookies e tudo:
 ---
 
 ## 4. IDENTIDADE VISUAL
+
+### Marca e assinatura
+- **Marca:** `SR. Amorim` (com ponto, sempre). Nome legal em `ARGUS_AUTHOR_LEGAL`.
+- **Rodapé:** `SR. AMORIM` · Criado e desenvolvido por SR. Amorim ·
+  © 2026 SR. Amorim. Todos os direitos reservados.
+- Aparece na landing, no rodapé da aplicação, na barra lateral e no cartão de login.
+- **Canais:** WhatsApp (vem do servidor, `ARGUS_CONTACTO_WHATSAPP`). Instagram, Telegram
+  e X **não estão declarados**, por isso não aparecem — não se inventam URLs. O
+  `render.yaml` e o `config.ts` estão prontos para os receber quando existirem.
+
+### Paleta
+Azul profissional e controlado. As superfícies são quase neutras com um tom azul
+muito baixo; o azul entra como cor de acção, destaque e estado activo.
+
+```
+--bg        #07111F    --surface   #0D1B2A    --line      #1E334A
+--blue      #1677FF    --blue-2    #2F8CFF    --blue-3    #58B0FF
+--t-1       #F4F7FB    --t-3       #91A4B8    --erro      #EF4444  --ok  #22C55E
+```
+
+Sem verde Matrix, sem estética hacker, sem neon, sem visual gamer, sem excesso de
+gradientes.
+
+### Estrutura
+Sidebar com **7 camadas expansíveis** (o grupo da ferramenta aberta fica marcado),
+painel como primeiro ecrã com **"Nova investigação"** como acção principal, e as
+ferramentas organizadas **por objetivo do utilizador** — nunca despejadas uma a uma.
+
 
 - **Símbolo**: o olho do guardião. Geometria única em coordenadas 0..32, espelhada por
   `scripts/make-icons.mjs` — o SVG, o favicon, os ícones e a capa social vêm todos da

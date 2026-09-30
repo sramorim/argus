@@ -44,7 +44,7 @@ export default function History({ setView }: { setView: (v: View) => void }) {
       {rows === null ? <div className="card"><Skeleton lines={5} /></div> : rows.length === 0 ? (
         <div className="card">
           <Empty icon={Icon.history} title="Ainda não há execuções"
-            action={<button className="btn btn-primary btn-sm" type="button" onClick={() => setView({ k: 'catalog' })}>ver ferramentas</button>}>
+            action={<button className="btn btn-primary btn-sm" type="button" onClick={() => setView({ k: 'nova' })}>começar uma investigação</button>}>
             Quando correres uma ferramenta, o resultado completo fica aqui — com as fontes que o
             sustentam, mesmo dias depois.
           </Empty>

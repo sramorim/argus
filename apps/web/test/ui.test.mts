@@ -44,6 +44,7 @@ g.window = dom.window;
 g.document = dom.window.document;
 g.navigator ??= dom.window.navigator;
 g.HTMLElement = dom.window.HTMLElement;
+g.Element = dom.window.Element;
 g.Node = dom.window.Node;
 g.Event = dom.window.Event;
 g.KeyboardEvent ??= dom.window.KeyboardEvent;
@@ -52,6 +53,12 @@ g.getComputedStyle ??= () => ({ getPropertyValue: () => '' });
 g.matchMedia ??= () => ({ matches: false, addEventListener() {}, removeEventListener() {} });
 g.window.matchMedia ??= g.matchMedia;
 g.requestAnimationFrame ??= (fn: FrameRequestCallback) => setTimeout(() => fn(0), 0);
+// O linkedom nao implementa scrollTo nem scrollIntoView, e o AppShell chama os
+// dois ao navegar. Sem este stub o teste morre com "not a function" e nunca chega
+// a verificar o que interessa.
+g.window.scrollTo ??= (() => {}) as any;
+g.window.scroll ??= (() => {}) as any;
+if (!g.Element.prototype.scrollIntoView) g.Element.prototype.scrollIntoView = function () {};
 g.cancelAnimationFrame ??= (id: any) => clearTimeout(id);
 g.window.requestAnimationFrame ??= g.requestAnimationFrame;
 g.IS_REACT_ACT_ENVIRONMENT = true;
@@ -212,14 +219,212 @@ test('as categorias de ferramenta têm todas ícone e nome próprios', () => {
   assert.equal(semNome.join(','), '', 'sem nome (o utilizador veria o id cru)');
 });
 
-test('o pedido de plano é um link de verdade, não um "pedido registado" falso', () => {
-  const plans = readFileSync(join(SRC, 'pages', 'Plans.tsx'), 'utf8');
-  assert.match(plans, /wa\.me/, 'o fluxo de ativação tem de abrir um canal de contacto real');
-  assert.ok(!/Pedido registado/.test(plans), '"Pedido registado" é mentira: nada é registado');
+/**
+ * A arquitectura de informação é a decisão de produto mais importante do
+ * frontend, e é o que a referência usada de exemplo demonstra melhor: agrupar
+ * por objetivo, não despejar tudo num índice.
+ *
+ * Estes testes montam a app com o catálogo real e verificam que a navegação
+ * corresponde ao que o `ia.ts` declara. Se um grupo apanhar uma ferramenta que
+ * não lhe pertence, ou se uma ferramenta desaparecer de todos os grupos, o
+ * teste falha — que é exactamente o tipo de coisa que só se descobre a abrir.
+ */
+test('a navegação é por grupos, e cada ferramenta está exactamente num', () => {
+  const tools = H.stubApi();
 
+  // 1. As 26 ferramentas do catálogo estão todas em algum grupo.
+  const porId = new Map(tools.map((t) => [t.id, t]));
+  const faltam = H.GRUPOS.flatMap((g) => g.ferramentas).filter((id) => !porId.has(id));
+  assert.equal(faltam.join(', '), '', 'ferramentas em grupos que não existem no catálogo: ' + faltam.join(', '));
+
+  // 2. Nenhuma ferramenta está em dois grupos (senão aparece duas vezes no menu).
+  const contagem = new Map<string, number>();
+  for (const g of H.GRUPOS) for (const id of g.ferramentas) contagem.set(id, (contagem.get(id) ?? 0) + 1);
+  const duplicadas = [...contagem].filter(([, n]) => n > 1).map(([id]) => id);
+  assert.equal(duplicadas.join(', '), '', 'ferramentas em mais de um grupo: ' + duplicadas.join(', '));
+
+  // 3. Toda a ferramenta do catálogo está em algum grupo.
+  const todas = new Set(H.GRUPOS.flatMap((g) => g.ferramentas));
+  const orfas = tools.map((t) => t.id).filter((id) => !todas.has(id));
+  assert.equal(orfas.join(', '), '', 'ferramentas do catálogo sem grupo (ficariam inalcançáveis): ' + orfas.join(', '));
+});
+
+test('a organização não promete ferramentas que não existem', () => {
+  const tools = H.stubApi();
+  const ids = new Set(tools.map((t) => t.id));
+  // A referência tem Instagram/TikTok/X/Reddit/YouTube e Leak Check. Aqui não
+  // existem e não podem ser prometidas. Este teste existe para travar essa
+  // tentação, que é o modo mais fácil de passar de "26 reais" a "36 inventadas".
+  const inexistentes = ['instagram', 'tiktok', 'twitter', 'reddit', 'youtube', 'leak-check', 'onion-finder'];
+  for (const g of H.GRUPOS) {
+    for (const id of g.ferramentas) {
+      assert.ok(
+        !inexistentes.includes(id),
+        `o grupo "${g.nome}" lista "${id}", que não é uma ferramenta do ARGUS`,
+      );
+    }
+    assert.ok(
+      g.ferramentas.every((id) => ids.has(id)),
+      `o grupo "${g.nome}" lista ferramentas que não existem: ${g.ferramentas.filter((i) => !ids.has(i)).join(', ')}`,
+    );
+    assert.ok(g.resumo.length > 20, `o grupo "${g.nome}" não explica o que serve`);
+  }
+});
+
+test('os grupos são poucos e descritos — a sidebar não é uma lista gigante', () => {
+  assert.ok(H.GRUPOS.length <= 9, `${H.GRUPOS.length} grupos é demasiado para um menu lateral`);
+  for (const g of H.GRUPOS) {
+    assert.ok(g.nome.length >= 3 && g.nome.length <= 30, `nome de grupo estranho: "${g.nome}"`);
+    assert.ok(g.ferramentas.length >= 1, `grupo "${g.nome}" vazio`);
+  }
+});
+
+test('a busca encontra por nome, etiqueta e grupo', () => {
+  const tools = H.stubApi();
+  // A busca também acerta pelo resumo do grupo, por isso "username" devolve a
+  // ferramenta E as irmãs do mesmo grupo. O que se exige é que a ferramenta
+  // esteja lá — não que a busca seja uma lista exacta.
+  assert.ok(H.buscar(tools, 'username').some((t: any) => t.id === 'username-finder'), 'devia achar o localizador de username');
+  assert.ok(H.buscar(tools, 'telefone').length >= 1, 'devia achar o analisador de telefone');
+  assert.ok(H.buscar(tools, 'dns').length >= 1, 'devia achar por etiqueta');
+  assert.ok(H.buscar(tools, 'infraestrutura').length >= 1, 'devia achar pelo nome do grupo');
+  assert.equal(H.buscar(tools, 'nao-existe-nada').length, 0, 'não devia inventar resultados');
+});
+
+/** A app montada de verdade, com o shell e o painel. */
+function montaApp(so: Record<string, unknown> = {}, vista: string = 'dashboard') {
+  const tools = H.stubApi(so);
+  const user = { userId: 'u1', plan: 'free', email: 'ui@exemplo.test', name: 'UI', isAdmin: false };
+  const V = H.VISTAS.find((v: any) => v.id === vista) ?? H.VISTAS[0];
+  const view = { k: V.id } as any;
+  return {
+    tools,
+    t: H.monta(H.el(H.AppShell, {
+      user, tools, usage: { today: 2, daily: 15, concurrent: 1, inflight: 0 },
+      view, setView: () => {}, onLogout: () => {}, refreshUser: () => {},
+    })),
+  };
+}
+
+test('a app monta a sidebar com camadas expansíveis e marca a atual', () => {
+  const { t } = montaApp();
+  const html = t.html();
+  // Não se assume a ordem dos atributos no HTML (o renderizador põe-nos por
+  // ordem alfabética): apanha-se o <div ...> cujos atributos trazem class="layer".
+  const camadas = [...html.matchAll(/<div ([^>]*class="layer"[^>]*)>/g)].map((m) => m[1]);
+  assert.equal(camadas.length, H.GRUPOS.length, `deviam ser ${H.GRUPOS.length} camadas, apareceram ${camadas.length}`);
+
+  // Todas começam fechadas excepto a primeira: é o que evita a parede de texto.
+  const abertas = camadas.map((atributos) => atributos.includes('data-open="true"'));
+  assert.equal(abertas.filter(Boolean).length, 1, 'só uma camada deve estar aberta de inicio');
+  assert.equal(abertas[0], true, 'a primeira camada devia estar aberta');
+  assert.ok(abertas.slice(1).every((a) => a === false), 'as restantes deviam estar fechadas');
+  assert.ok(/aria-expanded="false"/.test(html), 'o botão das camadas fechadas devia dizer aria-expanded=false');
+  // Cada camada abre e fecha: é o comportamento que se pede, não uma lista.
+  assert.equal((html.match(/aria-expanded="(true|false)"/g) ?? []).length, H.GRUPOS.length,
+    'cada camada tem de ter um botão que abre e fecha');
+  t.desmontar();
+});
+
+test('o painel é o primeiro ecrã e tem a acção principal em grande', () => {
+  const { t } = montaApp();
+  const html = t.html();
+  assert.match(html, /Nova investigação/, 'falta a acção principal');
+  assert.match(html, /hero-panel/, 'falta o bloco principal do painel');
+  // O painel não pode despejar 26 cartões: tem de estar agrupado.
+  const cartoes = (html.match(/class="tool-card"/g) ?? []).length;
+  assert.ok(cartoes <= H.GRUPOS.length, `${cartoes} cartões soltos no painel — o objectivo é agrupar, não despejar`);
+  // E tem de mostrar o estado real da cota, não um número inventado.
+  assert.match(html, /2\/15/, 'não mostra o uso real da cota');
+  t.desmontar();
+});
+
+test('o rodapé leva a marca e o copyright', () => {
+  const { t } = montaApp();
+  const html = t.html();
+  assert.match(html, /© 2026 SR\. Amorim/, 'falta o copyright no rodapé');
+  assert.match(html, /Todos os direitos reservados/);
+  assert.match(html, /wa\.me\/5547997876098/, 'o WhatsApp tem de vir do servidor');
+  t.desmontar();
+});
+
+test('a paleta é azul profissional — sem verde de Matrix nem vermelho de gamer', () => {
+  const css = readFileSync(join(SRC, 'styles.css'), 'utf8');
+  // Lê o valor pelo nome do token, sem depender do alinhamento de espaços.
+  const token = (nome: string) => new RegExp(nome + '\\s*:\\s*(#[0-9A-Fa-f]{3,8})').exec(css)?.[1];
+  const esperado: Record<string, string> = {
+    '--bg': '#07111F',
+    '--surface': '#0D1B2A',
+    '--surface-2': '#102338',
+    '--line': '#1E334A',
+    '--blue': '#1677FF',
+    '--blue-2': '#2F8CFF',
+    '--blue-3': '#58B0FF',
+    '--t-1': '#F4F7FB',
+    '--t-3': '#91A4B8',
+    '--erro': '#EF4444',
+    '--ok': '#22C55E',
+  };
+  for (const [nome, valor] of Object.entries(esperado)) {
+    assert.equal(token(nome), valor, `${nome} devia ser ${valor}, obtive ${token(nome)}`);
+  }
+  // E não pode haver verde Matrix como cor de interface.
+  assert.ok(!/#00FF00|#0F0\b|green/i.test(css), 'há verde na interface');
+});
+
+test('o pedido de plano é um canal de contacto real, não um "pedido registado" falso', () => {
+  const plans = readFileSync(join(SRC, 'pages', 'Plans.tsx'), 'utf8');
   const api = readFileSync(join(SRC, 'api.ts'), 'utf8');
+
+  // O link pode vir de dois sítios legítimos: escrito à mão, ou montado pelo
+  // servidor. O que é proibido é o botão que confirma um pedido que ninguém
+  // recebeu.
+  assert.ok(
+    /wa\.me/.test(plans) || /pedidoPlanoLink/.test(plans),
+    'o fluxo de ativação tem de abrir um canal de contacto real',
+  );
+  assert.ok(!/Pedido registado/.test(plans), '"Pedido registado" é mentira: nada é registado');
   assert.match(api, /export function pedidoPlanoLink/, 'falta o link de pedido com a mensagem pronta');
   assert.match(api, /encodeURIComponent/, 'a mensagem tem de ser percent-encoded na URL');
+
+  // E o número tem de vir do servidor, para não voltar a divergir do Contacto.
+  const server = readFileSync(join(ROOT, 'apps', 'server', 'src', 'index.ts'), 'utf8');
+  assert.match(server, /app\.get\('\/api\/contact'/, 'o servidor tem de ser a fonte do contacto');
+});
+
+/**
+ * O número de WhatsApp e o nome do autor não podem estar escritos à mão no
+ * frontend: já aconteceu o número divergir do que o dono usava, em três
+ * sítios diferentes, e ninguém deu por isso.
+ */
+test('o contacto e a autoria vêm do servidor, não escritos à mão', () => {
+  const server = readFileSync(join(ROOT, 'apps', 'server', 'src', 'index.ts'), 'utf8');
+  assert.match(server, /app\.get\('\/api\/contact'/, 'falta o endpoint /api/contact');
+  assert.match(server, /config\.contacto\.whatsapp/, 'o endpoint tem de ler o contacto da config');
+
+  const config = readFileSync(join(ROOT, 'apps', 'server', 'src', 'config.ts'), 'utf8');
+  assert.match(config, /ARGUS_CONTACTO_WHATSAPP/, 'o número tem de vir do ambiente');
+  assert.match(config, /ARGUS_AUTHOR/, 'o autor tem de vir do ambiente');
+  // A validação é o que impede o número errado de voltar.
+  assert.match(config, /celular brasileiro tem 9 digitos/, 'falta a validação do formato do número');
+
+  // Nenhuma página pode ter o número colado.
+  const paginas: string[] = [];
+  const anda = (dir: string) => {
+    for (const e of readdirSync(dir, { withFileTypes: true })) {
+      const p = join(dir, e.name);
+      if (e.isDirectory()) anda(p);
+      else if (/\.tsx$/.test(e.name)) paginas.push(p);
+    }
+  };
+  anda(join(SRC, 'pages'));
+  for (const f of paginas) {
+    const src = readFileSync(f, 'utf8');
+    assert.ok(
+      !/55\s?4?79?\d{9}/.test(src),
+      `${f} tem um número de WhatsApp escrito à mão — tem de vir de /api/contact`,
+    );
+  }
 });
 
 test('a marca é a mesma no React e nos ficheiros SVG', () => {
@@ -360,13 +565,16 @@ test('toda variável de produção de que o código precisa está no render.yaml
     for (const m of src.matchAll(/(?:str|bool|int|list)\('([A-Z_][A-Z0-9_]*)'/g)) usadas.add(m[1]!);
   }
 
-  // HOST e PORT são injected pelo Render; as de tuning têm valor por omissão
-  // razoável e não precisam de ser declaradas.
+  // HOST e PORT são injected pelo Render; as de tuning e as deliberadamente
+  // opcionais têm valor por omissão razoável e não precisam de ser declaradas.
   const injetadas = new Set(['HOST', 'PORT']);
   const opcionais = new Set([
     'ARGUS_ALLOWED_ORIGINS', 'ARGUS_AUTH_MAX', 'ARGUS_AUTH_WINDOW_MIN',
     'ARGUS_COOKIE_SAMESITE', 'ARGUS_IP_MAX', 'ARGUS_REGISTER_MAX', 'ARGUS_RUN_MAX',
     'ARGUS_SESSION_DAYS', 'ARGUS_UPLOAD_MAX', 'ARGUS_WEB_DIST',
+    // O link do autor só existe se o dono tiver um site para pôr lá. Vazio =
+    // o rodapé mostra o copyright sem link, que é o comportamento pretendido.
+    'ARGUS_AUTHOR_LINK',
   ]);
 
   const declaradas = new Set([...yml.matchAll(/^\s*-\s*key:\s*([A-Z_][A-Z0-9_]*)/gm)].map((m) => m[1]!));

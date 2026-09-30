@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { api, ApiError } from '../api';
+import { api, ApiError, useContacto } from '../api';
 import { Icon } from '../components/Icons';
 import { Mark, Note } from '../components/ui';
 
@@ -25,6 +25,7 @@ export default function Auth({ onDone }: { onDone: () => void }) {
   const [password, setPassword] = useState('');
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
+  const wa = useContacto();
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -92,6 +93,11 @@ export default function Auth({ onDone }: { onDone: () => void }) {
             Sem cartão, sem trial que expira. Só dados públicos e uso defensivo.
           </p>
         )}
+
+        <div className="auth-credit">
+          <div>{wa?.copyright ?? '© 2026 Daniel Senhor Amorim'}</div>
+          {wa && <a href={wa.link} target="_blank" rel="noopener noreferrer">{wa.label}</a>}
+        </div>
       </form>
     </div>
   );
