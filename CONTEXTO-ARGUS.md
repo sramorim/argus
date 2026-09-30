@@ -86,13 +86,14 @@ Sem TypeScript compiler no arranque — usa-se o strip-types nativo do Node
 
 ### Estrutura
 ```
-probe/
-├── package.json                 (workspaces: server + web)
+argus/   (repo https://github.com/sramorim/argus — o ARGUS vive na RAIZ)
+├── package.json                 (workspaces: @argus/server + @argus/web)
 ├── package-lock.json            (tem de bater certo com o package.json — o `npm ci`
 │                                 do Render depende disso; há teste que compara)
-├── render.yaml                  Blueprint do Render: disco persistente + serviço
+├── render.yaml                  Blueprint do Render: raiz do repo + disco persistente
 ├── .env.example                 variáveis obrigatórias, comentadas
 ├── .gitignore                   (NUNCA commitar apps/server/data/*.db)
+├── COMO-POR-ONLINE.md           passo a passo para o dono
 ├── run.sh                       arrancar/parar em background no Termux
 ├── scripts/
 │   ├── make-icons.mjs           gera favicon, apple-touch, 192, 512 e a capa 1200x630
@@ -158,15 +159,16 @@ probe/
 │       │       ├── Icons.tsx        40 ícones próprios 24x24
 │       │       └── ui.tsx           marca, cartões, estados, avisos, modal, toast
 │       └── test/
-│           ├── ui.test.mts       14 testes (3 com DOM real)
+│           ├── ui.test.mts       17 testes (3 com DOM real)
 │           └── harness.tsx      o que é montado pelos testes de DOM
 ```
 
 ### Comandos
 ```bash
 # Verificações (ver ARGUS-CHECKPOINT.md para o tempo em cada uma)
+# o repositório de produção é https://github.com/sramorim/argus
 npm ci
-npm test                  # 109: 79 segurança + 16 parsers + 14 interface
+npm test                  # 112: 79 segurança + 16 parsers + 17 interface
 npm run test:api          # 48
 npm run test:prod         # 15
 npm run typecheck         # server + web, em paralelo
@@ -175,10 +177,10 @@ npm run test:audit        # 49 casos reais, precisa de rede
 npm run icons             # regenera favicon, ícones e capa social
 
 # Terminal 1 — API
-cd probe/apps/server
+cd ~/argus/apps/server
 node src/index.ts                                   # porta 8787
-# ou, em background e a sobreviver ao fim do comando:
-./run.sh start   # e depois: status | log | stop | restart | reset
+# ou, a partir da raiz e em background, a sobreviver ao fim do comando:
+cd ~/argus && ./run.sh start   # e depois: status | log | stop | restart | reset
 ```
 
 > **Nota Termux:** para o servidor sobreviver ao fim de um comando de shell:
@@ -373,17 +375,17 @@ por `window.innerWidth` no render.
 
 ```bash
 # 0. Verificações automáticas (não precisam do servidor)
-cd probe && npm ci                # tem de bater certo com o lock
-cd probe && npm test              # 109: 79 segurança + 16 parsers + 14 interface
-cd probe && npm run test:ui       # só os 14 de interface (3 com DOM real)
-cd probe && npm run test:api      # 48, HTTP a sério
-cd probe && npm run test:prod     # 15, arranque em condições de produção
-cd probe && npm run typecheck     # server + web, em paralelo (~2-4 min no Termux)
-cd probe && npm run build         # build do frontend
-cd probe && npm run test:audit    # 49 casos reais, ~1 min, usa a rede
+cd ~/argus && npm ci                # tem de bater certo com o lock
+cd ~/argus && npm test              # 109: 79 segurança + 16 parsers + 14 interface
+cd ~/argus && npm run test:ui       # só os 14 de interface (3 com DOM real)
+cd ~/argus && npm run test:api      # 48, HTTP a sério
+cd ~/argus && npm run test:prod     # 15, arranque em condições de produção
+cd ~/argus && npm run typecheck     # server + web, em paralelo (~2-4 min no Termux)
+cd ~/argus && npm run build         # build do frontend
+cd ~/argus && npm run test:audit    # 49 casos reais, ~1 min, usa a rede
 
 # 1. Arrancar
-cd probe && ./run.sh start
+cd ~/argus && ./run.sh start
 curl -s localhost:8787/api/health      # {"ok":true,"tools":26,"db":{"writable":true}}
 
 # 2. Registo
@@ -420,12 +422,12 @@ Administradores: `UPDATE users SET is_admin=1 WHERE email='...';` ou a variável
    do banco a cada pedido, e o próprio utilizador não se pode despromover.
 4. **Pagamento**: só quando houver autorização para conta externa. Hoje a ativação é
    manual por WhatsApp, com o pedido já escrito.
-5. **Testes automatizados** — **FEITO.** 221 verificações:
+5. **Testes automatizados** — **FEITO.** 224 verificações:
    - `security.test.ts` — 79 (SSRF, quotas, locks, crypto/BYOK, proveniência, cache, poda).
    - `parsers.test.ts` — 16 (EXIF sobre JPEG real, `detectSeedType`).
    - `api.test.ts` — 48 (HTTP a sério: cookies, CSRF, quotas, admin, estáticos, SPA).
    - `smoke-prod.ts` — 15 (recusa arrancar com config errada; dados sobrevivem a restart).
-   - `apps/web/test/ui.test.mts` — 14 (3 com DOM real; integridade de CSS, ícones, OG, e o `buildCommand` do Render).
+   - `apps/web/test/ui.test.mts` — 17 (3 com DOM real; integridade de CSS, ícones, OG, e o `render.yaml` do Render: `rootDir`, workspaces e variáveis de ambiente).
 6. **Métricas de latência**: mediana **357 ms** por execução na auditoria; o pior caso é
    `tls-audit` (8,8 s) e `reputation-check` (7,3 s a frio, ~1 ms com cache).
 

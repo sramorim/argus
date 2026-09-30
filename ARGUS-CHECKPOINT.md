@@ -1,7 +1,8 @@
 # ARGUS — CHECKPOINT
 
-**Data:** 2026-09-30 06:30 UTC · **Estado:** verde · **Fase:** pronto a publicar
-**Guia para pôr online:** `COMO-POR-ONLINE.md` · **Detalhe máquina-legível:** `ARGUS-STATE.json`
+**Data:** 2026-09-30 11:40 UTC · **Estado:** verde · **Fase:** pronto a redeploy
+**Repositório:** https://github.com/sramorim/argus (código na raiz) · **Guia:** `COMO-POR-ONLINE.md`
+**Detalhe máquina-legível:** `ARGUS-STATE.json`
 **Conclusão:** `CONCLUSAO-ARGUS.md` · **Contexto completo:** `CONTEXTO-ARGUS.md`
 
 ---
@@ -25,8 +26,10 @@ era grande.
    `npm run test:audit` (49 casos com alvos reais) e uma sessão manual ponta a ponta
    contra um servidor real. Detalhe em `CONCLUSAO-ARGUS.md`.
 
-2. **Nove defeitos reais corrigidos**, dos quais **quatro eram suficientes para
+2. **Dez defeitos reais corrigidos**, dos quais **cinco eram suficientes para
    impedir o deploy**:
+   - o `render.yaml` declarava `rootDir: probe`, herdado do layout antigo, e o
+     Render recusava criar o serviço com *"Root directory 'probe' does not exist"*;
    - o `ToastHost` nunca era montado e **todos os avisos da aplicação estavam mudos**;
    - `@types/jpeg-js@^0.4.1` não existe no registo, por isso **o `npm ci` do Render
      falhava** e o serviço nunca subia;
@@ -66,14 +69,14 @@ era grande.
 
 | Verificação | Resultado |
 |---|---|
-| `npm test` | 79 segurança + 16 parsers + 14 interface = **109/109** |
+| `npm test` | 79 segurança + 16 parsers + 17 interface = **112/112** |
 | `npm run test:api` | **48/48** |
 | `npm run test:prod` | **15/15** |
 | `npm run test:audit` | **49/49**, 26/26 ferramentas · mediana 375 ms · máx 31,9 s |
 | `npm run typecheck` | server ok · web ok |
 | `npm run build` | ok → `apps/web/dist` (94 kB gzip) |
 | `npm ci` | ok de raiz; **98 pacotes** com `NODE_ENV=production --include=dev` (sem o `--include=dev` seriam 9 e o build do Render falharia) |
-| **Total** | **221 verificações** |
+| **Total** | **224 verificações** |
 
 Comandos: `npm test` · `npm run test:api` · `npm run test:prod` · `npm run typecheck` ·
 `npm run build` · `npm run test:audit` · `npm run icons` · `./run.sh start|stop|restart|status|log|reset`
@@ -92,12 +95,10 @@ Comandos: `npm test` · `npm run test:api` · `npm run test:prod` · `npm run ty
 **O passo a passo está em `COMO-POR-ONLINE.md`.** Resumo em dez linhas:
 
 ```bash
-cd ~/central-amorim
-git add probe/ && git status          # confirmar que não aparece nenhum .db
-git commit -m "ARGUS: plataforma OSINT" && git push origin main
+cd ~/argus
 openssl rand -hex 32                 # anotar: é o ARGUS_SECRET
 ```
-Depois, no browser: **render.com → New + → Blueprint → sramorim/central-amorim**, com
+Depois, no browser: **render.com → New + → Blueprint → sramorim/argus**, com
 `ARGUS_SECRET` = o valor anotado e `ARGUS_ADMIN_EMAILS` = o teu e-mail. Esperar 3-6 min,
 abrir `/api/health`, registar-te com esse e-mail, e em Settings → Custom Domains apontar
 `argus.senhoramorim.com.br` com o CNAME que o Render der.

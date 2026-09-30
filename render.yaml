@@ -1,11 +1,20 @@
 # ARGUS — configuração do serviço no Render (Blueprint).
 #
-# Como usar: no Render, "New +" → "Blueprint" → escolher este repositório.
-# O Render lê este ficheiro e cria o serviço, o disco e as variáveis já com os valores certos.
+# Como usar: no Render, "New +" → "Blueprint" → escolher o repositório
+# `sramorim/argus`. O Render lê este ficheiro e cria o serviço, o disco e as
+# variáveis já com os valores certos.
 #
-# IMPORTANTE: este ficheiro só funciona se o código do ARGUS estiver no repositório Git.
-# A pasta probe/ ainda NÃO foi commitada — é o primeiro passo antes de criar o serviço.
-# Passo a passo em CONCLUSAO-ARGUS.md §6.
+# ---------------------------------------------------------------------------
+# ROOT DIRECTORY: a raiz do repositório. NÃO existe aqui nenhuma pasta "probe".
+#
+# Este ficheiro vivia dentro de `central-amorim/probe/`, por isso trazia
+# `rootDir: probe`. Quando o ARGUS passou a ter repositório próprio
+# (sramorim/argus) com o código na raiz, esse `rootDir` passou a apontar para
+# um directório inexistente e o Render recusava criar o serviço com:
+#     "Root directory 'probe' does not exist"
+# A correcção é não declarar `rootDir` — o Render constrói a partir da raiz.
+# Todos os comandos abaixo são relativos à raiz (apps/server, apps/web).
+# ---------------------------------------------------------------------------
 
 services:
   - type: web                     # Web Service (precisa de responder HTTP; nao e Background Worker)
@@ -13,8 +22,9 @@ services:
     runtime: node
     plan: starter                 # o plano Free nao tem disco persistente
     region: oregon
-    rootDir: probe                # o ARGUS vive dentro da pasta probe/ deste repositório
     branch: main
+    # SEM `rootDir`: o ARGUS vive na raiz deste repositório.
+    # (apps/server e apps/web são as workspaces npm, não um root directory.)
     numInstances: 1               # 1 só: SQLite num único ficheiro não aguenta 2 processos a escrever
 
     # ---- build e arranque ----
@@ -59,3 +69,9 @@ services:
         value: "true"
       - key: ARGUS_PUBLIC_ORIGIN
         value: https://argus.senhoramorim.com.br
+
+      # NOTA: ARGUS_ALLOWED_ORIGINS fica de fora de propósito. A app e a API são
+      # servidas no mesmo domínio, portanto CORS desligado é o mais seguro
+      # (o navegador bloqueia a leitura de qualquer outra origem). Se alguma vez
+      # precisares de um domínio separado, declara-o aqui — nunca "*", que o
+      # config.ts recusa no arranque.

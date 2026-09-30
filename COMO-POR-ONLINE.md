@@ -1,201 +1,150 @@
 # ARGUS — Como pôr online
 
-Guia passo a passo. **Só precisas de fazer isto uma vez.** Cada passo diz o que fazer,
-o que escrever e o que tem de aparecer no ecrã para saber que correu bem.
+Guia passo a passo. **O código já está no GitHub**, em
+**https://github.com/sramorim/argus** — o ARGUS vive na raiz desse repositório, sem
+pasta nenhuma por fora.
 
-Se algo correr mal, o passo tem uma secção "se correr mal" com o que fazer.
+Se cada passo corre bem, faz o seguinte. Se algum correr mal, o passo tem uma secção
+"se correr mal" — ou manda-me o erro tal e como aparece.
 
 ---
 
-## Passo 1 — Meter o código no GitHub
+## Passo 1 — Gerar o segredo
 
-O Render só consegue construir o site se o código estiver no GitHub. Hoje a pasta
-`probe/` **ainda não está lá**.
-
-Abre o terminal e corre, **uma linha de cada vez**:
+O Render vai pedir este valor, por isso foca-o **antes** de criar o serviço.
 
 ```bash
-cd ~/central-amorim
-git add probe/
-git status
+openssl rand -hex 32
 ```
 
-> **Olha para o ecrã antes de continuar.** Tens de ver uma lista de ficheiros a dizer
-> `new file:` ou `modified:`. Confirma que **não aparece nenhum** ficheiro terminado em
-> `.db` (base de dados) — se aparecer, pára e diz-me.
->
-> Devem ser ~71 ficheiros.
+Vai aparecer uma linha de 64 caracteres, tipo `a1b2c3d4e5f6...`. **Copia-a.**
 
-Se estiver tudo certo:
-
-```bash
-git commit -m "ARGUS: plataforma OSINT com proveniencia, 26 ferramentas testadas"
-git push origin main
-```
-
-> **Nota:** estamos na branch `main` e a mandar para `github.com/sramorim/central-amorim`.
-> O Render vai ler exatamente esta branch. Não uses `git add .` — há outras alterações
-> nesse projeto (o site principal) que são Separate e não entram aqui.
-
-**Se correr mal:** se o `git push` pedir palavra-passe, o GitHub já não aceita a senha
-normal. Vai a *Settings → Developer settings → Personal access tokens* e gera um token
-com acesso ao repositório.
+> **Guarda isto num sítio seguro** (notas do telemóvel, gestor de senhas). Se perderes
+> esta chave: quem estiver com sessão iniciada é desligado, e as chaves de API que os
+> utilizadores guardaram deixam de poder ser lidas. Não é grave, mas obriga a refazer.
 
 ---
 
 ## Passo 2 — Criar o serviço no Render
 
 1. Vai a **https://render.com** e entra na tua conta.
-2. Clica em **New +** → **Blueprint**.
-3. Escolhe o repositório **sramorim/central-amorim**.
-4. O Render lê o ficheiro `probe/render.yaml` e mostra o plano. Confirma:
+2. **New +** → **Blueprint**.
+3. Escolhe o repositório **sramorim/argus**.
+4. Confirma o plano que aparece:
    - Region: **Oregon**
-   - Instance type: **Starter** (o Free não tem disco, e nós precisamos do disco)
-5. Clica **Apply**.
-
-O Render vai pedir **dois valores secrets**:
+   - Instance type: **Starter**
+5. O Render pede **dois valores secrets**:
 
 | O que ele pede | O que escreves |
 |---|---|
-| `ARGUS_SECRET` | o resultado do comando do Passo 3 |
+| `ARGUS_SECRET` | o resultado do Passo 1 |
 | `ARGUS_ADMIN_EMAILS` | o teu e-mail, ex. `teu@email.com` |
 
-> Preenche o `ARGUS_ADMIN_EMAILS` já agora. É o que te dá acesso ao painel de
-> administração sem precisar de mexer no banco.
+6. **Apply**.
 
-O Render começa a construir. Demora **3 a 6 minutos**.
+O Render constrói. **3 a 6 minutos.**
 
-**Se correr mal:** se aparecer "Blueprint is invalid", o problema é usually o
-`render.yaml`. Manda-me o erro.
-
----
-
-## Passo 3 — Gerar o segredo
-
-**Faz isto ANTES de escrever no passo 2**, porque o Render pede o valor.
-
-```bash
-openssl rand -hex 32
-```
-
-Vai aparecer uma linha tipo `a1b2c3d4...` (64 caracteres). **Copia-a.**
-
-> **Guarda isto num sítio seguro** (notas do telemóvel, gestor de senhas). Se perderes
-> esta chave: toda a gente que estiver com sessão iniciada é desligada, e as chaves de
-> API que os utilizadores guardaram deixam de poder ser lidas. Não é grave, mas obriga
-> a refazer.
+> O `render.yaml` já está configurado com tudo o que é preciso: disco persistente de
+> 1 GB montado em `/var/data`, o SQLite em `/var/data/argus.db`, cookies `Secure` e o
+> domínio final. **Não precisas de inventar mais nada.**
 
 ---
 
-## Passo 4 — Confirmar que o site arrancou
+## Passo 3 — Confirmar que arrancou
 
-Espera o build terminar. Depois abre o endereço que o Render deu, do género:
+Abre o endereço que o Render deu, do género `https://argus.onrender.com`.
 
-```
-https://argus.onrender.com
-```
-
-Deves ver a página do ARGUS a Loads: o olho vermelho, o título grande e os botões
-**"criar conta grátis"**.
-
-Confirma também, colando isto no browser (deve dar `{"ok":true,...}`):
+Depois confirma o estado técnico, colando isto no browser:
 
 ```
 https://argus.onrender.com/api/health
 ```
 
+Tem de aparecer:
+
+```json
+{"ok":true,"tools":26,...,"db":{"path":"/var/data/argus.db","writable":true}}
+```
+
+O `"writable":true` é o mais importante: diz que o disco está montado e a aceitar
+escritas. Se aparecer `false`, os registos iam ser perdidos a cada deploy.
+
 **Se correr mal:**
 
 | O que vês | O que fazer |
 |---|---|
-| "503 Service Unhealthy" | O disco não montou. Abre o serviço no Render → **Disks** → confirma que `argus-data` está attached em `/var/data`. |
-| "502" ou a página não abre | O build ou o arranque falhou. No Render: **Events** → vê a última linha do log. |
-| A página abre mas dá 404 | O frontend não foi construído. Manda-me print do log. |
+| **"Root directory ... does not exist"** | Já está corrigido neste repositório. Faz *Sync* / *Redeploy* para puxar a versão nova. |
+| "503 Service Unhealthy" | O disco não montou. Abre o serviço no Render → **Disks** → confirma que `argus-data` está *attached* em `/var/data`. |
+| "502" ou não abre | O build ou o arranque falhou. Em **Events**, vê a última linha do log. |
+| 404 | O frontend não foi construído. Manda-me o log. |
 
 ---
 
-## Passo 5 — Criar a tua conta de administrador
+## Passo 4 — Criar a tua conta de administrador
 
-1. No site que abriu no Passo 4, clica em **criar conta grátis**.
+1. No site, clica em **criar conta grátis**.
 2. Regista-te **com o mesmo e-mail** que escreveste em `ARGUS_ADMIN_EMAILS`.
-3. Entra. No canto esquerdo deve aparecer **Administração**.
+3. Entra. No canto esquerdo tem de aparecer **Administração**.
 
-É isso: a partir de agora és administrador.
-
-> Se não aparecer "Administração", o e-mail não bateu exatamente com o que escreveste no
-> Render. Confirma em **Render → o serviço → Environment**.
+Se não aparecer, o e-mail não bateu exactamente. Confirma em **Render → argus →
+Environment**.
 
 ---
 
-## Passo 6 — Ligar o teu domínio
+## Passo 5 — Ligar o teu domínio
 
-Agora sim, o endereço oficial.
-
-1. No Render, abre o serviço **argus** → **Settings** → **Custom Domains** → **Add Custom Domain**.
-2. Escreve: `argus.senhoramorim.com.br`
-3. O Render mostra um registo **CNAME**. Anota o valor (parece `argus.onrender.com` ou
-   um código `cname.vercel-dns.com`).
-4. Vai ao painel onde geres o DNS de `senhoramorim.com.br` e cria esse registo:
+1. Render → serviço **argus** → **Settings** → **Custom Domains** → **Add Custom Domain**.
+2. Escreve `argus.senhoramorim.com.br`.
+3. O Render dá um registo **CNAME**. Anota o valor.
+4. No painel onde geres o DNS de `senhoramorim.com.br`, cria:
    - Tipo: **CNAME**
    - Nome: `argus`
    - Valor: o que o Render te deu
-   - TTL: automático / 3600
-5. **Espera de 5 minutos a 2 horas.** Depende de quanto tempo o teu provedor demora a
-   atualizar.
-6. Quando propagar, o Render emite o certificado TLS sozinho e o site passa a
-   `https://argus.senhoramorim.com.br`.
+   - TTL: automático
+5. **Espera de 5 minutos a 2 horas**, conforme o teu provedor.
 
-**Se correr mal:** depois de 2 horas sem resolver, testa em
-*https://www.nslookup.io* e vê o que aparece. Se aparecer "No A record", o teu painel de
-DNS não tem o registo certo.
+O Render emite o certificado TLS sozinho assim que o domínio resolver.
+
+**Se correr mal:** depois de 2 horas, testa em *https://www.nslookup.io*. Se disser
+"No A record", o registo no teu painel de DNS está mal criado.
 
 ---
 
-## Passo 7 — Verificar que está tudo bem
-
-Faz isto a partir do site já com o teu domínio:
+## Passo 6 — Verificar que está tudo bem
 
 | Teste | Como | O que deve acontecer |
 |---|---|---|
-| Health | abre `/api/health` | `{"ok":true,"tools":26,...}` |
+| Health | `/api/health` | `{"ok":true,"tools":26,...}` |
 | Criar conta | regista um e-mail novo | Entra no site |
-| Correr ferramenta | "Analisador de Domínio", escreve `github.com`, "investigar" | Aparecem achados + a tabela "Fontes" |
-| Trancas | "Analisador de IP"... procura uma com cadeado | Diz que precisa de plano Pro |
-| Móvel | abre no telemóvel | Menu de baixo, tudo cabe no ecrã |
+| Correr ferramenta | "Analisador de Domínio" → `github.com` → *investigar* | Achados + tabela "Fontes" |
+| Trancas | procura uma ferramenta com cadeado | Diz que precisa de plano Pro |
+| Administrador | menu lateral | "Administração" aparece |
+| Telemóvel | abre no telemóvel | Barra de baixo, tudo cabe |
 | Partilhar | manda o link no WhatsApp | Aparece a imagem do ARGUS |
 
-Se a ferramenta mostrar **"Fontes: 1 com problema"** — isso está certo e é honesto:
-significa que uma das fontes não respondeu. O site está a mostrar a verdade, que é
-exatamente o que prometemos.
-
----
-
-## Se quiseres reverter
-
-O site pode ser desligado sem perder nada: no Render, **Settings → Suspend**.
-O disco e as contas ficam guardados. Para voltar, é só **Resume**.
+> Se uma ferramenta mostrar **"fontes: 1 com problema"**, **está certo**. Significa que
+> uma das fontes não respondeu, e o site está a mostrar a verdade em vez de a esconder.
 
 ---
 
 ## Resumo numa tela
 
 ```
-1. cd ~/central-amorim
-2. git add probe/  &&  git status      (confirma: sem .db)
-3. git commit -m "ARGUS: plataforma OSINT"  &&  git push origin main
-4. openssl rand -hex 32                 (anota o resultado)
-5. render.com → New + → Blueprint → sramorim/central-amorim
-   → ARGUS_SECRET = o do passo 4
-   → ARGUS_ADMIN_EMAILS = o teu e-mail
-   → Apply   (espera 3-6 min)
-6. abre https://argus.onrender.com/api/health   →  {"ok":true,...}
-7. regista-te no site com esse e-mail → deves ver "Administração"
-8. Render → Settings → Custom Domains → argus.senhoramorim.com.br
-9. cria o CNAME no teu painel de DNS → espera propagar
-10. pronto: https://argus.senhoramorim.com.br
+1. openssl rand -hex 32                       (anota o resultado)
+2. render.com → New + → Blueprint → sramorim/argus
+     ARGUS_SECRET      = o valor do passo 1
+     ARGUS_ADMIN_EMAILS= o teu e-mail
+     Region Oregon · Starter · Apply        (espera 3-6 min)
+3. abre https://argus.onrender.com/api/health   →  {"ok":true,"tools":26,...}
+4. regista-te no site com esse e-mail        →  deve aparecer "Administração"
+5. Render → Settings → Custom Domains → argus.senhoramorim.com.br
+6. cria o CNAME no teu painel de DNS → espera propagar
+7. pronto: https://argus.senhoramorim.com.br
 ```
 
 ---
 
-Se algum passo der erro, **manda-me a mensagem de erro tal e qual como aparece** e eu
-digo-te o que fazer. Não é preciso tentar resolver sozinho.
+## Quando quiseres desligar
+
+Render → **Settings → Suspend**. O disco e as contas ficam guardados. Para voltar,
+**Resume**.

@@ -1,10 +1,10 @@
 {
   "projeto": "ARGUS",
-  "raiz": "/data/data/com.termux/files/home/central-amorim/probe",
-  "actualizado_em": "2026-09-30T06:30:00Z",
-  "fase": "pronto-a-publicar",
+  "raiz": "/data/data/com.termux/files/home/argus",
+  "actualizado_em": "2026-09-30T11:40:00Z",
+  "fase": "pronto-a-redeploy",
   "estado": "verde",
-  "resumo": "26 ferramentas registadas e provadas com 49 casos contra alvos reais; 221 verificacoes automaticas a passar; interface, identidade visual, administracao, persistencia e deploy estao prontos. Corrigidos 8 defeitos reais, quatro deles suficientes para impedir o deploy. Falta apenas o que exige a conta do dono: commitar a pasta, criar o servico no Render e apontar o dominio.",
+  "resumo": "Codigo na raiz do repositorio sramorim/argus. 224 verificacoes automaticas a passar. O primeiro deploy falhou por causa de \"rootDir: probe\" herdado do layout antigo (o ARGUS vivia dentro de central-amorim/probe/); ja foi corrigido, sem renomear nem mascarar nada. Falta so o que exige a conta do dono: criar o servico no Render, o segredo, e apontar o dominio.",
   "ambiente": {
     "node": "v26.4.0",
     "npm": "11.19.1",
@@ -84,8 +84,8 @@
     "npm test": {
       "seguranca": "79/79",
       "parsers": "16/16",
-      "interface": "14/14",
-      "total": 109,
+      "interface": "17/17",
+      "total": 112,
       "estado": "passa"
     },
     "npm run test:api": {
@@ -116,7 +116,7 @@
       "estado": "passa",
       "nota": "verificado de raiz com NODE_ENV=production --include=dev: 98 pacotes; sem --include=dev seriam 9 e o build falharia"
     },
-    "TOTAL": 221,
+    "TOTAL": 224,
     "render.buildCommand": "npm ci --include=dev && npm run build (com teste de regressao)"
   },
   "corrigido_nesta_sessao": [
@@ -242,6 +242,20 @@
         "apps/server/test/api.test.ts",
         "apps/server/test/smoke-prod.ts"
       ]
+    },
+    {
+      "id": "rootdir-probe",
+      "gravidade": "critica",
+      "problema": "O render.yaml trazia 'rootDir: probe', herdado de quando o ARGUS vivia dentro de central-amorim/probe/. Com o ARGUS em repositorio proprio (sramorim/argus, codigo na raiz) esse caminho nao existe e o Render recusou criar o servico com 'Root directory \\'probe\\' does not exist'.",
+      "correccao": "rootDir deixou de ser declarado: o Render constroi a partir da raiz. Nada foi renomeado nem mascarado. De passagem as workspaces npm passaram de @probe/* para @argus/*. Tres testes de regressao novos: rootDir tem de existir se for declarado, cada --workspace= tem de apontar para uma workspace real, e as variaveis de producao do codigo tem de bater certo com o Blueprint (nos dois sentidos).",
+      "ficheiros": [
+        "render.yaml",
+        "package.json",
+        "apps/server/package.json",
+        "apps/web/package.json",
+        "package-lock.json",
+        "apps/web/test/ui.test.mts"
+      ]
     }
   ],
   "verificacao_manual": {
@@ -280,37 +294,30 @@
   },
   "bloqueios": [
     {
-      "id": "commit",
-      "problema": "A pasta probe/ ainda nao esta no repositorio Git. O render.yaml so funciona se o codigo estiver no repo.",
-      "acao": "git add probe/ && git commit && git push",
-      "estado": "aguardando o dono (commit nao foi pedido)",
-      "verificado": "74 ficheiros entram; nenhum .db incluido"
-    },
-    {
       "id": "render",
-      "problema": "Servico Render nao criado.",
-      "acao": "New + > Blueprint > escolher o repositorio. Gerar ARGUS_SECRET com openssl rand -hex 32 e guardar em seguranca.",
+      "problema": "Servico Render ainda nao criado com o repositorio certo (sramorim/argus).",
+      "acao": "render.com -> New + -> Blueprint -> sramorim/argus. ARGUS_SECRET = openssl rand -hex 32. ARGUS_ADMIN_EMAILS = o email do dono. Region Oregon, plano Starter, Apply.",
       "estado": "aguardando o dono",
-      "pronto": "render.yaml completo: disco de 1 GB em /var/data, ARGUS_DB=/var/data/argus.db, rootDir=probe, plan=starter, healthCheckPath=/api/health"
+      "pronto": "render.yaml completo: raiz do repo, disco 1GB em /var/data, ARGUS_DB=/var/data/argus.db, cookie __Host- Secure, trust_proxy, origin do dominio final, healthCheckPath"
     },
     {
       "id": "primeiro-admin",
       "problema": "Nao ha administrador em producao.",
-      "acao": "render.yaml agora pede ARGUS_ADMIN_EMAILS na criacao do servico: escrever o teu email e registar-se com ele da acesso de admin no primeiro login. Alternativa: sqlite3 /var/data/argus.db \"UPDATE users SET is_admin=1 WHERE email=...;\"",
-      "estado": "pronto — so falta o dono escrever o email no painel do Render",
-      "pronto": "as duas vias implementadas e testadas; a via ARGUS_ADMIN_EMAILS foi acrescentada ao render.yaml"
+      "acao": "Registar-se no site com o email colocado em ARGUS_ADMIN_EMAILS. Alternativa: sqlite3 /var/data/argus.db \"UPDATE users SET is_admin=1 WHERE email=...\";",
+      "estado": "aguardando o dono",
+      "pronto": "as duas vias implementadas e testadas"
     },
     {
       "id": "dominio",
       "problema": "argus.senhoramorim.com.br nao aponta para o servico.",
-      "acao": "Render Settings > Custom Domains > argus.senhoramorim.com.br; criar o CNAME dado pelo Render no DNS de senhoramorim.com.br. O TLS e emitido pelo Render quando o dominio resolver.",
+      "acao": "Render -> Settings -> Custom Domains -> argus.senhoramorim.com.br; criar o CNAME no DNS de senhoramorim.com.br. TLS emitido pelo Render.",
       "estado": "aguardando o dono",
-      "pronto": "index.html ja tem rel=canonical e etiquetas OG absolutas; HSTS ligado; cookie passa a __Host- com Secure"
+      "pronto": "ARGUS_PUBLIC_ORIGIN, rel=canonical e etiquetas OG ja apontam para o dominio final; HSTS e cookie __Host- ligados"
     },
     {
       "id": "pagamento",
-      "problema": "Nao ha gateway de pagamento. Ativacao e manual, a partir do WhatsApp.",
-      "estado": "decisao de produto assumida (nenhum cartao passa pelo site). Mudar = integracao com conta externa = autorizacao necessaria."
+      "problema": "Sem gateway de pagamento.",
+      "estado": "decisao de produto assumida (nenhum cartao passa pelo site). Ativacao manual por WhatsApp."
     }
   ],
   "fraco_conhecido": [
@@ -384,5 +391,17 @@
     "ARGUS-CHECKPOINT.md",
     "CONTEXTO-ARGUS.md"
   ],
-  "guia_online": "COMO-POR-ONLINE.md — passo a passo para o dono, com o que fazer, o que escrever e o que ver no ecra"
+  "guia_online": "COMO-POR-ONLINE.md — passo a passo para o dono (o codigo ja esta no GitHub)",
+  "repositorio": "https://github.com/sramorim/argus (branch main, ARGUS na RAIZ do repositorio)",
+  "render": {
+    "root_directory": "raiz do repositorio (render.yaml NAO declara rootDir)",
+    "plano": "starter",
+    "regiao": "oregon",
+    "branch": "main",
+    "build": "npm ci --include=dev && npm run build",
+    "start": "npm start",
+    "health": "/api/health",
+    "disco": "/var/data (1 GB)",
+    "db": "/var/data/argus.db"
+  }
 }

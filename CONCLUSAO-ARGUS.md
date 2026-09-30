@@ -82,8 +82,8 @@ a cada deploy) e que o `SIGTERM` dá checkpoint do SQLite e sai com código 0.
 
 O checkpoint anterior estava desatualizado: o projeto já estava muito mais avançado do
 que registava (o painel de administração, o `render.yaml`, o logo, os ícones e o
-`CONTEXTO` já existiam). Ao verificar o código a sério apareceram **nove defeitos
-reais**, quatro deles suficientes para impedir o deploy.
+`CONTEXTO` já existiam). Ao verificar o código a sério apareceram **dez defeitos
+reais**, cinco deles suficientes para impedir o deploy.
 
 ### 1. Todos os avisos da aplicação estavam mudos 🔴
 
@@ -170,7 +170,31 @@ Agora abre o WhatsApp (`wa.me`) com a mensagem já escrita e percent-encoded, e 
 também um botão para copiar. O texto é honesto: quem ativa o plano és tu, depois de
 confirmares a transferência.
 
-### 9. Defeitos menores 🟡
+### 9. O `rootDir` do Render apontava para uma pasta que não existe 🔴
+
+O `render.yaml` nasceu quando o ARGUS vivia dentro de `central-amorim/probe/`, por
+isso trazia `rootDir: probe`. Quando o ARGUS passou a ter repositório próprio
+(`sramorim/argus`, código na raiz), o `rootDir` ficou para trás e o primeiro deploy
+morreu com:
+
+```
+Root directory 'probe' does not exist
+```
+
+**Correcção:** `rootDir` deixou de ser declarado — o Render constrói a partir da raiz.
+Nada foi renomeado nem mascarado: o repositório tem o ARGUS na raiz e a configuração
+diz isso.
+
+De passagem, as workspaces npm deixaram de se chamar `@probe/*` para `@argus/*`, para
+não sobrar nenhum "probe" no código que vai para produção.
+
+**Testes de regressão** (3 novos, todos a falhar se a confusão voltar):
+- se `render.yaml` declarar `rootDir`, essa pasta tem de existir no repositório;
+- cada `--workspace=` dos scripts da raiz tem de apontar para uma workspace real;
+- toda variável que o código lê em produção tem de estar no Blueprint — e o inverso
+  também: uma variável declarada que o código não lê é lixo no painel.
+
+### 10. Defeitos menores 🟡
 
 - `config.ts` tinha um comentário corrompido (`éJL relativo`).
 - `Auth.tsx` mapeava `demais_tentativas`; o servidor devolve `demasiadas_tentativas`, por
@@ -246,61 +270,44 @@ com lookup fixo.
 ## 6. O QUE PRECISA DE TI (bloqueios de produção)
 
 Tudo o que está aqui abaixo exige a tua conta ou a tua mão. Nada disto foi feito
-por minha conta, de propósito.
+por minha conta, de propósito. Passo a passo em `COMO-POR-ONLINE.md`.
 
-### 6.1 Commit da pasta `probe/` — **bloqueia o deploy**
+### 6.1 Código no GitHub — FEITO
 
-O `render.yaml` só funciona se o código estiver no repositório Git, e a pasta
-`probe/` **ainda não foi commitada**. Sem isto o Render não tem o que construir.
-
-```
-git add probe/
-git commit -m "ARGUS: plataforma OSINT com proveniencia (26 ferramentas testadas)"
-git push
-```
-
-Já verifiquei que o que entra são 74 ficheiros e que **nenhum `.db` vai incluído**.
-Não commitei nada — commit não foi pedido.
+O ARGUS tem repositório próprio: **https://github.com/sramorim/argus**, com o código
+**na raiz** (sem pasta `probe/` por fora). O passo a passo do dono está em
+`COMO-POR-ONLINE.md`.
 
 ### 6.2 Render — criar o serviço
 
-1. Render → **New +** → **Blueprint** → escolher o repositório. O `render.yaml` cria o
-   serviço, o disco de 1 GB e as variáveis.
-2. Quando o Render pedir o `ARGUS_SECRET`, gera um: `openssl rand -hex 32`.
-   **Guarde-o em segurança**: se mudar, as sessões caem e as chaves BYOK guardadas
-   deixam de decifrar.
-3. `rootDir: probe`, plano `starter` (o Free não tem disco persistente), `oregon`.
-4. Ao fim do build o Render dá o endereço do serviço (parecido com
-   `argus.onrender.com`).
+1. Render → **New +** → **Blueprint** → repositório **sramorim/argus**.
+2. `ARGUS_SECRET` → gerar com `openssl rand -hex 32` e **guardar em segurança**.
+3. `ARGUS_ADMIN_EMAILS` → o e-mail do dono.
+4. Region **Oregon**, plano **Starter** (o Free não tem disco), **Apply**.
 
-O `ARGUS_DB=/var/data/argus.db` e o disco em `/var/data` já estão no `render.yaml`.
-O smoke test de produção valida exactamente esta configuração antes de publicares.
+O `render.yaml` já traz tudo o resto: disco de 1 GB em `/var/data`,
+`ARGUS_DB=/var/data/argus.db`, cookie `__Host-` com `Secure`, `trust_proxy`,
+`ARGUS_PUBLIC_ORIGIN` e `healthCheckPath: /api/health`.
 
 ### 6.3 Primeiro administrador
 
-**Sem SSH.** O `render.yaml` agora pede o `ARGUS_ADMIN_EMAILS` durante a criação do
-serviço: escreve lá o teu e-mail e, quando te registares com ele, entras como
-administrador logo no primeiro login.
-
-Se preferires promoting por base de dados:
-`sqlite3 /var/data/argus.db "UPDATE users SET is_admin=1 WHERE email='<o-teu-email>';"`
+Sem SSH. O e-mail colocado em `ARGUS_ADMIN_EMAILS` dá acesso de administrador no
+primeiro login. Alternativa por base de dados:
+`sqlite3 /var/data/argus.db "UPDATE users SET is_admin=1 WHERE email='...';"`
 
 ### 6.4 Domínio `argus.senhoramorim.com.br`
 
-1. No Render: **Settings → Custom Domains** → `argus.senhoramorim.com.br`.
-2. O Render dá um registo **CNAME** para apontar.
-3. Criar esse registo no DNS de `senhoramorim.com.br`.
-4. O certificado TLS é emitido pelo Render assim que o domínio resolve. O HSTS já está
-   ligado e o cookie passa automaticamente a `__Host-` com `Secure`.
-5. Ajustar `ARGUS_PUBLIC_ORIGIN` para o domínio final (já está no `render.yaml`).
+1. Render → **Settings** → **Custom Domains** → `argus.senhoramorim.com.br`.
+2. Criar no DNS de `senhoramorim.com.br` o **CNAME** que o Render indicar.
+3. O TLS é emitido pelo Render quando o domínio resolver. O HSTS e o cookie
+   `__Host-` já estão ligados.
+4. `ARGUS_PUBLIC_ORIGIN` e as etiquetas OG do `index.html` já apontam para o
+   domínio final.
 
-O `index.html` já traz `rel=canonical` e etiquetas OG absolutas para esse domínio.
+### 6.5 Pagamento — decisão de produto, não bloqueio técnico
 
-### 6.5 Pagamento — decisão tua, não técnica
-
-Não há gateway de pagamento, e isso é uma **decisão de produto**: nenhum cartão passa
-por este site. A ativação é manual, a partir do WhatsApp. Se um dia quiseres automatico,
-isso é integração com conta externa e precisa de autorização tua.
+Não há gateway de pagamento: nenhum cartão passa pelo site, por decisão. A ativação
+é manual a partir do WhatsApp, com o pedido já escrito.
 
 ---
 
@@ -323,7 +330,7 @@ isso é integração com conta externa e precisa de autorização tua.
 ## 8. COMO VERIFICAR
 
 ```bash
-cd probe
+cd ~/argus
 npm ci                     # tem de bater certo com o lock (ver teste)
 npm test                   # 109 verificações
 npm run test:api           # 48

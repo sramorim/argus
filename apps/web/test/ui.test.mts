@@ -277,6 +277,115 @@ test('o buildCommand do Render instala o que o build precisa', () => {
   assert.match(yml, /mountPath:\s*\/var\/data/, 'o disco tem de montar em /var/data');
 });
 
+/**
+ * Este teste é a história do deploy partido.
+ *
+ * O `render.yaml` nasceu quando o ARGUS vivia dentro de `central-amorim/probe/`,
+ * por isso trazia `rootDir: probe`. Quando o ARGUS passou a ter repositório
+ * próprio (`sramorim/argus`, com o código na raiz), esse `rootDir` continuou lá
+ * e o Render recusou criar o serviço com:
+ *
+ *     Root directory 'probe' does not exist
+ *
+ * A regra que este teste fixa: **se `render.yaml` declarar um `rootDir`, essa
+ * pasta tem de existir no repositório.** É o que impede a mesma confusão de
+ * voltar, seja por renomear o repositório, mover a pasta ou trocar o layout.
+ */
+test('se o render.yaml declarar rootDir, essa pasta tem de existir no repositório', () => {
+  const yml = readFileSync(join(ROOT, 'render.yaml'), 'utf8');
+  const m = /^\s*rootDir:\s*(\S+)\s*$/m.exec(yml);
+
+  if (!m) {
+    // Caso esperado hoje: sem rootDir, o Render constrói a partir da raiz.
+    assert.ok(
+      existsSync(join(ROOT, 'package.json')),
+      'sem rootDir, a raiz do repositório tem de ser o ARGUS (package.json na raiz)',
+    );
+    return;
+  }
+
+  const dir = m[1]!.replace(/^["']|["']$/g, '');
+  const normalizado = dir === '.' ? '' : dir.replace(/^\/+|\/+$/g, '');
+  assert.ok(
+    !normalizado || existsSync(join(ROOT, normalizado)),
+    `rootDir "${dir}" não existe no repositório — o Render vai recusar com ` +
+    `"Root directory '${dir}' does not exist"`,
+  );
+});
+
+/** Os comandos do Blueprint têm de correr a partir da raiz, onde vive o código. */
+test('os comandos do Blueprint partem da raiz, onde estão as workspaces', () => {
+  const raiz = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8'));
+  assert.ok(existsSync(join(ROOT, 'package.json')), 'o package.json tem de estar na raiz');
+  assert.deepEqual(
+    raiz.workspaces,
+    ['apps/server', 'apps/web'],
+    'as workspaces deixaram de estar onde os scripts as esperam',
+  );
+  for (const ws of raiz.workspaces as string[]) {
+    assert.ok(existsSync(join(ROOT, ws, 'package.json')), `falta ${ws}/package.json`);
+  }
+  // `npm start` tem de chegar ao servidor; se o workspace renomear e o script
+  // apontar para o nome antigo, o arranque falha com "No workspaces found".
+  for (const s of ['start', 'build', 'test']) {
+    assert.ok(raiz.scripts[s], `falta o script "${s}" na raiz`);
+  }
+  // Cada `--workspace=` tem de apontar para uma workspace que exista de facto.
+  const nomes = new Set<string>();
+  for (const dir of raiz.workspaces as string[]) {
+    nomes.add(JSON.parse(readFileSync(join(ROOT, dir, 'package.json'), 'utf8')).name);
+  }
+  for (const [nome, cmd] of Object.entries<string>(raiz.scripts)) {
+    for (const m of cmd.matchAll(/--workspace=(\S+)/g)) {
+      assert.ok(
+        nomes.has(m[1]!),
+        `o script "${nome}" aponta para a workspace inexistente "${m[1]}" ` +
+        `( workspaces reais: ${[...nomes].join(', ')} )`,
+      );
+    }
+  }
+});
+
+/**
+ * Toda variável que o código lê em produção tem de estar declarada no
+ * Blueprint. Uma que falte não dá erro — dá comportamento errado em silêncio,
+ * que é o pior tipo de bug.
+ */
+test('toda variável de produção de que o código precisa está no render.yaml', () => {
+  const yml = readFileSync(join(ROOT, 'render.yaml'), 'utf8');
+  const usadas = new Set<string>();
+  for (const f of ['config.ts', 'security.ts', 'index.ts', 'registry.ts']) {
+    const src = readFileSync(join(ROOT, 'apps', 'server', 'src', f), 'utf8');
+    for (const m of src.matchAll(/process\.env\.([A-Z_][A-Z0-9_]*)/g)) usadas.add(m[1]!);
+    for (const m of src.matchAll(/(?:str|bool|int|list)\('([A-Z_][A-Z0-9_]*)'/g)) usadas.add(m[1]!);
+  }
+
+  // HOST e PORT são injected pelo Render; as de tuning têm valor por omissão
+  // razoável e não precisam de ser declaradas.
+  const injetadas = new Set(['HOST', 'PORT']);
+  const opcionais = new Set([
+    'ARGUS_ALLOWED_ORIGINS', 'ARGUS_AUTH_MAX', 'ARGUS_AUTH_WINDOW_MIN',
+    'ARGUS_COOKIE_SAMESITE', 'ARGUS_IP_MAX', 'ARGUS_REGISTER_MAX', 'ARGUS_RUN_MAX',
+    'ARGUS_SESSION_DAYS', 'ARGUS_UPLOAD_MAX', 'ARGUS_WEB_DIST',
+  ]);
+
+  const declaradas = new Set([...yml.matchAll(/^\s*-\s*key:\s*([A-Z_][A-Z0-9_]*)/gm)].map((m) => m[1]!));
+  const faltam = [...usadas]
+    .filter((v) => !injetadas.has(v) && !opcionais.has(v) && !declaradas.has(v))
+    .sort();
+
+  assert.equal(
+    faltam.join(', '), '',
+    'variáveis que o código lê e o Blueprint não declara: ' + faltam.join(', '),
+  );
+
+  // E o inverso: declarar uma variável que o código não lê é lixo que vai
+  // sobrar no painel sem ninguém saber para que serve.
+  const conhecidas = new Set<string>([...usadas, ...injetadas]);
+  const orfas = [...declaradas].filter((v) => !conhecidas.has(v)).sort();
+  assert.equal(orfas.join(', '), '', 'variáveis no Blueprint que o código não lê: ' + orfas.join(', '));
+});
+
 test('o package.json e o package-lock.json concordam (o `npm ci` do Render depende disto)', () => {
   const lock = JSON.parse(readFileSync(join(ROOT, 'package-lock.json'), 'utf8'));
   const problemas: string[] = [];
