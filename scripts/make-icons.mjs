@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Gera os ícones PNG do ARGUS a partir da mesma geometria do SVG.
+ * Gera os ícones PNG do ARGOS a partir da mesma geometria do SVG.
  *
  * Porquê um script em vez de exportar de um editor: o logo tem de ser
  * reproduzível. Se amanhã o traço mudar, `node scripts/make-icons.mjs` volta a
@@ -152,14 +152,14 @@ function distSeg(px, py, ax, ay, bx, by) {
 
 /**
  * Letra do logótipo como traços normalizados (caixa 0..1, base em y=1).
- * Traço técnico, não uma fonte: é o que mantém a identidade do ARGUS —
+ * Traço técnico, não uma fonte: é o que mantém a identidade do ARGOS —
  * um SVG não dá para controlar a renderização de texto num PNG social.
  */
 const WORDMARK = {
   A: [[[0, 1], [0.5, 0], [1, 1]], [[0.21, 0.63], [0.79, 0.63]]],
   R: [[[0, 0], [0, 1]], [[0, 0], [0.68, 0], [0.94, 0.27], [0.68, 0.54], [0, 0.54]], [[0.52, 0.54], [1, 1]]],
   G: [[[0.94, 0.24], [0.72, 0.02], [0.34, 0.02], [0.05, 0.3], [0.05, 0.7], [0.34, 0.98], [0.72, 0.98], [0.95, 0.75], [0.95, 0.56], [0.58, 0.56]]],
-  U: [[[0, 0], [0, 0.66], [0.18, 0.97], [0.5, 1.0], [0.82, 0.97], [1, 0.66], [1, 0]]],
+  O: [[[0.94, 0.27], [0.72, 0.02], [0.28, 0.02], [0.05, 0.27], [0.05, 0.73], [0.28, 0.98], [0.72, 0.98], [0.94, 0.73], [0.94, 0.27]]],
   S: [[[0.94, 0.21], [0.7, 0.02], [0.3, 0.02], [0.05, 0.25], [0.3, 0.5], [0.72, 0.5], [0.95, 0.72], [0.7, 0.98], [0.28, 0.98], [0.05, 0.79]]],
 };
 const tracking = 0.26;
@@ -211,7 +211,7 @@ function renderCover(W = 1200, H = 630) {
     }
   }
 
-  // Logótipo ARGUS em traço, centrado por baixo.
+  // Logótipo ARGOS em traço, centrado por baixo.
   const capH = 74;
   const letters = Object.keys(WORDMARK);
   const totalW = wordWidth(letters.length) * capH;

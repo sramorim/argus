@@ -64,11 +64,11 @@ export default function Dashboard({
         <div className="hero-panel-txt">
           <span className="hero-kicker">Investigação de fontes abertas</span>
           <h1 className="t-h1" style={{ margin: '10px 0 6px' }}>
-            Começa por um alvo. O ARGUS faz o resto.
+            Começa por um alvo. O ARGOS faz o resto.
           </h1>
           <p className="muted t-sm" style={{ maxWidth: '58ch' }}>
             Um username, um e-mail, um telefone, um domínio, um IP, uma URL ou uma carteira.
-            O ARGUS escolhe as ferramentas certas, cruza o que encontra e mostra
+            O ARGOS escolhe as ferramentas certas, cruza o que encontra e mostra
             <b style={{ color: 'var(--t-2)' }}> de onde veio cada achado</b>.
           </p>
         </div>

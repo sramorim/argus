@@ -22,17 +22,26 @@ import { config, configReport, configWarnings } from './config.ts';
 import {
   securityHeaders, cors, bodyLimit, clientIp, csrf,
   MAX_BODY_BYTES, MAX_UPLOAD_BYTES, RateLimiter,
+  ADMIN_EMAILS, readSessionToken, currentUser, requireAuth, requireAdmin, type Ctx,
 } from './security.ts';
 import { resolveFile, FileError, MAX_FILE_BYTES, sniff } from './net/upload.ts';
+import { saudeSistema } from './health.ts';
+import intelRoutes from './intel/routes.ts';
+import { criarPlanoRouter } from './investigation/routes.ts';
 import { SourceLog, type Finding } from './net/provenance.ts';
 
 // importa ficheiros de ferramentas para registar no registry
 import './tools/infra.ts';
 import './tools/identity.ts';
+import './tools/username-intel.ts';
 import './tools/threat.ts';
 import './tools/finance-dev-br.ts';
 import './tools/tls.ts';
 import './tools/graph.ts';
+import './tools/social.ts';
+import './tools/social-search.ts';
+import './tools/osint-engine.ts';
+import './tools/apify.ts';
 
 const app = new Hono();
 const PORT = config.port;
@@ -46,7 +55,6 @@ app.use('/api/arquivo/*', bodyLimit(MAX_UPLOAD_BYTES));
 app.use('/api/*', csrf());
 
 // ---------- helpers ----------
-interface Ctx { userId: string; plan: PlanId; email: string; name: string; isAdmin: boolean; }
 
 function setSessionCookie(c: any, token: string, userId: string, ua: string): void {
   const { name, secure, sameSite, maxAgeDays } = config.cookie;
@@ -64,48 +72,6 @@ function setSessionCookie(c: any, token: string, userId: string, ua: string): vo
   c.header('Set-Cookie', parts.join('; '), { append: true });
 }
 
-function readSessionToken(c: any): string | null {
-  const name = config.cookie.name;
-  const raw = c.req.header('cookie') ?? '';
-  for (const part of raw.split(';')) {
-    const i = part.indexOf('=');
-    if (i > 0 && part.slice(0, i).trim() === name) return decodeURIComponent(part.slice(i + 1).trim());
-  }
-  return null;
-}
-
-/** Administradores: a coluna `is_admin` do banco + a lista de e-mails do ambiente. */
-const ADMIN_EMAILS = new Set(
-  (process.env.ARGUS_ADMIN_EMAILS ?? '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean),
-);
-
-function currentUser(c: any): Ctx | null {
-  const token = readSessionToken(c);
-  if (!token) return null;
-  const row = q(`SELECT u.id, u.email, u.name, u.plan, u.is_admin, u.suspended, s.expires_at FROM sessions s
-    JOIN users u ON u.id = s.user_id WHERE s.token_hash = ?`).get(tokenHash(token)) as any;
-  if (!row) return null;
-  if (new Date(row.expires_at).getTime() < Date.now()) {
-    q('DELETE FROM sessions WHERE token_hash=?').run(tokenHash(token));
-    return null;
-  }
-  if (row.suspended) return null;
-  const isAdmin = !!row.is_admin || ADMIN_EMAILS.has(String(row.email).toLowerCase());
-  return { userId: row.id, plan: row.plan, email: row.email, name: row.name, isAdmin };
-}
-
-function requireAuth(c: any): Response | Ctx {
-  const u = currentUser(c);
-  if (!u) return c.json({ error: 'nao_autenticado', msg: 'Inicia sessão.' }, 401);
-  return u;
-}
-
-function requireAdmin(c: any): Response | Ctx {
-  const u = requireAuth(c);
-  if (u instanceof Response) return u;
-  if (!u.isAdmin) return c.json({ error: 'sem_permissao', msg: 'Apenas administração.' }, 403);
-  return u;
-}
 
 function byokFor(userId: string): Record<string, string> {
   const rows = q('SELECT provider, secret_enc FROM user_keys WHERE user_id = ?').all(userId) as any[];
@@ -553,13 +519,48 @@ app.post('/api/admin/user/:id/flags', async (c) => {
  * SQLite está montado e a escrever. Sem isso o serviço fica VERDE com o disco
  * por montar e aceita registos que se perdem no deploy seguinte.
  */
-app.get('/api/health', (c) => {
+/**
+ * Saúde do serviço — e, desde a FASE G, a saúde das DEPENDÊNCIAS por provider.
+ *
+ * Por omissão: presença e configuração (rápido, sem rede, sem spawning de
+ * versões). `?detalhe=sim` acrescenta versão, latência e, se houver token, o
+ * estado do serviço Apify. Nunca expõe segredos: os campos dizem o NOME da
+ * variável em falta, nunca o valor.
+ */
+app.get('/api/health', async (c) => {
   const dbh = dbHealth();
+  const detalhe = (c.req.query('detalhe') ?? '') === 'sim';
+  let saude: Awaited<ReturnType<typeof saudeSistema>> | null = null;
+  let erroSaude: string | null = null;
+  try {
+    saude = await saudeSistema({ detalhe });
+  } catch (e) {
+    erroSaude = String((e as Error).message ?? e).slice(0, 300);
+  }
   return c.json(
-    { ok: dbh.writable, tools: allTools().length, uptime: Math.round(process.uptime()), env: config.env, db: dbh },
-    dbh.writable ? 200 : 503,
+    {
+      ok: dbh.writable, tools: allTools().length, uptime: Math.round(process.uptime()),
+      env: config.env, db: dbh,
+      estadoGeral: saude?.estadoGeral ?? 'ERROR',
+      resumo: saude?.porEstado ?? {},
+      providers: saude?.linhas ?? [],
+      nota: saude?.nota ?? 'falha ao verificar dependências',
+      geradoEm: saude?.geradoEm ?? new Date().toISOString(),
+      detalhe,
+      erro: erroSaude,
+    },
+    dbh.writable && !erroSaude ? 200 : 503,
   );
 });
+
+// ---------- Intelligence Engine (FASE E/G) ----------
+app.route('/api/intel', intelRoutes);
+
+// ---------- plano de investigação (FASE F) ----------
+// Monte depois das rotas de investigação: os caminhos são distintos
+// (`/:id/plan` frente a `/:id`), por isso a ordem não esconde nada.
+app.route('/api/investigations', criarPlanoRouter({ byokFor, limite: limited }));
+
 
 // ---------- estáticos ----------
 /**

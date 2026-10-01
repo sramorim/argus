@@ -116,8 +116,12 @@ await t('todo plano tem quotas coerentes', () => {
 });
 await t('TOOL_LOCKS nao referencia ferramentas inexistentes', async () => {
   await import('../src/tools/infra.ts'); await import('../src/tools/identity.ts');
+  await import('../src/tools/username-intel.ts');
   await import('../src/tools/threat.ts'); await import('../src/tools/finance-dev-br.ts');
   await import('../src/tools/tls.ts'); await import('../src/tools/graph.ts');
+  await import('../src/tools/social.ts'); await import('../src/tools/social-search.ts');
+  await import('../src/tools/osint-engine.ts');
+  await import('../src/tools/apify.ts');
   const { allTools } = await import('../src/registry.ts');
   const ids = new Set(allTools().map((x) => x.id));
   const orfaos = Object.keys(TOOL_LOCKS).filter((k) => !ids.has(k));
@@ -443,6 +447,7 @@ await t('toda ferramenta tem descricao, resumo e pelo menos um campo', async () 
   await import('../src/tools/infra.ts'); await import('../src/tools/identity.ts');
   await import('../src/tools/threat.ts'); await import('../src/tools/finance-dev-br.ts');
   await import('../src/tools/tls.ts'); await import('../src/tools/graph.ts');
+  await import('../src/tools/social.ts'); await import('../src/tools/social-search.ts');
   for (const t of allTools()) {
     if (t.id.startsWith('__')) continue;   // ferramentas de teste
     ok(t.name.length > 2, `${t.id}: nome curto`);
@@ -459,6 +464,7 @@ await t('nenhuma ferramenta diz "ok" numa fonte que nao devolveu nada', async ()
   await import('../src/tools/infra.ts'); await import('../src/tools/identity.ts');
   await import('../src/tools/threat.ts'); await import('../src/tools/finance-dev-br.ts');
   await import('../src/tools/tls.ts'); await import('../src/tools/graph.ts');
+  await import('../src/tools/social.ts'); await import('../src/tools/social-search.ts');
   // Regra estrutural do SourceLog ja testada acima; aqui confirmamos que
   // nenhuma fonte registada no codigo declara 'ok' com contagem implicita.
   const { SourceLog: SL } = await import('../src/net/provenance.ts');

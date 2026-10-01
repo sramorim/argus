@@ -6,7 +6,13 @@
  * histórico de texto.
  */
 import { useEffect, useState } from 'react';
-import { api, type Investigation, type InvestigationDetail, ApiError, PLAN_NAME } from '../api';
+import {
+  api, ApiError, PLAN_NAME,
+  CLASSE_FASE, CLASSE_FERRAMENTA, ROTULO_FASE, ROTULO_FERRAMENTA, ROTULO_MODO,
+  type ExecutarResposta, type FerramentaPlano, type FasePlano, type Investigation,
+  type InvestigationDetail, type ModoPlano, type Plano, type PlanoResposta,
+  type Progresso, type RegistoFerramenta, type RegistoFase, type ResumoProgresso,
+} from '../api';
 import { Icon } from '../components/Icons';
 import { Empty, Modal, Note, Skeleton, useToast, CardGridSkeleton } from '../components/ui';
 import GraphView from '../components/GraphView';
@@ -74,7 +80,7 @@ export default function Investigations({ view, setView }: { view: { id?: string 
             </button>
           }>
             Corre a ferramenta <b style={{ color: 'var(--t-2)' }}>Investigação (Grafo)</b> com um
-            domínio, um IP, um username ou um email. O ARGUS escolhe as ferramentas certas,
+            domínio, um IP, um username ou um email. O ARGOS escolhe as ferramentas certas,
             executa-as e guarda o grafo com proveniência.
           </Empty>
         </div>
@@ -152,6 +158,8 @@ function InvestigationDetailView({ det, onRename, onRemove }: {
         </div>
       </div>
 
+      <PlanoInvestigacao invId={inv.id} seedType={inv.seed_type} />
+
       <div className="card">
         <div className="card-head">Grafo</div>
         <GraphView graph={graph} />
@@ -211,5 +219,316 @@ function InvestigationDetailView({ det, onRename, onRemove }: {
         </p>
       </Modal>
     </>
+  );
+}
+
+/* ------------------------------------------------- plano e execução (FASE F) */
+
+/** Ferramentas de um plano, na ordem em que aparecem nas fases. */
+const ferramentasDo = (p: Plano): FerramentaPlano[] => p.fases.flatMap((f) => f.ferramentas);
+
+/** Uma linha do plano: o que ia correr, o input exacto e porque é que não correu. */
+function LinhaFerramenta({ plan, reg }: { plan: FerramentaPlano; reg?: RegistoFerramenta }) {
+  const bloqueada = plan.estado === 'BLOQUEADA' && !reg;
+  const rotulo = reg ? ROTULO_FERRAMENTA[reg.estado] : bloqueada ? 'não executada' : 'pendente';
+  const classe = reg ? CLASSE_FERRAMENTA[reg.estado] : bloqueada ? 'st st-skipped' : 'st st-empty';
+  const entrada = plan.input ? Object.entries(plan.input) : [];
+
+  return (
+    <div className="ferr">
+      <span className="mono ferr-id">{plan.id}</span>
+      <span className={`tag ${plan.kind === 'etapa' ? 'tag-free' : 'tag-legal'}`}>{plan.kind}</span>
+      <span className={classe}>● {rotulo}</span>
+      {reg?.contagem !== undefined && (
+        <span className="t-xs num dim">{reg.contagem} {plan.kind === 'etapa' ? 'itens' : 'achados'}</span>
+      )}
+      {reg && reg.ms > 0 && <span className="t-xs num dim">{reg.ms} ms</span>}
+      {plan.motivo && <span className="ferr-motivo">{plan.motivo}</span>}
+      {reg?.erro && <span className="ferr-erro">{reg.erro}</span>}
+      {reg?.nota && <span className="ferr-nota">{reg.nota}</span>}
+      {plan.nota && !reg?.nota && <span className="ferr-nota">{plan.nota}</span>}
+      {entrada.length > 0 && (
+        <span className="t-xs mono dim ferr-input">
+          {entrada.map(([k, v]) => `${k}=${v}`).join(' · ')}
+        </span>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Uma das 8 fases. O cabeçalho mostra sempre o estado e o motivo — abrir a
+ * fase mostra as ferramentas, o input e o que saiu de cada uma. Uma fase
+ * pulada no modo escolhido não abre: não há o que mostrar além do motivo.
+ */
+function LinhaFase({ fase, reg, aberta, onToggle }: {
+  fase: FasePlano; reg?: RegistoFase; aberta: boolean; onToggle: () => void;
+}) {
+  const estado = reg ? reg.estado : fase.estado;
+  const motivo = fase.motivo ?? reg?.motivo;
+
+  if (fase.pulada) {
+    return (
+      <li className="fase" data-estado="PENDENTE">
+        <div className="fase-head">
+          <span className="fase-nome">{fase.fase}</span>
+          <span className="tag tag-free">pulada</span>
+          <span className="fase-motivo">{motivo ?? 'fora do modo escolhido'}</span>
+        </div>
+      </li>
+    );
+  }
+
+  return (
+    <li className="fase" data-estado={estado}>
+      <button className="fase-head" type="button" aria-expanded={aberta} onClick={onToggle}>
+        <span className="fase-nome">{fase.fase}</span>
+        <span className={`tag ${CLASSE_FASE[estado]}`}>{ROTULO_FASE[estado]}</span>
+        {motivo && <span className="fase-motivo">{motivo}</span>}
+        <span className="fase-seta"><Icon.chevronDown width={14} height={14} /></span>
+      </button>
+      {aberta && (
+        <div className="fase-corpo">
+          {fase.ferramentas.length === 0 ? (
+            <p className="t-xs dim">Sem ferramentas nesta fase.</p>
+          ) : fase.ferramentas.map((f) => (
+            <LinhaFerramenta key={f.id} plan={f} reg={reg?.ferramentas.find((r) => r.id === f.id)} />
+          ))}
+          <p className="t-xs dim">{fase.descricao}</p>
+        </div>
+      )}
+    </li>
+  );
+}
+
+/**
+ * Plano de investigação e execução.
+ *
+ * O painel mostra o que o planeador decidiu e o que a execução fez — e nada
+ * mais. Estados vêm do servidor: `CONCLUIDA` só quando tudo correu, `ERRO` só
+ * quando algo falhou, e o que não correu fica visível com o motivo concreto
+ * (plano insuficiente, CLI em falta, custo do Apify por confirmar). O
+ * plano personalizado constrói-se a partir do que o servidor disse que se
+ * aplica ao alvo — nunca a partir de uma lista escrita à mão no cliente.
+ */
+function PlanoInvestigacao({ invId, seedType }: { invId: string; seedType: string }) {
+  const toast = useToast();
+  const [plano, setPlano] = useState<Plano | null>(null);
+  const [progresso, setProgresso] = useState<Progresso | null>(null);
+  const [resumo, setResumo] = useState<ResumoProgresso | null>(null);
+  const [erro, setErro] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [custo, setCusto] = useState(false);
+  const [candidatos, setCandidatos] = useState<FerramentaPlano[] | null>(null);
+  const [escolhidas, setEscolhidas] = useState<string[]>([]);
+  const [aberta, setAberta] = useState<string | null>(null);
+  const [confirmarTroca, setConfirmarTroca] = useState(false);
+
+  const aplicar = (r: PlanoResposta) => {
+    setPlano(r.plano ?? null);
+    setProgresso(r.progresso ?? null);
+    setResumo(r.resumo ?? null);
+    setErro('');
+    if (r.plano) setAberta((a) => a ?? r.plano!.fases.find((f) => !f.pulada)?.fase ?? null);
+  };
+
+  useEffect(() => {
+    setPlano(null); setProgresso(null); setResumo(null); setCandidatos(null);
+    setEscolhidas([]); setAberta(null); setErro(''); setCusto(false); setBusy(false);
+    api.plano(invId).then(aplicar).catch((e) => setErro((e as ApiError).message));
+  }, [invId]);
+
+  const gerar = async (modo: ModoPlano, ferramentas?: string[]): Promise<Plano | null> => {
+    setBusy(true);
+    try {
+      const r = await api.gerarPlano(invId, { modo, ferramentas });
+      aplicar(r);
+      toast('ok', `Plano ${modo} gerado: ${r.plano?.resumo.ferramentas ?? 0} ferramentas em ${r.plano?.resumo.fases ?? 0} fases.`);
+      return r.plano;
+    } catch (e) {
+      const m = (e as ApiError).message;
+      setErro(m);
+      toast('err', m);
+      return null;
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  /**
+   * Para personalizar é preciso saber o que o servidor considera aplicável.
+   * Um FULL já carregado dá isso de borla; um plano sem execução pode ser
+   * substituído sem perder nada. Só com execução feita é que se avisa primeiro.
+   */
+  const montarPersonalizado = async () => {
+    if (plano?.modo === 'FULL') { setCandidatos(ferramentasDo(plano)); return; }
+    if (plano && (resumo?.executadas ?? 0) > 0) { setConfirmarTroca(true); return; }
+    const p = await gerar('FULL');
+    if (p) { setCandidatos(ferramentasDo(p)); setEscolhidas([]); }
+  };
+
+  const executar = async (reexecutar: boolean) => {
+    setBusy(true);
+    try {
+      const r: ExecutarResposta = await api.executarPlano(invId, { confirmarCusto: custo, reexecutar });
+      setPlano(r.plano);
+      setProgresso(r.progresso);
+      setResumo(r.resumo);
+      setErro('');
+      if (r.erro) {
+        toast('warn', `A execução parou a meio: ${r.erro}`);
+      } else {
+        toast('ok', `${r.resumo.concluidas} de ${r.resumo.fases} fases concluídas · ${r.resumo.executadas} de ${r.resumo.ferramentas} ferramentas executadas.`);
+      }
+    } catch (e) {
+      const m = (e as ApiError).message;
+      setErro(m);
+      toast('err', m);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const precisaCusto = !!plano && ferramentasDo(plano).some((f) => f.id === 'apify' && f.estado === 'PRONTO');
+  const feitas = (resumo?.executadas ?? 0) > 0;
+  const pct = resumo ? Math.round((resumo.concluidas / Math.max(1, resumo.fases)) * 100) : 0;
+
+  return (
+    <div className="card">
+      <div className="card-head">
+        Plano de investigação
+        {plano && <span className="tag">{ROTULO_MODO[plano.modo]}</span>}
+        <span className="grow" />
+        <div className="card-head-actions">
+          <button className="btn btn-quiet btn-sm" type="button" disabled={busy || !!candidatos} onClick={() => { setCandidatos(null); gerar('QUICK'); }}>QUICK</button>
+          <button className="btn btn-quiet btn-sm" type="button" disabled={busy || !!candidatos} onClick={() => { setCandidatos(null); gerar('FULL'); }}>FULL</button>
+          <button className="btn btn-quiet btn-sm" type="button" disabled={busy} onClick={montarPersonalizado}>personalizar</button>
+        </div>
+      </div>
+
+      {erro && <div style={{ marginBottom: 12 }}><Note kind="err">{erro}</Note></div>}
+      {busy && <div className="progress" style={{ marginBottom: 12 }}><i /></div>}
+
+      {candidatos ? (
+        <div className="plano-custom">
+          <p className="t-sm muted">
+            Escolha o que quer correr. As que não se aplicam a <b>{seedType}</b> estão assinaladas e
+            ficam no plano como <b>bloqueadas</b>, com o motivo — não desaparecem.
+          </p>
+          <div className="chip-row" style={{ marginTop: 10 }}>
+            {candidatos.map((c) => (
+              <button
+                key={c.id}
+                type="button"
+                className={c.estado === 'BLOQUEADA' ? 'chip chip-block' : 'chip'}
+                aria-pressed={escolhidas.includes(c.id)}
+                title={c.motivo ?? `${c.rotulo} · aplica-se a ${seedType}`}
+                onClick={() => setEscolhidas((s) => (s.includes(c.id) ? s.filter((x) => x !== c.id) : [...s, c.id]))}
+              >
+                {c.rotulo}
+              </button>
+            ))}
+          </div>
+          <div className="plano-acoes" style={{ marginTop: 12 }}>
+            <button
+              className="btn btn-primary btn-sm" type="button" disabled={busy || escolhidas.length === 0}
+              onClick={() => { setCandidatos(null); gerar('CUSTOM', escolhidas); }}
+            >
+              gerar plano personalizado ({escolhidas.length})
+            </button>
+            <button className="btn btn-quiet btn-sm" type="button" onClick={() => setCandidatos(null)}>cancelar</button>
+          </div>
+        </div>
+      ) : !plano ? (
+        <div className="plano-vazio">
+          <p className="t-sm muted">
+            Ainda não há plano para esta investigação. O planeador escolhe as 8 fases e as ferramentas
+            que se aplicam a <b>{seedType}</b> — e diz, com motivo, o que fica por correr.
+          </p>
+          <div className="plano-acoes" style={{ marginTop: 10 }}>
+            <button className="btn btn-primary btn-sm" type="button" disabled={busy} onClick={() => gerar('QUICK')}>plano QUICK</button>
+            <button className="btn btn-sm" type="button" disabled={busy} onClick={() => gerar('FULL')}>plano completo</button>
+            <button className="btn btn-quiet btn-sm" type="button" disabled={busy} onClick={montarPersonalizado}>personalizar</button>
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className="t-sm plano-resumo">
+            <span className="dim">
+              {plano.resumo.fases} fases · {plano.resumo.ferramentas} ferramentas
+              {plano.resumo.bloqueadas ? ` · ${plano.resumo.bloqueadas} bloqueadas` : ''}
+              {plano.resumo.puladas ? ` · ${plano.resumo.puladas} puladas` : ''}
+              {plano.resumo.fora ? ` · ${plano.resumo.fora} de fora do plano (não se aplicam a ${seedType})` : ''}
+            </span>
+          </div>
+
+          {resumo && (
+            <div className="plano-progresso">
+              <div className="meter"><i style={{ width: `${pct}%` }} /></div>
+              <div className="t-xs dim">
+                {resumo.concluidas} de {resumo.fases} fases concluídas · {resumo.executadas} de {resumo.ferramentas} ferramentas executadas
+                {resumo.bloqueadas ? ` · ${resumo.bloqueadas} bloqueadas` : ''}
+                {resumo.erros ? ` · ${resumo.erros} com erro` : ''}
+                {resumo.pendentes ? ` · ${resumo.pendentes} por correr` : ''}
+              </div>
+            </div>
+          )}
+
+          <ol className="fases">
+            {plano.fases.map((f) => (
+              <LinhaFase
+                key={f.fase}
+                fase={f}
+                reg={progresso?.fases.find((r) => r.fase === f.fase)}
+                aberta={aberta === f.fase}
+                onToggle={() => setAberta((a) => (a === f.fase ? null : f.fase))}
+              />
+            ))}
+          </ol>
+
+          <div className="plano-acoes">
+            <button className="btn btn-primary btn-sm" type="button" disabled={busy} onClick={() => executar(false)}>
+              {feitas ? 'continuar execução' : 'executar plano'}
+            </button>
+            {progresso && (
+              <button className="btn btn-sm" type="button" disabled={busy} onClick={() => executar(true)}>
+                reexecutar tudo
+              </button>
+            )}
+            {precisaCusto && (
+              <label className="plano-custo">
+                <input type="checkbox" checked={custo} onChange={(e) => setCusto(e.target.checked)} />
+                confirmo o custo do Apify (pay-per-event)
+              </label>
+            )}
+          </div>
+          <p className="t-xs dim plano-nota">
+            O plano mostra o que está por correr <b>antes</b> de correr. Fases das etapas do Intel
+            (Normalization, Correlation, Intelligence, Snapshots) calculam-se sobre os nós que já
+            existem — sem nós, ficam bloqueadas em vez de inventarem resultado.
+          </p>
+        </>
+      )}
+
+      <Modal
+        open={confirmarTroca}
+        onClose={() => setConfirmarTroca(false)}
+        title="Trocar o plano actual?"
+        actions={
+          <button
+            className="btn btn-danger" type="button"
+            onClick={async () => { setConfirmarTroca(false); const p = await gerar('FULL'); if (p) { setCandidatos(ferramentasDo(p)); setEscolhidas([]); } }}
+          >
+            gerar plano completo e escolher
+          </button>
+        }
+      >
+        <p className="t-sm muted">
+          Para montar o plano personalizado o servidor tem de avaliar o que se aplica a{' '}
+          <b>{seedType}</b>. Isso substitui o plano actual — o que já foi executado deixa de contar
+          e a execução recomeça do zero.
+        </p>
+      </Modal>
+    </div>
   );
 }

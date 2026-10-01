@@ -1,7 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" role="img" aria-label="ARGUS">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" role="img" aria-label="ARGOS">
   <defs>
     <linearGradient id="p" x1="0" y1="0" x2="0.35" y2="1">
-      <stop offset="0" stop-color="#DC2626"/><stop offset="1" stop-color="#B91C1C"/>
+      <stop offset="0" stop-color="#1677FF"/><stop offset="1" stop-color="#0B5FD6"/>
     </linearGradient>
   </defs>
   <rect x="0" y="0" width="32" height="32" rx="6.9" fill="#0B0D10"/>

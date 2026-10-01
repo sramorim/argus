@@ -13,10 +13,15 @@ import { db } from '../src/db.ts';
 // carregar registos
 await import('../src/tools/infra.ts');
 await import('../src/tools/identity.ts');
+await import('../src/tools/username-intel.ts');
 await import('../src/tools/threat.ts');
 await import('../src/tools/finance-dev-br.ts');
 await import('../src/tools/tls.ts');
 await import('../src/tools/graph.ts');
+await import('../src/tools/social.ts');
+await import('../src/tools/social-search.ts');
+await import('../src/tools/osint-engine.ts');
+await import('../src/tools/apify.ts');
 
 const BASE = process.env.AUDIT_BASE ?? 'http://127.0.0.1:8787';
 const CTX = { userId: 'audit-user', plan: 'pro_max' as const, byok: {} as Record<string, string> };
@@ -121,6 +126,41 @@ const CASES: Case[] = [
   // ---- anti-falso-positivo: e o teste que o catalogo nao tinha ----
   { tool: 'username-finder', input: { username: 'zzargusinexistente' + Date.now() + 'q' }, label: 'username inventado NAO pode dar confirmados',
     expect: (r) => !r.findings.some((f) => f.group === 'plataforma' && f.evidence.confidence === 'confirmed') },
+  { tool: 'username-intel', input: { username: 'torvalds', modo: 'QUICK' }, label: 'username conhecido: FOUND em sites reais, 4 providers reportados',
+    expect: (r) => hasGroup(r, 'encontrado') && r.findings.filter((f) => f.group === 'provider').length === 4
+      && r.findings.some((f) => f.group === 'encontrado' && f.value !== null && typeof f.value === 'object') },
+  { tool: 'username-intel', input: { username: 'zzq7xk9plmw' + Date.now().toString(36), modo: 'QUICK' },
+    label: 'username inventado NAO pode dar FOUND em nenhum site (baseline do site)',
+    expect: (r) => r.findings.length > 0 && !r.findings.some((f) => f.group === 'encontrado')
+      && hasGroup(r, 'provider') },
+  { tool: 'username-intel', input: { username: 'torvalds', modo: 'CUSTOM', providers: 'blackbird' },
+    label: 'provider de CLI sem instalar: estado honesto, sem fabricar resultados',
+    expect: (r) => r.findings.some((f) => f.group === 'provider' && f.label === 'Blackbird')
+      && r.sources.some((s) => s.id === 'p-blackbird')
+      && r.findings.filter((f) => f.group === 'encontrado').every((f) => f.evidence.sourceIds[0] === 'p-blackbird') },
+  { tool: 'osint-engine', input: { alvo: 'example.com' }, label: '5 providers de CLI: cada um reporta o SEU estado real, nada fabricado',
+    expect: (r) => r.findings.filter((f) => f.group === 'provider').length === 5
+      && r.sources.filter((s) => s.id.startsWith('p-osint-')).length === 5
+      && r.findings.filter((f) => f.group === 'provider').every((f) => /^(READY|NOT_INSTALLED|NOT_CONFIGURED|INCOMPATIBLE|ERROR)/.test(String(f.value))) },
+  { tool: 'osint-engine', input: { alvo: 'example.com', providers: 'holehe' }, label: 'provider que nao aceita este tipo de alvo: INCOMPATIBLE, sem sequer correr',
+    expect: (r) => r.findings.some((f) => f.group === 'provider' && String(f.value).startsWith('INCOMPATIBLE'))
+      && r.sources.some((s) => s.id === 'p-osint-holehe' && s.status === 'skipped') },
+  { tool: 'osint-engine', input: { alvo: 'pessoa@exemplo.com', providers: 'ghunt, holehe, openosint' }, label: 'alvo de email: os 3 que aceitam email reportam estado por provider',
+    expect: (r) => r.findings.filter((f) => f.group === 'provider').length === 3
+      && hasGroup(r, 'alvo')
+      && r.findings.some((f) => f.label === 'Tipo detetado' && f.value === 'email') },
+  { tool: 'apify', input: { alvo: '@exemplo' }, label: 'sem token: NOT_CONFIGURED por actor + needs_key, APIFY_API_TOKEN no aviso',
+    expect: (r) => r.findings.filter((f) => f.group === 'actor').length === 8
+      && r.findings.filter((f) => f.group === 'actor').every((f) => String(f.value).startsWith('NOT_CONFIGURED'))
+      && r.sources.some((s) => s.status === 'needs_key')
+      && JSON.stringify(r.findings).includes('APIFY_API_TOKEN')
+      && !JSON.stringify(r).includes('APIFY_TOKEN=') },
+  { tool: 'apify', input: { alvo: '@exemplo', plataforma: 'instagram' }, label: 'filtro por plataforma: só os 4 actors de Instagram',
+    expect: (r) => r.findings.filter((f) => f.group === 'actor').length === 4 },
+  { tool: 'apify', input: { alvo: '@exemplo', actors: 'apify/instagram-scraper', confirmarCusto: 'sim' },
+    label: 'confirmado mas sem token: continua NOT_CONFIGURED (nunca corre às cegas)',
+    expect: (r) => r.findings.filter((f) => f.group === 'actor').length === 1
+      && r.findings.every((f) => !JSON.stringify(f.value).includes('Bearer')) },
   { tool: 'reputation-check', input: { target: 'debian.org' }, label: 'dominario limpo nao pode ser alertado',
     expect: (r) => r.findings.some((f) => f.label === 'Não consta nas listas consultadas') },
   { tool: 'crypto-tracer', input: { address: 'nao-e-um-endereco' }, label: 'endereco BTC invalido (tem de recusar ANTES de consultar)',
@@ -133,6 +173,15 @@ const CASES: Case[] = [
     expect: (r) => !r.findings.some((f) => f.label === 'Coordenadas (aproximadas)') },
   { tool: 'metadata-extractor', input: {}, label: 'sem ficheiro (tem de pedir input, nao devolver nada)',
     expect: (r) => r.findings.length > 0 && /URL|upload|Forneca|Envie/i.test(JSON.stringify(r.findings)) },
+  // ---------- presença pública: redes com API aberta ----------
+  { tool: 'bluesky-osint', input: { target: 'bsky.app/profile/bsky.app' }, label: 'perfil Bluesky publico (perfil + feed + rede)',
+    expect: (r) => hasGroup(r, 'perfil') || hasGroup(r, 'publicacoes') },
+  { tool: 'bluesky-osint', input: { target: 'nao-existe-argus-zzz.bsky.social' }, label: 'handle Bluesky inexistente (tem de avisar, nao inventar)',
+    expect: (r) => r.findings.length > 0 },
+  { tool: 'mastodon-osint', input: { target: 'gargron@mastodon.social' }, label: 'perfil Mastodon publico em instancia real',
+    expect: (r) => hasGroup(r, 'perfil') || hasGroup(r, 'publicacoes') },
+  { tool: 'social-search', input: { name: 'Albert Einstein' }, label: 'busca de um nome no indice do Bing, agrupada por rede',
+    expect: (r) => hasGroup(r, 'resumo') && r.sources.some((s) => /bing/i.test(s.id + ' ' + s.label)) },
 ];
 
 // ---------- classificadores ----------

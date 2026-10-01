@@ -46,7 +46,7 @@ export default function Auth({ onDone }: { onDone: () => void }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
         <Mark size={34} />
         <div>
-          <div style={{ fontSize: 14, fontWeight: 720, letterSpacing: '.2em' }}>ARGUS</div>
+          <div style={{ fontSize: 14, fontWeight: 720, letterSpacing: '.2em' }}>ARGOS</div>
           <div className="t-xs dim">{mode === 'register' ? 'criar conta' : 'entrar'}</div>
         </div>
       </div>

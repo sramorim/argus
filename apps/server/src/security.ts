@@ -13,6 +13,8 @@
  * Por isso, pedidos que mudam estado exigem `Origin`/`Sec-Fetch-Site` coerente.
  */
 import { config, isProd } from './config.ts';
+import { q, tokenHash } from './db.ts';
+import type { PlanId } from './plans.ts';
 
 const CSP = [
   "default-src 'self'",
@@ -300,4 +302,58 @@ export class RateLimiter {
   }
 
   get name(): string { return this.label; }
+}
+
+// ---------- sessão e autorização ----------
+/**
+ * Quem é o utilizador atrás do pedido.
+ *
+ * Viveram em `index.ts` até a FASE E, quando o Intelligence Engine passou a
+ * precisar das mesmas regras: um módulo que lê investigações tem de saber quem
+ * é o dono, e isso só pode existir num sítio só. Daqui saem `currentUser`,
+ * `requireAuth` e `requireAdmin` — o cliente continua a não decidir nada.
+ */
+export interface Ctx { userId: string; plan: PlanId; email: string; name: string; isAdmin: boolean }
+
+/** Administradores: a coluna `is_admin` do banco + a lista de e-mails do ambiente. */
+export const ADMIN_EMAILS = new Set(
+  (process.env.ARGUS_ADMIN_EMAILS ?? '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean),
+);
+
+export function readSessionToken(c: any): string | null {
+  const name = config.cookie.name;
+  const raw = c.req.header('cookie') ?? '';
+  for (const part of raw.split(';')) {
+    const i = part.indexOf('=');
+    if (i > 0 && part.slice(0, i).trim() === name) return decodeURIComponent(part.slice(i + 1).trim());
+  }
+  return null;
+}
+
+export function currentUser(c: any): Ctx | null {
+  const token = readSessionToken(c);
+  if (!token) return null;
+  const row = q(`SELECT u.id, u.email, u.name, u.plan, u.is_admin, u.suspended, s.expires_at FROM sessions s
+    JOIN users u ON u.id = s.user_id WHERE s.token_hash = ?`).get(tokenHash(token)) as any;
+  if (!row) return null;
+  if (new Date(row.expires_at).getTime() < Date.now()) {
+    q('DELETE FROM sessions WHERE token_hash=?').run(tokenHash(token));
+    return null;
+  }
+  if (row.suspended) return null;
+  const isAdmin = !!row.is_admin || ADMIN_EMAILS.has(String(row.email).toLowerCase());
+  return { userId: row.id, plan: row.plan, email: row.email, name: row.name, isAdmin };
+}
+
+export function requireAuth(c: any): Response | Ctx {
+  const u = currentUser(c);
+  if (!u) return c.json({ error: 'nao_autenticado', msg: 'Inicia sessão.' }, 401);
+  return u;
+}
+
+export function requireAdmin(c: any): Response | Ctx {
+  const u = requireAuth(c);
+  if (u instanceof Response) return u;
+  if (!u.isAdmin) return c.json({ error: 'sem_permissao', msg: 'Apenas administração.' }, 403);
+  return u;
 }

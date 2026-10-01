@@ -13,11 +13,11 @@ export { Icon };
 // --------------------------------------------------------------------- marca
 export function Mark({ size = 30, className }: { size?: number; className?: string }) {
   return (
-    <svg className={className} width={size} height={size} viewBox="0 0 32 32" role="img" aria-label="ARGUS">
+    <svg className={className} width={size} height={size} viewBox="0 0 32 32" role="img" aria-label="ARGOS">
       <defs>
         <linearGradient id="argus-pupil" x1="0" y1="0" x2="0.35" y2="1">
-          <stop offset="0" stopColor="#DC2626" />
-          <stop offset="1" stopColor="#B91C1C" />
+          <stop offset="0" stopColor="#1677FF" />
+          <stop offset="1" stopColor="#0B5FD6" />
         </linearGradient>
         <linearGradient id="argus-bg" x1="0" y1="0" x2="1" y2="1">
           <stop offset="0" stopColor="#14171C" />
@@ -40,7 +40,7 @@ export function Brand({ size = 30, subtitle = 'Fontes abertas' }: { size?: numbe
     <div className="brand">
       <Mark size={size} className="brand-logo" />
       <div className="brand-text">
-        <div className="brand-name">ARGUS</div>
+        <div className="brand-name">ARGOS</div>
         <div className="brand-sub">{subtitle}</div>
       </div>
     </div>

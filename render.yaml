@@ -63,6 +63,14 @@ services:
       # (Pode deixar vazio e promover depois por SQL.)
       - key: ARGUS_ADMIN_EMAILS
         sync: false
+      # Chave da conta Apify — só o backend a lê (process.env.APIFY_API_TOKEN).
+      # Sem ela a ferramenta APIFY devolve NOT_CONFIGURED e não gasta nada; com
+      # ela, correr um actor é pay-per-event e consome o crédito da conta.
+      # Criar em: Apify Console → Settings → API & Integrations.
+      # sync: false ⇒ o Render pede o valor na criação do serviço e guarda-o
+      # como secret; o valor NUNCA entra neste ficheiro nem no repositório.
+      - key: APIFY_API_TOKEN
+        sync: false
       - key: ARGUS_COOKIE_SECURE
         value: "true"
       - key: ARGUS_TRUST_PROXY

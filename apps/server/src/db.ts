@@ -97,6 +97,21 @@ CREATE TABLE IF NOT EXISTS runs (
   output TEXT NOT NULL,
   created_at TEXT NOT NULL
 );
+-- Rede social: a ULTIMA lista de seguidores observada por utilizador/alvo.
+-- As APIs do Bluesky e do Mastodon nao dizem QUANDO alguem passou a seguir — so
+-- devolvem a lista. Sem guardar a observacao anterior e impossivel responder a
+-- "quem acabou de seguir", que e a pergunta real. Uma linha por combinacao
+-- (upsert), nao um historico: guarda-se o minimo necessario para comparar.
+CREATE TABLE IF NOT EXISTS snapshots (
+  user_id TEXT NOT NULL,
+  tool TEXT NOT NULL,
+  target TEXT NOT NULL,
+  kind TEXT NOT NULL,
+  payload TEXT NOT NULL,
+  at TEXT NOT NULL,
+  PRIMARY KEY (user_id, tool, target, kind)
+);
+CREATE INDEX IF NOT EXISTS idx_snapshots_at ON snapshots(at);
 CREATE INDEX IF NOT EXISTS idx_usage_user_at ON usage(user_id, at);
 CREATE INDEX IF NOT EXISTS idx_usage_at ON usage(at);
 CREATE INDEX IF NOT EXISTS idx_runs_user_at ON runs(user_id, created_at);
@@ -123,6 +138,10 @@ addColumn('investigations', 'run_id', 'TEXT');
 addColumn('investigations', 'node_count', 'INTEGER NOT NULL DEFAULT 0');
 addColumn('investigations', 'edge_count', 'INTEGER NOT NULL DEFAULT 0');
 addColumn('investigations', 'tools', 'TEXT');
+// FASE F: o plano de investigação e o progresso da sua execução. Guardados na
+// própria linha para que reler a investigação não dependa de mais nada.
+addColumn('investigations', 'plano', 'TEXT');
+addColumn('investigations', 'progresso', 'TEXT');
 addColumn('users', 'suspended', 'INTEGER NOT NULL DEFAULT 0');
 
 // ---------- statements preparadas em cache ----------
@@ -189,6 +208,66 @@ export function cacheSet(key: string, value: unknown, ttlSeconds: number): void 
     .run(key, JSON.stringify(value), exp);
 }
 
+// ---------- observações de rede social ----------
+/**
+ * A última lista de seguidores observada para um alvo.
+ *
+ * Só guardamos **handles**, nunca conteúdo: a pergunta que se quer responder é
+ * "quem passou a seguir desde a última vez", e para isso basta a diferença
+ * entre duas listas. Uma linha por utilizador/alvo (upsert), pelo que o consumo
+ * é fixo — não é um histórico que cresce.
+ */
+export interface Snapshot { members: string[]; at: string }
+
+export function snapshotGet(
+  userId: string, tool: string, target: string, kind: string,
+): Snapshot | null {
+  const row = q('SELECT payload, at FROM snapshots WHERE user_id = ? AND tool = ? AND target = ? AND kind = ?')
+    .get(userId, tool, target, kind) as { payload: string; at: string } | undefined;
+  if (!row) return null;
+  try {
+    const parsed = JSON.parse(row.payload);
+    if (!Array.isArray(parsed)) return null;
+    return { members: parsed.map(String), at: row.at };
+  } catch { return null; }
+}
+
+export function snapshotPut(
+  userId: string, tool: string, target: string, kind: string, members: string[],
+): void {
+  const at = new Date().toISOString();
+  q(`INSERT INTO snapshots(user_id, tool, target, kind, payload, at) VALUES(?,?,?,?,?,?)
+     ON CONFLICT(user_id, tool, target, kind) DO UPDATE SET payload=excluded.payload, at=excluded.at`)
+    .run(userId, tool, target, kind, JSON.stringify(members.slice(0, 1000)), at);
+}
+
+// ---------- snapshots do Intel (documento JSON, nao so listas) ----------
+/**
+ * A mesma tabela `snapshots`, outro contrato: o Intel guarda um DOCUMENTO
+ * (perfil unificado, presenca), nao uma lista de handles. `snapshotGet` acima
+ * exige array de strings e rejeita o resto — por isso estes dois helperes
+ * existem: nao se amolda um documento a um contrato que nao e' o dele.
+ */
+export interface IntelSnapshotRow { dados: unknown; at: string }
+
+export function intelSnapshotGet(
+  userId: string, tool: string, target: string, kind: string,
+): IntelSnapshotRow | null {
+  const row = q('SELECT payload, at FROM snapshots WHERE user_id = ? AND tool = ? AND target = ? AND kind = ?')
+    .get(userId, tool, target, kind) as { payload: string; at: string } | undefined;
+  if (!row) return null;
+  try { return { dados: JSON.parse(row.payload), at: row.at }; } catch { return null; }
+}
+
+export function intelSnapshotPut(
+  userId: string, tool: string, target: string, kind: string, dados: unknown,
+): void {
+  const at = new Date().toISOString();
+  q(`INSERT INTO snapshots(user_id, tool, target, kind, payload, at) VALUES(?,?,?,?,?,?)
+     ON CONFLICT(user_id, tool, target, kind) DO UPDATE SET payload=excluded.payload, at=excluded.at`)
+    .run(userId, tool, target, kind, JSON.stringify(dados ?? null), at);
+}
+
 /**
  * Cache com dedupe de inflight: evita que N pedidos simultaneos batam na mesma API gratuita.
  * `cachedWith` devolve tambem se veio do cache, para que a proveniencia continue correcta
@@ -221,10 +300,10 @@ export async function cachedWith<T>(
  * e `cache` crescem sem limite e o deploy acaba por ficar sem espaço — ou, pior,
  * por ficar lento. A poda corre no arranque e de duas em duas horas.
  */
-export function prune(opts: { keepUsageDays?: number; keepRunsPerUser?: number } = {}): { usage: number; runs: number; cache: number; sessions: number } {
+export function prune(opts: { keepUsageDays?: number; keepRunsPerUser?: number } = {}): { usage: number; runs: number; cache: number; sessions: number; snapshots: number } {
   const usageDays = opts.keepUsageDays ?? 90;
   const keepRuns = opts.keepRunsPerUser ?? 200;
-  const r = { usage: 0, runs: 0, cache: 0, sessions: 0 };
+  const r = { usage: 0, runs: 0, cache: 0, sessions: 0, snapshots: 0 };
   const cut = new Date(Date.now() - usageDays * 86_400_000).toISOString();
   const n = (x: number | bigint) => Number(x);
   r.usage = n(q('DELETE FROM usage WHERE at < ?').run(cut).changes);
@@ -236,6 +315,9 @@ export function prune(opts: { keepUsageDays?: number; keepRunsPerUser?: number }
     )`).run(keepRuns, keepRuns).changes);
   r.cache = n(q('DELETE FROM cache WHERE expires_at < ?').run(Date.now() - 3600_000).changes);
   r.sessions = n(q('DELETE FROM sessions WHERE expires_at < ?').run(new Date().toISOString()).changes);
+  // Observações de rede: uma linha por utilizador/alvo, mas alvos esquecidos
+  // continuam a ocupar disco. Passados 90 dias a comparação já não interessa.
+  r.snapshots = n(q('DELETE FROM snapshots WHERE at < ?').run(cut).changes);
   return r;
 }
 

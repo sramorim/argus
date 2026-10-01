@@ -9,6 +9,10 @@ import { StrictMode, useCallback, useEffect, useState, Component } from 'react';
 import type { ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import './styles.css';
+// Efeito lateral ao arranque: lê as preferências locais (densidade, zebra) e
+// escreve-as no <html> antes de o primeiro ecrã desenhar. Sem este import, a
+// preferência só passava a valer quando o ecrã de Definições fosse aberto.
+import './prefs';
 import { api, type ToolPublic, type User, type Usage } from './api';
 import Auth from './pages/Auth';
 import { Landing } from './pages/Landing';
@@ -29,6 +33,10 @@ const viewToHash = (v: View2): string => {
     case 'account': return '/conta';
     case 'admin': return '/admin';
     case 'history': return '/historico';
+    case 'health': return '/saude';
+    case 'radar': return '/radar';
+    case 'perfil': return '/perfil';
+    case 'definicoes': return '/definicoes';
     default: return '/';
   }
 };
@@ -44,6 +52,10 @@ const hashToView = (h: string): View2 => {
     case 'conta': return { k: 'account' };
     case 'admin': return { k: 'admin' };
     case 'historico': return { k: 'history' };
+    case 'saude': return { k: 'health' };
+    case 'radar': return { k: 'radar' };
+    case 'perfil': return { k: 'perfil' };
+    case 'definicoes': return { k: 'definicoes' };
     case 'investigar': return { k: 'nova' };
     default: return { k: 'dashboard' };
   }
@@ -121,7 +133,7 @@ function App() {
     return (
       <div style={{ display: 'grid', placeItems: 'center', minHeight: '100vh', gap: 14 }}>
         <span className="spin" />
-        <span className="t-sm dim">a ligar ao ARGUS…</span>
+        <span className="t-sm dim">a ligar ao ARGOS…</span>
       </div>
     );
   }

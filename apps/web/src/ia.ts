@@ -1,5 +1,5 @@
 /**
- * Arquitetura de informação do ARGUS.
+ * Arquitetura de informação do ARGOS.
  *
  * Um único lugar decide **que ferramentas existem, a que grupo pertencem e por
  * que ordem aparecem**. A sidebar, o dashboard, a busca e os atalhos leem
@@ -7,8 +7,8 @@
  * sempre a fonte de "a ferramenta está no site mas não aparece no menu".
  *
  * Regra do projeto: **só entra o que existe e funciona.** Nada é listado por
- * parecer completo. Os grupos abaixo contêm as 26 ferramentas registadas e testadas
- * com alvos reais (`npm run test:audit`, 26/26), e nenhuma outra.
+ * parecer completo. Os grupos abaixo contêm as 32 ferramentas registadas e testadas
+ * com alvos reais (`npm run test:audit`, 32/32), e nenhuma outra.
  */
 import { Icon } from './components/Icons';
 import type { PlanId, ToolPublic } from './api';
@@ -45,18 +45,37 @@ export const GRUPOS: Grupo[] = [
     nome: 'Identidade',
     resumo: 'Descobre quem está por trás de um username, e-mail ou telefone.',
     icon: Icon.user,
-    ferramentas: ['username-finder', 'email-analyzer', 'phone-analyzer', 'dorks-generator'],
+    ferramentas: ['username-finder', 'username-intel', 'email-analyzer', 'phone-analyzer', 'dorks-generator'],
   },
   {
     id: 'social',
     nome: 'Redes e Comunicação',
     resumo: 'Perfis públicos em plataformas onde a pessoa se identifica.',
     icon: Icon.globe,
-    // Só existem estas duas ferramentas de rede social a sério. Não se lista
-    // Instagram/TikTok/X/Reddit/YouTube porque não há ferramenta nenhuma por trás
-    // — o `username-finder` é que sonda perfis públicos nessas e noutras
-    // plataformas, e mostra quais respondeu.
-    ferramentas: ['github-osint', 'telegram-osint'],
+    // Só entram ferramentas que leem dados públicos de uma rede. Não se lista
+    // Instagram/TikTok/X/Reddit/YouTube como ferramentas próprias porque não há
+    // nenhuma por trás — o `social-search` é que consulta o índice do motor de
+    // busca por essas redes, e o `username-finder` sonda quais respondem.
+    ferramentas: ['github-osint', 'telegram-osint', 'bluesky-osint', 'mastodon-osint', 'social-search'],
+  },
+  {
+    id: 'osint',
+    nome: 'OSINT Engine',
+    resumo: 'Ferramentas externas (SpiderFoot, Photon, OpenOSINT, GHunt, Holehe) corridas isoladas.',
+    icon: Icon.code,
+    // Cada uma destas corre num processo próprio, sem shell e com env mínima.
+    // Se não estiverem instaladas, reportam NOT_INSTALLED — o grupo mostra o
+    // estado real das dependências, nunca um resultado simulado.
+    ferramentas: ['osint-engine'],
+  },
+  {
+    id: 'apify',
+    nome: 'APIFY',
+    resumo: 'Actors pagos do Apify (Instagram, TikTok, Facebook, X) com chave só no backend.',
+    icon: Icon.link,
+    // Engine separada do núcleo: sem APIFY_API_TOKEN devolve NOT_CONFIGURED e
+    // não gasta nada; correr um actor custa dinheiro, por isso pede confirmação.
+    ferramentas: ['apify'],
   },
   {
     id: 'web',
@@ -88,15 +107,26 @@ export const GRUPOS: Grupo[] = [
   },
 ];
 
-/** Ferramentas que a app oferece como *vista*, não como ferramenta do catálogo. */
+/**
+ * Ferramentas que a app oferece como *vista*, não como ferramenta do catálogo.
+ *
+ * Não são grupos de ferramentas: são ecrãs próprios da aplicação (estado do
+ * sistema, observação de presença, perfil unificado e definições) com
+ * navegação própria, pelo mesmo mecanismo de sempre — ícone na área de
+ * trabalho, item na gaveta e janela.
+ */
 export const VISTAS = [
   { id: 'dashboard', nome: 'Painel', icon: Icon.grid },
   { id: 'nova', nome: 'Nova investigação', icon: Icon.target },
   { id: 'inv', nome: 'Investigações', icon: Icon.network },
   { id: 'history', nome: 'Histórico', icon: Icon.history },
+  { id: 'health', nome: 'System Health', icon: Icon.activity },
+  { id: 'radar', nome: 'Presence Radar', icon: Icon.eye },
+  { id: 'perfil', nome: 'Unified Profile', icon: Icon.layers },
   { id: 'plans', nome: 'Planos', icon: Icon.crown },
   { id: 'keys', nome: 'Chaves API', icon: Icon.key },
   { id: 'account', nome: 'Conta', icon: Icon.user },
+  { id: 'definicoes', nome: 'Definições', icon: Icon.settings },
   { id: 'admin', nome: 'Administração', icon: Icon.shield },
 ] as const;
 

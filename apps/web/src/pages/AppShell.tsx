@@ -1,24 +1,30 @@
 /**
- * Estrutura da aplicação.
+ * Espaço de trabalho do ARGOS.
  *
- * Duas decisões que definem a experiência:
+ * A aplicação é uma **área de trabalho**, não uma pilha de páginas: barra no
+ * topo, ícones agrupados pelo que se quer fazer, e ferramentas que abrem em
+ * **janelas** que se arrastam, redimensionam, minimizam e fecham. Ter o
+ * domínio e o IP abertos ao mesmo tempo é metade do que uma investigação
+ * precisa — em páginas que se substituem, comparar dois alvos obriga a andar
+ * para trás a perder o que se tinha escrito.
  *
- * 1. **A navegação é por camadas, não uma lista.** A sidebar tem grupos
- *    ("Identidade", "Domínio e Infraestrutura", …) que abrem e fecham. Só o grupo
- *    que contém a ferramenta aberta fica marcado, para se saber sempre onde
- *    está. Uma lista de 26 botões não diz nada; sete grupos dizem.
+ * Três decisões que ficam da versão anterior e continuam a valer:
  *
- * 2. **O primeiro ecrã é um painel, não o catálogo.** Quem entra quer
- *    investigar alguma coisa, não ler um índice. O painel tem a ação principal em
- *    grande e atalhos para o que mais se usa.
- *
- * Telemóvel: barra inferior de 4 destinos e a mesma sidebar em gaveta. O
- * comportamento dos grupos é o mesmo nos dois.
+ * 1. **A organização continua a vir do `ia.ts`.** Os ícones agrupam-se pelos
+ *    mesmos grupos que a sidebar usava; nada aqui inventa ordem nem categoria.
+ * 2. **O primeiro ecrã continua a ser o painel.** Quem entra quer investigar,
+ *    não ler um índice: a janela do painel abre sozinha.
+ * 3. **Telemóvel não é um desktop ao pequenino.** Abaixo de 1001px as janelas
+ *    ocupam a área toda, a navegação é a gaveta com as camadas e a barra
+ *    inferior de quatro destinos — a visibilidade disto é do CSS, nunca de uma
+ *    medida do browser lida durante o render.
  */
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactElement } from 'react';
-import { api, type ToolPublic, type Usage, type User, useContacto } from '../api';
+import type { SVGProps } from 'react';
+import { type ToolPublic, type Usage, type User, useContacto } from '../api';
 import { Icon, CATEGORY_ICON, CATEGORY_LABEL } from '../components/Icons';
+import Janela, { type Geom } from '../components/Janela';
 import { Brand } from '../components/ui';
 import { GRUPOS, VISTAS, ATALHOS, NOME_PLANO, porGrupo } from '../ia';
 import Dashboard from './Dashboard';
@@ -29,11 +35,16 @@ import Keys from './Keys';
 import Account from './Account';
 import Admin from './Admin';
 import History from './History';
+import Health from './Health';
+import Radar from './Radar';
+import Perfil from './Perfil';
+import Definicoes from './Definicoes';
 
 export type View =
   | { k: 'dashboard' } | { k: 'nova' }
   | { k: 'tool'; id: string } | { k: 'inv' } | { k: 'inv'; id: string }
-  | { k: 'plans' } | { k: 'keys' } | { k: 'account' } | { k: 'admin' } | { k: 'history' };
+  | { k: 'plans' } | { k: 'keys' } | { k: 'account' } | { k: 'admin' } | { k: 'history' }
+  | { k: 'health' } | { k: 'radar' } | { k: 'perfil' } | { k: 'definicoes' };
 
 /** Os 4 destinos da barra inferior. Escolha: o que se usa a toda a hora. */
 const TABS: { v: View; id: string; label: string; icon: (p: Record<string, unknown>) => ReactElement }[] = [
@@ -45,6 +56,24 @@ const TABS: { v: View; id: string; label: string; icon: (p: Record<string, unkno
 
 const sameView = (a: View, b: View) => JSON.stringify(a) === JSON.stringify(b);
 
+/** Identidade de uma vista: é o que liga a rota, a janela e a barra de tarefas. */
+function chave(v: View): string {
+  switch (v.k) {
+    case 'tool': return `tool:${(v as { id: string }).id}`;
+    case 'inv': return `inv:${(v as { id?: string }).id ?? ''}`;
+    default: return v.k;
+  }
+}
+
+const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
+
+interface Aberta {
+  vista: View;
+  geom: Geom;
+  max: boolean;
+  min: boolean;
+}
+
 export default function AppShell({
   user, tools, usage, view, setView, onLogout, refreshUser,
 }: {
@@ -53,11 +82,126 @@ export default function AppShell({
 }) {
   const [drawer, setDrawer] = useState(false);
   const wa = useContacto();
+  const areaRef = useRef<HTMLElement | null>(null);
+  const espacoRef = useRef({ w: 1200, h: 760 });
+  const [espaco, setEspaco] = useState({ w: 1200, h: 760 });
+
+  /** Janelas abertas e a ordem em que estão (o fim é o topo). */
+  const [abertas, setAbertas] = useState<Record<string, Aberta>>({});
+  const [ordem, setOrdem] = useState<string[]>([]);
+  const [ativa, setAtiva] = useState<string | null>(null);
+
+  /** Relógio da barra superior — só muda de estado de 30 em 30 segundos. */
+  const [agora, setAgora] = useState(() => new Date());
+  useEffect(() => {
+    const t = setInterval(() => setAgora(new Date()), 30_000);
+    return () => clearInterval(t);
+  }, []);
 
   /**
-   * Quais grupos estão abertos. Por omissão, só o grupo da ferramenta aberta —
-   * é o que impede a sidebar de ser uma parede de texto. O utilizador pode abrir
-   * outros e a escolha fica.
+   * A área de trabalho encolhe com o ecrã e é ela que define até onde uma
+   * janela pode andar. Mede-se o próprio elemento, não a janela do browser.
+   */
+  useEffect(() => {
+    const el = areaRef.current;
+    if (!el) return;
+    const medir = () => {
+      const w = el.clientWidth || espacoRef.current.w;
+      const h = el.clientHeight || espacoRef.current.h;
+      espacoRef.current = { w, h };
+      setEspaco((s) => (s.w === w && s.h === h ? s : { w, h }));
+    };
+    medir();
+    if (typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(medir);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  const abrir = useCallback((v: View) => {
+    const k = chave(v);
+    setAbertas((prev) => {
+      if (prev[k]) return prev[k]?.min ? { ...prev, [k]: { ...prev[k], min: false } } : prev;
+      const { w: aw, h: ah } = espacoRef.current;
+      const n = Object.keys(prev).length;
+      const w = clamp(Math.min(1060, aw - 90), 520, Math.max(520, aw));
+      const h = clamp(Math.min(740, ah - 70), 360, Math.max(360, ah));
+      const geom: Geom = {
+        x: clamp(24 + n * 28, 0, Math.max(0, aw - w)),
+        y: clamp(16 + n * 24, 0, Math.max(0, ah - h)),
+        w, h,
+      };
+      // A investigação é a vista que pede ecrã inteiro: é um grafo, não um formulário.
+      return { ...prev, [k]: { vista: v, geom, max: v.k === 'nova', min: false } };
+    });
+    setOrdem((o) => [...o.filter((x) => x !== k), k]);
+    setAtiva(k);
+  }, []);
+
+  const focar = useCallback((k: string, sincronizar = true) => {
+    setOrdem((o) => (o[o.length - 1] === k ? o : [...o.filter((x) => x !== k), k]));
+    setAtiva(k);
+    setAbertas((prev) => (prev[k]?.min ? { ...prev, [k]: { ...prev[k], min: false } } : prev));
+    if (sincronizar) {
+      const v = abertas[k]?.vista;
+      if (v) setView(v);
+    }
+  }, [abertas, setView]);
+
+  /** Fecha: a janela sai de cima, o foco desce para a que estava por baixo. */
+  const fechar = useCallback((k: string) => {
+    const resto = ordem.filter((x) => x !== k);
+    const proximo = resto[resto.length - 1] ?? null;
+    setAbertas((prev) => {
+      const { [k]: _sai, ...r } = prev;
+      return r;
+    });
+    setOrdem(resto);
+    setAtiva((a) => (a === k ? proximo : a));
+    const v = proximo ? abertas[proximo]?.vista : undefined;
+    if (v) setView(v);
+  }, [ordem, abertas, setView]);
+
+  const alternarMin = useCallback((k: string) => {
+    setAbertas((prev) => (prev[k] ? { ...prev, [k]: { ...prev[k], min: !prev[k].min } } : prev));
+    // Minimizar entrega o foco à janela que estava por baixo — deixa de haver
+    // nenhuma ativa só quando não sobra nenhuma por restaurar.
+    setAtiva((a) => {
+      if (a !== k) return a;
+      const i = ordem.indexOf(k);
+      return ordem.slice(0, i).pop() ?? null;
+    });
+  }, [ordem]);
+
+  const alternarMax = useCallback((k: string) => {
+    setAbertas((prev) => (prev[k] ? { ...prev, [k]: { ...prev[k], max: !prev[k].max } } : prev));
+    focar(k, false);
+  }, [focar]);
+
+  const porGeom = useCallback((k: string, geom: Geom) => {
+    setAbertas((prev) => (prev[k] ? { ...prev, [k]: { ...prev[k], geom } } : prev));
+  }, []);
+
+  /** A rota também muda por fora (botão do browser, link direto). */
+  const ultima = useRef<string | null>(null);
+
+  /** Navegar = mudar a rota **e** abrir a janela que lhe corresponde. */
+  const go = useCallback((v: View) => {
+    ultima.current = chave(v);
+    setView(v);
+    abrir(v);
+    setDrawer(false);
+  }, [abrir, setView]);
+  useEffect(() => {
+    const k = chave(view);
+    if (ultima.current === k) return;
+    ultima.current = k;
+    abrir(view);
+  }, [view, abrir]);
+
+  /**
+   * Quais grupos estão abertos na gaveta. Por omissão, só o grupo da ferramenta
+   * aberta — é o que impede a gaveta de ser uma parede de texto.
    */
   const grupoDaFerramenta = useMemo(() => {
     if (view.k !== 'tool') return null;
@@ -66,19 +210,10 @@ export default function AppShell({
 
   const [abertos, setAbertos] = useState<Set<string>>(() => new Set(grupoDaFerramenta ? [grupoDaFerramenta] : ['investigar']));
 
-  // Ao navegar, o grupo da ferramenta abre-se só. Sem isto, abrir uma ferramenta
-  // de dentro de um grupo fechado deixava a sidebar sem nada marcado.
   useEffect(() => {
     if (!grupoDaFerramenta) return;
     setAbertos((s) => (s.has(grupoDaFerramenta) ? s : new Set([...s, grupoDaFerramenta])));
   }, [grupoDaFerramenta]);
-
-  useEffect(() => {
-    const mq = window.matchMedia('(min-width: 1001px)');
-    const on = () => { if (mq.matches) setDrawer(false); };
-    mq.addEventListener('change', on);
-    return () => mq.removeEventListener('change', on);
-  }, []);
 
   useEffect(() => {
     if (!drawer) return;
@@ -87,9 +222,6 @@ export default function AppShell({
     return () => { document.body.style.overflow = prev; };
   }, [drawer]);
 
-  useEffect(() => { window.scrollTo({ top: 0, behavior: 'auto' }); }, [view.k, (view as { id?: string }).id]);
-
-  const go = (v: View) => { setView(v); setDrawer(false); };
   const alternar = (id: string) => setAbertos((s) => {
     const n = new Set(s);
     if (n.has(id)) n.delete(id); else n.add(id);
@@ -98,8 +230,58 @@ export default function AppShell({
 
   const pct = usage?.daily ? Math.min(100, (usage.today / usage.daily) * 100) : 0;
   const esgotada = usage ? usage.today >= usage.daily : false;
-
   const visivel = (id: string) => (user.isAdmin ? true : id !== 'admin');
+  const apps = VISTAS.filter((v) => visivel(v.id));
+
+  const iconeDe = (v: View): ((p: SVGProps<SVGSVGElement>) => ReactElement) => {
+    if (v.k === 'tool') {
+      const t = tools.find((x) => x.id === (v as { id: string }).id);
+      return CATEGORY_ICON[t?.category ?? ''] ?? Icon.grid;
+    }
+    return VISTAS.find((x) => x.id === v.k)?.icon ?? Icon.grid;
+  };
+
+  const tituloDe = (v: View): string => {
+    switch (v.k) {
+      case 'dashboard': return 'Painel';
+      case 'nova': return 'Nova investigação';
+      case 'tool': return tools.find((t) => t.id === (v as { id: string }).id)?.name ?? 'Ferramenta';
+      case 'inv': return (v as { id?: string }).id ? 'Sessão' : 'Sessões';
+      case 'plans': return 'Planos';
+      case 'keys': return 'Chaves API';
+      case 'account': return 'Conta';
+      case 'admin': return 'Administração';
+      case 'history': return 'Histórico';
+      case 'health': return 'System Health';
+      case 'radar': return 'Presence Radar';
+      case 'perfil': return 'Unified Profile';
+      case 'definicoes': return 'Definições';
+      default: return 'ARGOS';
+    }
+  };
+
+  const conteudo = (v: View): React.ReactNode => {
+    switch (v.k) {
+      case 'dashboard': return <Dashboard user={user} tools={tools} usage={usage} setView={go} />;
+      case 'nova': return <ToolPage id="graph-investigation" tools={tools} onUsage={refreshUser} comoAlvo />;
+      case 'tool': return <ToolPage id={(v as { id: string }).id} tools={tools} onUsage={refreshUser} />;
+      case 'inv': return <Investigations view={v as { id?: string }} setView={go} />;
+      case 'plans': return <Plans user={user} />;
+      case 'keys': return <Keys />;
+      case 'account': return <Account user={user} onLogout={onLogout} />;
+      case 'admin': return <Admin />;
+      case 'history': return <History setView={go} />;
+      case 'health': return <Health />;
+      case 'radar': return <Radar setView={go} />;
+      case 'perfil': return <Perfil setView={go} />;
+      case 'definicoes': return <Definicoes user={user} usage={usage} setView={go} />;
+      default: return null;
+    }
+  };
+
+  const data = agora.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' });
+  const hora = agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  const inicial = (user.name || user.email || '?').trim().slice(0, 1).toUpperCase();
 
   const conteudoLateral = (
     <>
@@ -113,7 +295,7 @@ export default function AppShell({
           >
             <Icon.target /> Nova investigação
           </button>
-          {VISTAS.filter((v) => v.id !== 'admin' || user.isAdmin).map((v) => (
+          {apps.map((v) => (
             <NavItem
               key={v.id}
               v={{ k: v.id } as View}
@@ -199,64 +381,177 @@ export default function AppShell({
     </>
   );
 
-  const titulo = useMemo(() => {
-    switch (view.k) {
-      case 'dashboard': return 'Painel';
-      case 'nova': return 'Nova investigação';
-      case 'tool': return tools.find((t) => t.id === (view as { id: string }).id)?.name ?? 'Ferramenta';
-      case 'inv': return ((view as { id?: string }).id ? 'Sessão' : 'Sessões');
-      case 'plans': return 'Planos';
-      case 'keys': return 'Chaves API';
-      case 'account': return 'Conta';
-      case 'admin': return 'Administração';
-      case 'history': return 'Histórico';
-      default: return 'ARGUS';
-    }
-  }, [view, tools]);
-
-  const crumb = view.k === 'tool'
-    ? GRUPOS.find((g) => g.ferramentas.includes((view as { id: string }).id))?.nome
-    : undefined;
-
   return (
-    <div className="app">
+    <div className="shell">
+      {/* ---------------------------------------------------------- barra superior */}
+      <header className="topbar">
+        <button className="icon-btn only-narrow" onClick={() => setDrawer(true)} aria-label="Abrir menu" type="button">
+          <Icon.menu />
+        </button>
+        <button className="topbar-brand" type="button" onClick={() => go({ k: 'dashboard' })} title="Painel">
+          <Brand />
+        </button>
+        <div className="topbar-clock only-desk">
+          <Icon.clock />
+          <span className="topbar-data">{data}</span>
+          <span className="topbar-sep">·</span>
+          <span className="topbar-hora">{hora}</span>
+        </div>
+        <span className="grow" />
+        {esgotada && <span className="tag tag-warn only-desk">cota esgotada</span>}
+        {!esgotada && usage && (
+          <span className="topbar-quota only-desk">{usage.daily - usage.today} execuções hoje</span>
+        )}
+        <nav className="topbar-links only-desk" aria-label="Atalhos">
+          <button className="topbar-link" type="button" onClick={() => go({ k: 'inv' })}>Sessões</button>
+          <button className="topbar-link" type="button" onClick={() => go({ k: 'history' })}>Histórico</button>
+          <button className="topbar-link" type="button" onClick={() => go({ k: 'plans' })}>Planos</button>
+        </nav>
+        <details className="user-menu">
+          <summary className="avatar" title={user.email}>{inicial}</summary>
+          <div className="user-pop">
+            <div className="user-pop-head">
+              <div className="user-pop-name">{user.name || user.email}</div>
+              <div className="user-pop-mail">{user.email}</div>
+            </div>
+            {apps.map((v) => (
+              <button key={v.id} className="user-pop-item" type="button" onClick={() => go({ k: v.id } as View)}>
+                <v.icon /> {v.nome}
+              </button>
+            ))}
+            <button className="user-pop-item" type="button" onClick={onLogout}>
+              <Icon.logout /> Sair
+            </button>
+          </div>
+        </details>
+      </header>
+
+      {/* ------------------------------------------------------- área de trabalho */}
+      <main className="desktop" ref={areaRef}>
+        <div className="desk-icons">
+          <section className="desk-group">
+            <h2 className="desk-title">Aplicação</h2>
+            <div className="desk-row">
+              {apps.map((v) => (
+                <button key={v.id} className="desk-icon" type="button" onClick={() => go({ k: v.id } as View)}
+                  data-aberta={ordem.includes(chave({ k: v.id } as View))}>
+                  <span className="desk-ico"><v.icon /></span>
+                  <span className="desk-label">{v.nome}</span>
+                </button>
+              ))}
+            </div>
+          </section>
+
+          {GRUPOS.map((g) => {
+            const lista = porGrupo(tools, g.id);
+            if (!lista.length) return null;
+            const Ico = g.icon;
+            return (
+              <section className="desk-group" key={g.id}>
+                <h2 className="desk-title"><Ico /> {g.nome}</h2>
+                <div className="desk-row">
+                  {lista.map((t) => {
+                    const Cat = CATEGORY_ICON[t.category] ?? Icon.grid;
+                    const k = chave({ k: 'tool', id: t.id });
+                    return (
+                      <button
+                        key={t.id}
+                        className="desk-icon"
+                        type="button"
+                        title={t.summary}
+                        data-tool={t.id}
+                        data-aberta={ordem.includes(k)}
+                        onClick={() => go({ k: 'tool', id: t.id })}
+                      >
+                        <span className="desk-ico"><Cat /></span>
+                        <span className="desk-label">{t.name}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
+            );
+          })}
+        </div>
+
+        {ordem.length === 0 && (
+          <div className="desk-hint">
+            <Icon.target />
+            <p className="t-sm">Escolhe um ícone para abrir uma ferramenta. Várias podem ficar abertas ao mesmo tempo.</p>
+          </div>
+        )}
+
+        {ordem.map((k, i) => {
+          const j = abertas[k];
+          if (!j) return null;
+          return (
+            <Janela
+              key={k}
+              titulo={tituloDe(j.vista)}
+              icone={iconeDe(j.vista)}
+              geom={j.geom}
+              espaco={espaco}
+              z={20 + i}
+              ativa={ativa === k}
+              max={j.max}
+              min={j.min}
+              onFocar={() => focar(k)}
+              onFechar={() => fechar(k)}
+              onMin={() => alternarMin(k)}
+              onMax={() => alternarMax(k)}
+              onGeom={(g) => porGeom(k, g)}
+            >
+              {conteudo(j.vista)}
+            </Janela>
+          );
+        })}
+      </main>
+
+      {/* ------------------------------------------------------------- barra de tarefas */}
+      <footer className="taskbar only-desk">
+        <div className="task-list">
+          {ordem.map((k) => {
+            const j = abertas[k];
+            if (!j) return null;
+            const Ico = iconeDe(j.vista);
+            return (
+              <button
+                key={k}
+                className="task-item"
+                type="button"
+                data-ativa={ativa === k && !j.min ? 'true' : 'false'}
+                onClick={() => focar(k)}
+                title={tituloDe(j.vista)}
+              >
+                <Ico /> <span className="task-name">{tituloDe(j.vista)}</span>
+              </button>
+            );
+          })}
+        </div>
+        <span className="grow" />
+        {usage && <span className="task-quota">{usage.today}/{usage.daily}</span>}
+        <span className="task-copy">{wa?.copyright ?? '© 2026 SR. Amorim'} · Todos os direitos reservados.</span>
+      </footer>
+
+      {/* ------------------------------------------------------------ canal de contacto */}
+      <div className="dock only-desk" aria-label="Contacto">
+        {wa && (
+          <a className="dock-btn" href={wa.link} target="_blank" rel="noopener noreferrer" title={wa.label} aria-label={wa.label}>
+            <Icon.phone />
+          </a>
+        )}
+        <a className="dock-btn" href="https://github.com/sramorim/argus" target="_blank" rel="noopener noreferrer"
+          title="Código-fonte" aria-label="Código-fonte">
+          <Icon.code />
+        </a>
+      </div>
+
+      {/* -------------------------------------------------------------- gaveta (estreito) */}
       <aside className="sidebar" data-open={drawer}>
         <Brand />
         {conteudoLateral}
       </aside>
       {drawer && <div className="side-scrim" onClick={() => setDrawer(false)} />}
-
-      <main className="main">
-        <header className="appbar">
-          <button className="icon-btn only-narrow" onClick={() => setDrawer(true)} aria-label="Abrir menu" type="button">
-            <Icon.menu />
-          </button>
-          <div style={{ minWidth: 0 }}>
-            <div className="appbar-title">{titulo}</div>
-            {crumb && <div className="appbar-crumb">{crumb}</div>}
-          </div>
-          <span className="grow" />
-          {esgotada && <span className="tag tag-warn">cota esgotada</span>}
-          {!esgotada && usage && (
-            <span className="t-xs dim num only-wide">{usage.daily - usage.today} execuções hoje</span>
-          )}
-          <button className="icon-btn only-narrow" onClick={() => go({ k: 'account' })} aria-label="Conta" type="button">
-            <Icon.user />
-          </button>
-        </header>
-
-        {view.k === 'dashboard' && <Dashboard user={user} tools={tools} usage={usage} setView={go} />}
-        {view.k === 'nova' && <ToolPage id="graph-investigation" tools={tools} onUsage={refreshUser} comoAlvo />}
-        {view.k === 'tool' && (
-          <ToolPage id={(view as { id: string }).id} tools={tools} onUsage={refreshUser} />
-        )}
-        {view.k === 'inv' && <Investigations view={view as { id?: string }} setView={go} />}
-        {view.k === 'plans' && <Plans user={user} />}
-        {view.k === 'keys' && <Keys />}
-        {view.k === 'account' && <Account user={user} onLogout={onLogout} />}
-        {view.k === 'admin' && <Admin />}
-        {view.k === 'history' && <History setView={go} />}
-      </main>
 
       <nav className="tabbar" aria-label="Navegação principal">
         {TABS.map((t) => (

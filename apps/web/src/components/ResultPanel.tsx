@@ -23,17 +23,17 @@ function ValueView({ v, link }: { v: unknown; link?: string }) {
   if (v == null) return <span className="dim">—</span>;
   if (typeof v === 'boolean') return <span>{v ? 'sim' : 'não'}</span>;
   if (typeof v === 'number') return <span className="mono num">{v}</span>;
-  if (typeof v === 'string') {
-    const isUrl = /^https?:\/\//i.test(v);
-    return (
-      <span>
-        <span className={link || isUrl ? 'mono' : ''} style={{ overflowWrap: 'anywhere' }}>{v}</span>
-        {(link || isUrl) && (
-          <> <a className="t-xs" style={{ color: 'var(--red-hi)' }} href={link || v} target="_blank" rel="noreferrer noopener">abrir ↗</a></>
-        )}
-      </span>
-    );
-  }
+if (typeof v === 'string') {
+      const isUrl = /^https?:\/\//i.test(v);
+      return (
+        <span>
+          <span className={link || isUrl ? 'mono' : ''} style={{ overflowWrap: 'anywhere' }}>{v}</span>
+          {(link || isUrl) && (
+            <> <a className="t-xs" style={{ color: 'var(--blue-3)' }} href={link || v} target="_blank" rel="noreferrer noopener">abrir ↗</a></>
+          )}
+        </span>
+      );
+    }
   if (Array.isArray(v)) {
     if (v.length === 0) return <span className="dim">vazio</span>;
     if (v.every((x) => typeof x === 'string' || typeof x === 'number')) {
@@ -83,8 +83,8 @@ function TableView({ rows }: { rows: Record<string, unknown>[] }) {
                     <td key={c} data-l={c}>
                       {cell == null ? <span className="dim">—</span>
                         : typeof cell === 'boolean' ? (cell ? 'sim' : 'não')
-                          : /^(https?:\/\/)/.test(String(cell))
-                            ? <a href={String(cell)} target="_blank" rel="noreferrer noopener" style={{ color: 'var(--red-hi)', overflowWrap: 'anywhere' }}>{String(cell).replace(/^https?:\/\//, '').slice(0, 42)}</a>
+: /^(https?:\/\/)/.test(String(cell))
+                                ? <a href={String(cell)} target="_blank" rel="noreferrer noopener" style={{ color: 'var(--blue-3)', overflowWrap: 'anywhere' }}>{String(cell).replace(/^https?:\/\//, '').slice(0, 42)}</a>
                             : String(cell).slice(0, 140)}
                     </td>
                   );
@@ -186,7 +186,7 @@ export default function ResultPanel({ run }: { run: ToolRun }) {
         <div><div className="v num">{run.ms}<span style={{ fontSize: 11, color: 'var(--t-4)' }}> ms</span></div><div className="l">tempo</div></div>
         <div><div className="v num">{run.findings.length}</div><div className="l">achados</div></div>
         <div><div className="v num">{ok}</div><div className="l">fontes ok</div></div>
-        <div><div className="v num" style={{ color: problems ? 'var(--red-hi)' : undefined }}>{problems}</div><div className="l">com problema</div></div>
+        <div><div className="v num" style={{ color: problems ? 'var(--blue-3)' : undefined }}>{problems}</div><div className="l">com problema</div></div>
         <div><div className="v num">{empty}</div><div className="l">sem dados</div></div>
       </div>
 

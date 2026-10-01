@@ -60,7 +60,7 @@ export default function Keys() {
         {err && <div style={{ marginBottom: 12 }}><Note kind="err">{err}</Note></div>}
         {keys === null ? <Skeleton lines={2} /> : keys.length === 0 ? (
           <Empty icon={Icon.key} title="Nenhuma chave guardada">
-            Não é preciso para usar o ARGUS: as ferramentas gratuitas funcionam sem chave. Uma chave
+            Não é preciso para usar o ARGOS: as ferramentas gratuitas funcionam sem chave. Uma chave
             só desbloqueia fontes que exigem conta (por exemplo, a base de brechas Leak-Lookup).
           </Empty>
         ) : (
@@ -88,7 +88,7 @@ export default function Keys() {
         </Field>
         {sel && (
           <Note kind="info">
-            Obtém a chave em <a href={sel.doc} target="_blank" rel="noreferrer noopener" style={{ color: 'var(--red-hi)' }}>{sel.doc.replace(/^https?:\/\//, '')} ↗</a>.
+            Obtém a chave em <a href={sel.doc} target="_blank" rel="noreferrer noopener" style={{ color: 'var(--blue-3)' }}>{sel.doc.replace(/^https?:\/\//, '')} ↗</a>.
             {' '}Fica a ser usada apenas por {sel.usedBy}.
           </Note>
         )}

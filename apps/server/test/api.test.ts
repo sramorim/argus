@@ -144,6 +144,30 @@ await t('health responde 200 e diz quantas ferramentas existem', async () => {
   ok(r.data.tools >= 25, `só ${r.data.tools} ferramentas registadas`);
   eq(r.data.db.writable, true, 'o disco tem de aceitar escrita');
 });
+await t('health estendido: por provider, com os campos do spec e estados honestos', async () => {
+  const r = await new Client().get('/api/health');
+  ok(Array.isArray(r.data.providers) && r.data.providers.length >= 10, `só ${r.data.providers?.length} linhas de provider`);
+  const estados = new Set(['READY', 'NOT_INSTALLED', 'NOT_CONFIGURED', 'MISSING_SECRET', 'INCOMPATIBLE', 'ERROR', 'RATE_LIMITED', 'DISABLED']);
+  for (const p of r.data.providers) {
+    ok(estados.has(p.status), `estado fora do spec: ${p.status}`);
+    ok(typeof p.nome === 'string' && typeof p.healthCheck === 'string', 'provider sem nome/healthCheck');
+    ok('versao' in p && 'ultimoTeste' in p && 'latenciaMs' in p && 'erro' in p && 'configuracao' in p,
+      `provider ${p.nome} sem os campos status/version/lastTest/latency/error/configuration`);
+  }
+  ok(r.data.estadoGeral && r.data.nota.length > 10, 'estado geral com nota explicativa');
+  ok(!JSON.stringify(r.data).match(/APIFY_API_TOKEN=[^ ]+/), 'nenhum valor de segredo devolvido');
+});
+await t('health detalhado: verifica versões sem inventar (e continua a não devolver segredos)', async () => {
+  const r = await new Client().get('/api/health?detalhe=sim');
+  eq(r.status, 200);
+  ok(r.data.detalhe === true, 'modo detalhe marcado');
+  const apify = r.data.providers.find((p: any) => p.nome === 'Apify (serviço)');
+  ok(apify, 'linha do serviço Apify presente');
+  ok(apify.status === 'NOT_CONFIGURED' && apify.healthCheck.includes('APIFY_API_TOKEN'),
+    `sem token tem de ser NOT_CONFIGURED a nomear APIFY_API_TOKEN, veio ${apify.status}: ${apify.healthCheck}`);
+  ok(r.data.providers.every((p: any) => typeof p.ultimoTeste === 'string' || p.ultimoTeste === null),
+    'último teste com data');
+});
 await t('produção sem ARGUS_SECRET não arranca (já é assim, mas confirmamos o caminho feliz)', async () => {
   // O arranque bem-sucedido já prova que config.ts validou o segredo.
   const r = await new Client().get('/api/health');
@@ -430,6 +454,226 @@ await t('investigação de outra pessoa dá 404 (não 403 — não confirma exis
   await b.post('/api/auth/register', { email: `b${Date.now()}@exemplo.test`, name: 'Bia', password: 'senhaforte123' }, UA);
   const r = await b.get(`/api/investigations/${inv.id}`, UA);
   eq(r.status, 404);
+});
+
+// =========================================================== PLANO DE INVESTIGAÇÃO
+console.log('\n── PLANO DE INVESTIGAÇÃO (8 fases) ───────────────────────────────');
+const FASES_ESPERADAS = ['Discovery', 'OSINT', 'Social', 'Apify', 'Normalization', 'Correlation', 'Intelligence', 'Snapshots'];
+async function planFix(seed = 'example.com') {
+  const c = new Client();
+  const n = `${Date.now()}${Math.random().toString(36).slice(2, 6)}`;
+  const reg = await c.post('/api/auth/register', { email: `pl${n}@exemplo.test`, name: 'Plano', password: 'senhaforte123' }, UA);
+  eq(reg.status, 201, `registo recusado: ${JSON.stringify(reg.data)}`);
+  const run = await c.post('/api/run/graph-investigation', { seed }, UA);
+  eq(run.status, 200, JSON.stringify(run.data).slice(0, 200));
+  const inv = (await c.get('/api/investigations', UA)).data.investigations[0];
+  ok(inv?.id && inv.node_count > 0, 'fixture sem investigação com nós');
+  return { c, inv };
+}
+await t('plano: sem sessão não há plano nem progresso (401 nos três endpoints)', async () => {
+  const anon = new Client();
+  eq((await anon.post('/api/investigations/qualquer/plan', { modo: 'QUICK' })).status, 401);
+  eq((await anon.get('/api/investigations/qualquer/plan')).status, 401);
+  eq((await anon.post('/api/investigations/qualquer/plan/executar', {})).status, 401);
+});
+await t('plano: sem plano gerado, executar diz que não há plano', async () => {
+  const { c, inv } = await planFix();
+  const r = await c.post(`/api/investigations/${inv.id}/plan/executar`, {}, UA);
+  eq(r.status, 404);
+  eq(r.data.error, 'sem_plano');
+});
+await t('QUICK: 8 fases na ordem, só a Discovery activa e o resto dito como pulado', async () => {
+  const { c, inv } = await planFix();
+  const r = await c.post(`/api/investigations/${inv.id}/plan`, { modo: 'QUICK' }, UA);
+  eq(r.status, 200, JSON.stringify(r.data).slice(0, 300));
+  eq(r.data.plano.modo, 'QUICK');
+  eq(r.data.plano.fases.map((f: any) => f.fase), FASES_ESPERADAS, 'a ordem das 8 fases');
+  ok(r.data.progresso === null, 'plano novo não traz progresso inventado');
+  const disc = r.data.plano.fases[0];
+  eq(disc.pulada, false);
+  ok(disc.ferramentas.length >= 1 && disc.ferramentas.length <= 2,
+    `QUICK: 1–2 ferramentas, obtido ${JSON.stringify(disc.ferramentas.map((x: any) => x.id))}`);
+  ok(disc.ferramentas.every((x: any) => x.estado === 'PRONTO' && x.input), 'o que entra está PRONTO e mostra o input com que correria');
+  for (const f of r.data.plano.fases.slice(1)) {
+    eq(f.pulada, true, `${f.fase} tem de estar dita como pulada`);
+    eq(f.estado, 'PENDENTE', `${f.fase} pulada não pode ser CONCLUIDA`);
+    ok(!!f.motivo, `${f.fase} pulada sem motivo`);
+  }
+  eq(r.data.plano.resumo.puladas, 7);
+});
+await t('executar QUICK: a fase Discovery corre e o progresso fica guardado e relido', async () => {
+  const { c, inv } = await planFix();
+  await c.post(`/api/investigations/${inv.id}/plan`, { modo: 'QUICK' }, UA);
+  const r = await c.post(`/api/investigations/${inv.id}/plan/executar`, {}, UA);
+  eq(r.status, 200, JSON.stringify(r.data).slice(0, 300));
+  const disc = r.data.progresso.fases[0];
+  eq(disc.fase, 'Discovery');
+  eq(disc.estado, 'CONCLUIDA', `Discovery não correu: ${JSON.stringify(disc)}`);
+  ok(disc.executadoEm, 'a fase tem hora de execução');
+  ok(disc.ferramentas.every((x: any) => x.estado === 'EXECUTADA'),
+    `todas as ferramentas da fase correram: ${JSON.stringify(disc.ferramentas)}`);
+  ok(disc.ferramentas.every((x: any) => typeof x.contagem === 'number' && x.ms >= 0),
+    `cada ferramenta regista contagem e tempo reais: ${JSON.stringify(disc.ferramentas)}`);
+  eq(r.data.resumo.executadas, disc.ferramentas.length, 'o resumo conta o que correu');
+  eq(r.data.resumo.pendentes, 7, 'as 7 puladas continuam pendentes');
+  // persistência: reler o plano devolve exactamente o mesmo progresso
+  const relido = await c.get(`/api/investigations/${inv.id}/plan`, UA);
+  eq(relido.status, 200);
+  eq(relido.data.progresso.fases[0].estado, 'CONCLUIDA', 'o progresso sobreviveu à releitura');
+  eq(relido.data.progresso.fases[0].ferramentas.map((x: any) => x.id), disc.ferramentas.map((x: any) => x.id));
+  eq(relido.data.resumo.executadas, r.data.resumo.executadas, 'o resumo relido é o mesmo');
+});
+await t('recriar o mesmo plano mantém o progresso; mudar de modo limpa-o', async () => {
+  const { c, inv } = await planFix();
+  await c.post(`/api/investigations/${inv.id}/plan`, { modo: 'QUICK' }, UA);
+  await c.post(`/api/investigations/${inv.id}/plan/executar`, {}, UA);
+  const igual = await c.post(`/api/investigations/${inv.id}/plan`, { modo: 'QUICK' }, UA);
+  ok(igual.data.progresso, 'o mesmo plano apagava o progresso');
+  eq(igual.data.progresso.fases[0].estado, 'CONCLUIDA', 'e o progresso era o de antes');
+  const outro = await c.post(`/api/investigations/${inv.id}/plan`, { modo: 'FULL' }, UA);
+  eq(outro.status, 200);
+  ok(outro.data.progresso === null, 'plano novo: o progresso antigo já não descreve o plano');
+  eq(outro.data.plano.modo, 'FULL');
+});
+await t('FULL: as 8 fases activas, com as bloqueadas pelo plano e sem ferramentas de outro alvo', async () => {
+  const { c, inv } = await planFix();
+  const r = await c.post(`/api/investigations/${inv.id}/plan`, { modo: 'FULL' }, UA);
+  eq(r.status, 200, JSON.stringify(r.data).slice(0, 300));
+  eq(r.data.plano.fases.map((f: any) => f.fase), FASES_ESPERADAS);
+  ok(r.data.plano.fases.every((f: any) => !f.pulada), 'FULL não pula nada');
+  const ids = r.data.plano.fases.flatMap((f: any) => f.ferramentas.map((x: any) => x.id));
+  ok(ids.includes('domain-analyzer') && !ids.includes('username-finder'),
+    `só ferramentas do tipo de alvo (domínio): ${JSON.stringify(ids)}`);
+  const bloqueadas = r.data.plano.fases.flatMap((f: any) => f.ferramentas.filter((x: any) => x.estado === 'BLOQUEADA'));
+  ok(bloqueadas.length >= 1, 'há ferramentas trancadas no free para mostrar');
+  ok(bloqueadas.every((x: any) => typeof x.motivo === 'string' && x.motivo.length > 5),
+    `toda a bloqueada tem motivo concreto: ${JSON.stringify(bloqueadas)}`);
+  const planoFree = bloqueadas.find((x: any) => x.id === 'port-scanner');
+  ok(planoFree && planoFree.motivo.includes('Pro'),
+    `a tranca diz o plano e o que falta: ${JSON.stringify(planoFree)}`);
+  const etapas = r.data.plano.fases.filter((f: any) => ['Normalization', 'Correlation', 'Intelligence', 'Snapshots'].includes(f.fase));
+  ok(etapas.every((f: any) => f.ferramentas.length === 1 && f.ferramentas[0].kind === 'etapa'),
+    `as 4 últimas fases são etapas do motor: ${JSON.stringify(etapas)}`);
+});
+await t('CUSTOM só com as 4 etapas: executar dá as 4 fases CONCLUIDA com contagem real', async () => {
+  const { c, inv } = await planFix();
+  const etapas = ['intel-normalizacao', 'intel-correlacao', 'intel-perfil', 'intel-snapshot'];
+  const r = await c.post(`/api/investigations/${inv.id}/plan`, { modo: 'CUSTOM', ferramentas: etapas }, UA);
+  eq(r.status, 200, JSON.stringify(r.data).slice(0, 300));
+  eq(r.data.plano.fases.filter((f: any) => !f.pulada).map((f: any) => f.fase),
+    ['Normalization', 'Correlation', 'Intelligence', 'Snapshots'], 'só as 4 etapas entram');
+  const run = await c.post(`/api/investigations/${inv.id}/plan/executar`, {}, UA);
+  eq(run.status, 200, JSON.stringify(run.data).slice(0, 300));
+  const feitas = run.data.progresso.fases.filter((f: any) => !f.pulada);
+  eq(feitas.length, 4);
+  for (const f of feitas) {
+    eq(f.estado, 'CONCLUIDA', `${f.fase} não ficou CONCLUIDA: ${JSON.stringify(f)}`);
+    const x = f.ferramentas[0];
+    eq(x.estado, 'EXECUTADA', `${f.fase}: ferramenta não executada`);
+    ok(typeof x.contagem === 'number' && x.contagem >= 0 && x.nota && x.nota.length > 5,
+      `${f.fase}: contagem e nota do que saiu: ${JSON.stringify(x)}`);
+    ok(x.ms >= 0 && f.executadoEm, `${f.fase}: tempo e hora registados`);
+  }
+  eq(run.data.resumo.concluidas, 4, 'o resumo diz 4 concluídas');
+  eq(run.data.resumo.executadas, 4);
+  // prova de que a etapa de Snapshots guardou mesmo um snapshot:
+  const radar = await c.get(`/api/intel/radar?investigacao=${inv.id}`, UA);
+  eq(radar.status, 200, JSON.stringify(radar.data).slice(0, 200));
+  eq(radar.data.radar.temAnterior, true,
+    'já havia snapshot — o plano gravou-o, não foi a API de radar que o criou');
+});
+await t('CUSTOM: id desconhecido, id fora das 8 fases e modo inválido são 400 com o motivo', async () => {
+  const { c, inv } = await planFix();
+  const vazio = await c.post(`/api/investigations/${inv.id}/plan`, {}, UA);
+  eq(vazio.status, 400);
+  eq(vazio.data.error, 'modo_em_falta');
+  const mau = await c.post(`/api/investigations/${inv.id}/plan`, { modo: 'RECALCAR' }, UA);
+  eq(mau.status, 400);
+  eq(mau.data.error, 'modo_invalido');
+  eq(mau.data.aceites, ['QUICK', 'FULL', 'CUSTOM']);
+  const semLista = await c.post(`/api/investigations/${inv.id}/plan`, { modo: 'CUSTOM' }, UA);
+  eq(semLista.status, 400);
+  eq(semLista.data.error, 'custom_vazio');
+  const desconhecida = await c.post(`/api/investigations/${inv.id}/plan`, { modo: 'CUSTOM', ferramentas: ['inventada'] }, UA);
+  eq(desconhecida.status, 400);
+  eq(desconhecida.data.error, 'ferramenta_desconhecida');
+  ok((desconhecida.data.aceites ?? []).includes('domain-analyzer'), 'o erro ensina os ids reais');
+  const fora = await c.post(`/api/investigations/${inv.id}/plan`, { modo: 'CUSTOM', ferramentas: ['graph-investigation'] }, UA);
+  eq(fora.status, 400);
+  eq(fora.data.error, 'ferramenta_fora_do_plano');
+  eq(fora.data.fase, 'Discovery', 'diz em que fase cairia');
+  ok(fora.data.msg.includes('própria investigação'), `e porque é que não entra: ${fora.data.msg}`);
+  // nenhum dos erros guardou plano
+  const depois = await c.get(`/api/investigations/${inv.id}/plan`, UA);
+  eq(depois.data.plano, null, 'um pedido inválido não deixa plano a meio');
+});
+await t('plano de outro utilizador dá 404 nos três endpoints (não enumera ids)', async () => {
+  const { c, inv } = await planFix();
+  const outro = new Client();
+  await outro.post('/api/auth/register', { email: `o${Date.now()}@exemplo.test`, name: 'Outro', password: 'senhaforte123' }, UA);
+  eq((await outro.post(`/api/investigations/${inv.id}/plan`, { modo: 'QUICK' }, UA)).status, 404);
+  eq((await outro.get(`/api/investigations/${inv.id}/plan`, UA)).status, 404);
+  eq((await outro.post(`/api/investigations/${inv.id}/plan/executar`, {}, UA)).status, 404);
+  const falso = await outro.get('/api/investigations/nao-existe/plan', UA);
+  eq(falso.status, 404, 'id inexistente dá o mesmo 404');
+  eq(falso.data.error, 'nao_encontrada');
+});
+
+// =========================================================== INTEL
+console.log('\n── INTEL (motor de inteligência) ──────────────────────────────────');
+async function intelFix() {
+  const c = new Client();
+  await c.post('/api/auth/register', { email: `int${Date.now()}${Math.random().toString(36).slice(2, 6)}@exemplo.test`, name: 'Int', password: 'senhaforte123' }, UA);
+  const run = await c.post('/api/run/graph-investigation', { seed: 'example.com' }, UA);
+  eq(run.status, 200, JSON.stringify(run.data).slice(0, 200));
+  const inv = (await c.get('/api/investigations', UA)).data.investigations[0];
+  return { c, inv };
+}
+await t('intel exige sessão', async () => {
+  const r = await new Client().get('/api/intel/perfil');
+  eq(r.status, 401);
+});
+await t('unified profile vem das arestas da investigação, com faixa de confiança', async () => {
+  const { c, inv } = await intelFix();
+  const r = await c.get(`/api/intel/perfil?investigacao=${inv.id}`, UA);
+  eq(r.status, 200, JSON.stringify(r.data).slice(0, 300));
+  ok(r.data.perfil.entidades.length > 0, 'perfil sem entidades');
+  ok(r.data.perfil.contas.length >= 1, 'perfil sem contas');
+  ok(['HIGH', 'MEDIUM', 'LOW', 'UNCONFIRMED'].includes(r.data.perfil.confiancaGeral), `confiança inválida: ${r.data.perfil.confiancaGeral}`);
+  ok(Array.isArray(r.data.perfil.evidencias) && r.data.perfil.evidencias.length > 0, 'sem evidências');
+  ok(r.data.resumo.nos > 0 && r.data.resumo.arestas > 0, 'resumo vazio');
+  const txt = JSON.stringify(r.data);
+  ok(!txt.includes('prova que'), 'mensagem a afirmar prova identidade');
+});
+await t('presence radar: sem anterior diz-se; ao repetir, há anterior guardado', async () => {
+  const { c, inv } = await intelFix();
+  const r1 = await c.get(`/api/intel/radar?investigacao=${inv.id}`, UA);
+  eq(r1.status, 200, JSON.stringify(r1.data).slice(0, 300));
+  eq(r1.data.radar.temAnterior, false, '1ª observação tinha de dizer que não há anterior');
+  ok(r1.data.anterior === null, 'anterior não nulo na 1ª chamada');
+  const r2 = await c.get(`/api/intel/radar?investigacao=${inv.id}`, UA);
+  eq(r2.status, 200);
+  eq(r2.data.radar.temAnterior, true, '2ª chamada não leu o snapshot guardado');
+  ok(typeof r2.data.radar.nota === 'string' && r2.data.radar.nota.length > 10, 'radar sem nota');
+});
+await t('relatório: CSV mesmo conteúdo, headers de ficheiro, formato rejeitado', async () => {
+  const { c, inv } = await intelFix();
+  const r = await c.get(`/api/intel/relatorio?investigacao=${inv.id}&formato=csv`, UA);
+  eq(r.status, 200);
+  ok((r.headers.get('content-type') ?? '').includes('csv'), `content-type: ${r.headers.get('content-type')}`);
+  ok((r.headers.get('content-disposition') ?? '').includes('attachment'), 'sem content-disposition');
+  ok(r.text.split('\n').length > 1, 'csv vazio');
+  const bad = await c.get(`/api/intel/relatorio?investigacao=${inv.id}&formato=exe`, UA);
+  eq(bad.status, 400, 'formato malicioso aceite');
+});
+await t('intel de investigação de outra pessoa dá 404 (não enumera ids)', async () => {
+  const { c, inv } = await intelFix();
+  const outro = new Client();
+  await outro.post('/api/auth/register', { email: `o${Date.now()}@exemplo.test`, name: 'Outro', password: 'senhaforte123' }, UA);
+  const r = await outro.get(`/api/intel/perfil?investigacao=${inv.id}`, UA);
+  eq(r.status, 404, `veio ${r.status}: ${JSON.stringify(r.data).slice(0, 150)}`);
+  const falso = await outro.get('/api/intel/perfil?investigacao=nao-existe', UA);
+  eq(falso.status, 404, 'id inexistente tem de dar o mesmo 404');
 });
 
 // =========================================================== HISTÓRICO

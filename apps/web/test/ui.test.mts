@@ -326,7 +326,93 @@ test('a app monta a sidebar com camadas expansíveis e marca a atual', () => {
   t.desmontar();
 });
 
+/**
+ * O espaço de trabalho: a área de trabalho, as janelas e a barra de tarefas.
+ *
+ * Estes testes existem porque a navegação deixou de ser "uma página de cada
+ * vez": agora abrem-se várias janelas e é a barra de tarefas que diz o que está
+ * aberto. O que se verifica é o que se pede ao utilizador — todos os ícones lá
+ * estão, um clique abre, o × fecha, minimizar esconde e a barra restaura.
+ */
+test('a área de trabalho tem um ícone por ferramenta e por aplicação', () => {
+  const { tools, t } = montaApp();
+  const html = t.html();
+
+  // Uma secção por grupo, com o nome que o `ia.ts` declara.
+  for (const g of H.GRUPOS) {
+    assert.ok(html.includes(g.nome), `falta no desktop a secção "${g.nome}"`);
+  }
+
+  // As ferramentas aparecem com o seu id — é isso que liga o ícone à janela.
+  for (const f of tools) {
+    assert.ok(html.includes(`data-tool="${f.id}"`), `falta o ícone de ${f.id}`);
+  }
+  const nIcones = (html.match(/class="desk-icon"/g) ?? []).length;
+  const nApps = H.VISTAS.filter((v: any) => v.id !== 'admin').length;   // utilizador comum
+  assert.equal(nIcones, tools.length + nApps,
+    `${nIcones} ícones: deviam ser ${tools.length} ferramentas + ${nApps} aplicações`);
+  t.desmontar();
+});
+
+test('um clique num ícone abre a janela, e o × a fecha e a tira da barra de tarefas', () => {
+  const { t } = montaApp();
+  // O painel abre sozinho: é o primeiro ecrã.
+  assert.equal(t.caixa.querySelectorAll('.janela').length, 1, 'o painel devia estar aberto de inicio');
+  assert.equal(t.caixa.querySelectorAll('.task-item').length, 1, 'a barra de tarefas devia mostrar a janela do painel');
+
+  H.clica(t, '.desk-icon[data-tool="domain-analyzer"]');
+  const nomes = [...t.caixa.querySelectorAll('.win-name')].map((n) => n.textContent);
+  assert.equal(t.caixa.querySelectorAll('.janela').length, 2, 'a ferramenta devia abrir sem fechar o painel');
+  assert.ok(nomes.includes('Analisador de Domínio'), `janelas abertas: ${nomes.join(' | ')}`);
+  assert.equal(t.caixa.querySelectorAll('.task-item').length, 2, 'a barra de tarefas devia listar as duas');
+
+  // O conteúdo da ferramenta está DENTRO da janela, não numa página à parte.
+  const janela = t.caixa.querySelector('.janela[aria-label="Analisador de Domínio"]');
+  assert.ok(janela, 'a janela devia ser identificável pelo título');
+  assert.ok(janela!.querySelector('.win-body'), 'a janela não tem área de conteúdo');
+  // Os três controlos da barra de título, com nome para quem usa leitor de ecrã.
+  for (const o of ['Minimizar', 'Maximizar', 'Fechar']) {
+    assert.ok(janela!.querySelector(`[aria-label^="${o}"]`), `falta o botão ${o}`);
+  }
+
+  H.clica(t, '.janela[aria-label="Analisador de Domínio"] .win-close');
+  assert.equal(t.caixa.querySelectorAll('.win-name').length, 1, 'o × devia fechar a janela');
+  assert.equal(t.caixa.querySelectorAll('.task-item').length, 1, 'a barra de tarefas devia seguir a janela fechada');
+  assert.ok(
+    [...t.caixa.querySelectorAll('.win-name')].some((n) => n.textContent === 'Painel'),
+    'fechar a ferramenta não devia fechar o painel',
+  );
+  t.desmontar();
+});
+
+test('minimizar esconde a janela e a barra de tarefas restaura-a', () => {
+  const { t } = montaApp();
+  const painel = '.janela[aria-label="Painel"]';
+  assert.equal(t.caixa.querySelector(`${painel}[data-min="false"]`) !== null, true, 'o painel devia começar visível');
+
+  H.clica(t, `${painel} [aria-label^="Minimizar"]`);
+  assert.equal(t.caixa.querySelector(`${painel}[data-min="true"]`) !== null, true, 'minimizar devia esconder a janela');
+
+  H.clica(t, '.task-item');
+  assert.equal(t.caixa.querySelector(`${painel}[data-min="false"]`) !== null, true,
+    'carregar na barra de tarefas devia restaurar a janela');
+  t.desmontar();
+});
+
+test('maximizar ocupa a área toda e o botão passa a dizer Restaurar', () => {
+  const { t } = montaApp();
+  const painel = '.janela[aria-label="Painel"]';
+  H.clica(t, `${painel} [aria-label^="Maximizar"]`);
+  assert.equal(t.caixa.querySelector(`${painel}[data-max="true"]`) !== null, true, 'devia maximizar');
+  assert.ok(t.caixa.querySelector('[aria-label^="Restaurar"]'), 'o botão devia passar a Restaurar');
+
+  H.clica(t, `${painel} [aria-label^="Restaurar"]`);
+  assert.equal(t.caixa.querySelector(`${painel}[data-max="false"]`) !== null, true, 'devia voltar ao tamanho anterior');
+  t.desmontar();
+});
+
 test('o painel é o primeiro ecrã e tem a acção principal em grande', () => {
+
   const { t } = montaApp();
   const html = t.html();
   assert.match(html, /Nova investigação/, 'falta a acção principal');
@@ -613,4 +699,128 @@ test('o package.json e o package-lock.json concordam (o `npm ci` do Render depen
     }
   }
   assert.equal(problemas.join('\n'), '', 'package.json ≠ package-lock.json:\n' + problemas.join('\n'));
+});
+
+// ==========================================================================
+// 6. PLANO DE INVESTIGAÇÃO (FASE F)
+// ==========================================================================
+//
+// Estes testes não montam o painel — o harness não muda. Lêem o código e
+// verificam o que só se descobre quando alguém "melhora" o painel a meio:
+// passar a inventar estados, a esconder o que ficou bloqueado ou a confirmar
+// custos do Apify sozinho. Nada disto é visível num screenshot.
+
+const invSrc = readFileSync(join(SRC, 'pages', 'Investigations.tsx'), 'utf8');
+const apiSrc = readFileSync(join(SRC, 'api.ts'), 'utf8');
+
+/** O corpo de um objecto exportado, do nome ao `};` que o fecha. */
+function corpo(src: string, nome: string): string {
+  const i = src.indexOf(nome);
+  assert.ok(i > -1, `não encontrei ${nome}`);
+  const a = src.indexOf('{', i);
+  const b = src.indexOf('\n};', a);
+  assert.ok(b > a, `${nome} não tem o fecho esperado`);
+  return src.slice(a, b);
+}
+
+test('o painel mostra as 8 fases que o servidor mandou, não uma lista escrita aqui', () => {
+  // O que o utilizador vê tem de ser o que o planeador decidiu, por isso as
+  // fases entram do JSON do plano e nunca de um array fixo no cliente.
+  assert.match(invSrc, /plano\.fases\.map\(/, 'as fases vêm de plano.fases');
+  assert.match(invSrc, /progresso\?\.fases\.find\(/, 'o estado corrido vem do progresso do servidor');
+  assert.ok(!/\[\s*'Discovery'/.test(invSrc), 'as 8 fases não podem estar escritas à mão na página');
+
+  // E a ordem é a do planeador, que é quem a define.
+  const planSrc = readFileSync(join(ROOT, 'apps/server', 'src', 'investigation', 'plan.ts'), 'utf8');
+  const bloco = planSrc.match(/export const FASES[^=]*=\s*\[([\s\S]*?)\] as const/);
+  assert.ok(bloco, 'o planeador deixou de exportar a lista FASES');
+  const fases = [...bloco[1].matchAll(/'([^']+)'/g)].map((m) => m[1]);
+  assert.deepEqual(
+    fases,
+    ['Discovery', 'OSINT', 'Social', 'Apify', 'Normalization', 'Correlation', 'Intelligence', 'Snapshots'],
+    'a ordem das 8 fases',
+  );
+});
+
+test('o painel usa exactamente os três endpoints do plano', () => {
+  const bloco = apiSrc.slice(apiSrc.indexOf('plano: ('), apiSrc.indexOf('history: ('));
+  assert.ok(bloco.length > 0, 'os métodos do plano desapareceram do api.ts');
+  assert.match(bloco, /req<PlanoResposta>\(`\/api\/investigations\/\$\{encodeURIComponent\(id\)\}\/plan`\),/, 'ler o plano é GET .../plan');
+  assert.match(bloco, /\/plan`,\s*\{\s*method: 'POST'/, 'gerar o plano é POST .../plan');
+  assert.match(bloco, /\/plan\/executar`,\s*\{\s*method: 'POST'/, 'executar é POST .../plan/executar');
+  assert.equal((bloco.match(/method: 'POST'/g) ?? []).length, 2, 'dois POSTs — gerar e executar, mais nada');
+});
+
+test('os três modos são alcançáveis no painel e o CUSTOM pede a lista ao servidor', () => {
+  assert.ok(invSrc.includes("gerar('QUICK')"), 'modo QUICK sem botão');
+  assert.ok(invSrc.includes("gerar('FULL')"), 'modo FULL sem botão');
+  assert.ok(invSrc.includes("gerar('CUSTOM', escolhidas)"), 'modo CUSTOM sem botão');
+  // Os candidatos do CUSTOM vêm do plano que o servidor devolveu — o cliente
+  // não tem catálogo nenhum para escolher por conta própria.
+  assert.match(invSrc, /setCandidatos\(ferramentasDo\(/, 'os candidatos vêm do plano do servidor');
+  assert.ok(!invSrc.includes("from '../ia'"), 'a página não importa o catálogo da IA para decidir o plano');
+});
+
+test('nenhum estado é calculado no cliente: contagens e rótulos vêm do servidor', () => {
+  // As contagens mostradas são as do `resumo` que o servidor calculou; a
+  // página não soma ferramentas por conta própria.
+  assert.match(invSrc, /resumo\.concluidas/, 'o total de concluídas vem do resumo');
+  assert.match(invSrc, /resumo\.executadas/, 'o total de executadas vem do resumo');
+  assert.ok(
+    !/filter\([^)]*estado\s*===\s*'(EXECUTADA|CONCLUIDA)'/.test(invSrc),
+    'a página passou a contar estados à mão',
+  );
+
+  // E os rótulos/cores são os dos mapas partilhados, completos e sem verde
+  // onde não houve execução.
+  assert.match(invSrc, /ROTULO_FASE\[estado\]/, 'o rótulo da fase vem de ROTULO_FASE');
+  assert.match(invSrc, /CLASSE_FASE\[estado\]/, 'a cor da fase vem de CLASSE_FASE');
+  assert.match(invSrc, /ROTULO_FERRAMENTA\[reg\.estado\]/, 'o rótulo da ferramenta vem do mapa partilhado');
+
+  const fase = corpo(apiSrc, 'ROTULO_FASE');
+  for (const k of ['PENDENTE', 'PRONTO', 'BLOQUEADA', 'CONCLUIDA', 'PARCIAL', 'ERRO']) {
+    assert.ok(new RegExp(`${k}:`).test(fase), `ROTULO_FASE sem ${k}`);
+  }
+  const ferr = corpo(apiSrc, 'ROTULO_FERRAMENTA');
+  for (const k of ['EXECUTADA', 'TRANCADA', 'QUOTA', 'ERRO', 'NAO_EXECUTADA', 'PENDENTE']) {
+    assert.ok(new RegExp(`${k}:`).test(ferr), `ROTULO_FERRAMENTA sem ${k}`);
+  }
+  const classes = corpo(apiSrc, 'CLASSE_FASE');
+  assert.match(classes, /PENDENTE:\s*'tag'/, 'pendente não é sucesso: não pode ser verde');
+  assert.match(classes, /CONCLUIDA:\s*'tag-ok'/, 'concluída é verde');
+  assert.match(classes, /ERRO:\s*'tag-err'/, 'erro é vermelho');
+  const classesFerr = corpo(apiSrc, 'CLASSE_FERRAMENTA');
+  assert.match(classesFerr, /EXECUTADA:\s*'st st-ok'/, 'executada é verde');
+  assert.match(classesFerr, /NAO_EXECUTADA:\s*'st st-skipped'/, 'não executada não pode parecer executada');
+});
+
+test('o que ficou bloqueado aparece com o motivo — nada é escondido do utilizador', () => {
+  assert.match(invSrc, /fase\.motivo \?\? reg\?\.motivo/, 'o motivo da fase lê-se do plano e do progresso');
+  assert.match(invSrc, /\{plan\.motivo\}/, 'o motivo da ferramenta aparece na linha');
+  assert.match(invSrc, /className="fase-motivo"/, 'o motivo tem sítio próprio no cabeçalho');
+  // Uma fase pulada continua visível com o seu motivo em vez de desaparecer.
+  assert.match(invSrc, /fase\.pulada/, 'a página sabe distinguir as puladas');
+  assert.match(invSrc, /<span className="tag tag-free">pulada<\/span>/, 'a fase pulada é dita, não omitida');
+});
+
+test('o custo do Apify só corre com confirmação explícita do utilizador', () => {
+  assert.match(invSrc, /confirmarCusto: custo/, 'o corpo leva o estado do custo');
+  assert.ok(!invSrc.includes('confirmarCusto: true'), 'o cliente nunca confirma custo sozinho');
+  const custo = invSrc.match(/const \[custo, setCusto\] = useState\(([^)]*)\)/);
+  assert.ok(custo, 'o estado do custo não começa indefinido');
+  assert.equal(custo![1], 'false', 'custo começa em false: sem confirmação, sem despesa');
+  // E só aparece a confirmação quando o Apify está mesmo no plano e pronto.
+  assert.match(invSrc, /precisaCusto/, 'a confirmação depende do plano ter o Apify pronto');
+});
+
+test('o painel do plano é honesto no ecrã: sem verde decorativo, sem window.innerWidth', () => {
+  assert.ok(!/window\.innerWidth/.test(invSrc), 'o painel não decide nada pela largura da janela');
+  assert.ok(!/#00FF00|\bgreen\b/.test(invSrc), 'sem verde de Matrix no painel');
+  // O aviso de que sem nós não há cálculo tem de estar escrito, não subentendido.
+  assert.match(invSrc, /sem nós/, 'o painel diz o que acontece sem nós para calcular');
+  // E todas as classes com estado têm cor própria no CSS.
+  const css = readFileSync(join(SRC, 'styles.css'), 'utf8');
+  assert.match(css, /\.tag-err\s*\{/, 'a classe de erro existe');
+  assert.match(css, /\.fase\[data-estado='ERRO'\]/, 'a fase em erro fica marcada na borda');
+  assert.match(css, /\.fase\[data-estado='BLOQUEADA'\]/, 'a fase bloqueada fica marcada na borda');
 });

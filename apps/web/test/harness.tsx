@@ -68,6 +68,18 @@ export function montaApp() {
   };
 }
 
+/**
+ * Clica num elemento montado, dentro de `act()`: sem isto o estado não é
+ * atualizado antes de o teste voltar a ler o HTML, e a asserção lê o ecrã
+ * anterior ao clique.
+ */
+export function clica(raiz: { caixa: Element }, seletor: string) {
+  const alvo = raiz.caixa.querySelector(seletor);
+  if (!alvo) throw new Error(`não encontrei "${seletor}" no ecrã`);
+  act(() => { (alvo as unknown as HTMLElement).click(); });
+  return alvo;
+}
+
 export { useEffect, createElement as el, ToastHost, AppShell };
 export const GRUPOS = ia.GRUPOS;
 export const VISTAS = ia.VISTAS;
@@ -84,11 +96,17 @@ export function stubApi(so: Record<string, unknown> = {}) {
   const ferramentas = [
     ['graph-investigation', 'Investigação (Grafo)', 'investigar', 'free', 'Correlaciona as ferramentas e monta o grafo.'],
     ['username-finder', 'Localizador de Username', 'identidade', 'free', 'Procura o username em várias plataformas.'],
+    ['username-intel', 'Inteligência de Username', 'identidade', 'free', 'Quatro registos independentes sobre o mesmo username.'],
     ['email-analyzer', 'Analisador de Email', 'identidade', 'free', 'Verifica MX, disposable e reputação.'],
     ['phone-analyzer', 'Analisador de Telefone', 'identidade', 'free', 'E.164, país, DDD e validação.'],
     ['dorks-generator', 'Gerador de Dorks', 'identidade', 'free', 'Gera consultas de pesquisa.'],
     ['github-osint', 'GitHub OSINT', 'social', 'free', 'Perfil, repositórios e atividade.'],
     ['telegram-osint', 'Telegram OSINT', 'social', 'pro', 'Canal, inscritos e descrição.'],
+    ['bluesky-osint', 'Bluesky OSINT', 'social', 'free', 'Perfil, publicações e rede.'],
+    ['mastodon-osint', 'Mastodon OSINT', 'social', 'free', 'Perfil em qualquer instância.'],
+    ['social-search', 'Busca por Nome nas Redes', 'social', 'pro', 'Perfis públicos que mencionam um nome.'],
+    ['osint-engine', 'OSINT Engine', 'osint', 'free', 'SpiderFoot, Photon, OpenOSINT, GHunt e Holehe isolados.'],
+    ['apify', 'APIFY', 'apify', 'free', 'Actors do Apify (Instagram, TikTok, Facebook, X).'],
     ['url-scanner', 'Scanner de URL', 'web', 'free', 'Estado HTTP, headers e título.'],
     ['web-crawler', 'Rastreador Web', 'web', 'free', 'robots.txt e páginas.'],
     ['metadata-extractor', 'Extrator de Metadados', 'web', 'free', 'EXIF e metadados de PDF.'],

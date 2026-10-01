@@ -24,7 +24,7 @@ export function Landing({ onStart, tools }: { onStart: () => void; tools: ToolPu
   const capacidades = [
     {
       i: Icon.network, t: 'Um alvo, tudo ligado',
-      d: 'Começa por um username, um domínio, um telefone. O ARGUS escolhe as ferramentas certas, cruza o que encontra e mostra as relações num grafo.',
+      d: 'Começa por um username, um domínio, um telefone. O ARGOS escolhe as ferramentas certas, cruza o que encontra e mostra as relações num grafo.',
     },
     {
       i: Icon.database, t: 'Proveniência em tudo',
@@ -45,7 +45,7 @@ export function Landing({ onStart, tools }: { onStart: () => void; tools: ToolPu
       <header className="topbar-landing" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '15px 0' }}>
         <Mark size={30} />
         <div>
-          <div style={{ fontSize: 13, fontWeight: 720, letterSpacing: '.2em' }}>ARGUS</div>
+          <div style={{ fontSize: 13, fontWeight: 720, letterSpacing: '.2em' }}>ARGOS</div>
           <div className="t-xs dim" style={{ letterSpacing: '.13em', textTransform: 'uppercase', fontSize: 9.5 }}>Fontes abertas</div>
         </div>
         <span style={{ flex: 1 }} />
@@ -63,7 +63,7 @@ export function Landing({ onStart, tools }: { onStart: () => void; tools: ToolPu
           Investigue o que é <span className="blue">público</span>,<br />com a proveniência à vista.
         </h1>
         <p className="lead">
-          O ARGUS cruza fontes abertas reais para responder a perguntas sobre domínios, IPs,
+          O ARGOS cruza fontes abertas reais para responder a perguntas sobre domínios, IPs,
           perfis, empresas, carteiras e vulnerabilidades. Cada resultado diz <b>de onde veio</b>,
           quando e com que grau de confiança. Não há mock, não há resultado plausível inventado,
           e não há fonte que responda 200 e finja que tem dados.
@@ -84,7 +84,7 @@ export function Landing({ onStart, tools }: { onStart: () => void; tools: ToolPu
 
       {/* ---------------- capacidades ---------------- */}
       <section className="section">
-        <h2 className="t-h2">O que o ARGUS faz</h2>
+        <h2 className="t-h2">O que o ARGOS faz</h2>
         <p className="muted t-sm">Quatro capacidades. Todas com fontes reais por trás.</p>
         <div className="feat-grid" style={{ marginTop: 'var(--s-4)' }}>
           {capacidades.map((c) => (
@@ -161,10 +161,10 @@ export function Landing({ onStart, tools }: { onStart: () => void; tools: ToolPu
       <section className="section">
         <h2 className="t-h2">Perguntas honestas</h2>
         <div className="feat-grid" style={{ marginTop: 'var(--s-4)' }}>
-          <Faq q="Isto é legal?" a="O ARGUS só consulta fontes públicas: registos RDAP, DNS, logs de transparência de certificados, bases de vulnerabilidades, registos de empresas e perfis públicos. Não faz varredura ativa, não compra dados e não acede a sistemas de ninguém. O uso responsável continua a ser responsabilidade de quem o usa — há um aviso em cada ferramenta com dados pessoais." />
+          <Faq q="Isto é legal?" a="O ARGOS só consulta fontes públicas: registos RDAP, DNS, logs de transparência de certificados, bases de vulnerabilidades, registos de empresas e perfis públicos. Não faz varredura ativa, não compra dados e não acede a sistemas de ninguém. O uso responsável continua a ser responsabilidade de quem o usa — há um aviso em cada ferramenta com dados pessoais." />
           <Faq q="Os dados são inventados?" a="Não. O que vem de uma fonte vem com o nome, o endereço e o estado dessa fonte. O que é cálculo local (parse de EXIF, pHash, validação de número) é rotulado como tal. E o que não coube numa resposta aparece como 'precisa de chave' ou 'erro' — nunca preenchido com algo plausível." />
           <Faq q="Guardam o que eu pesquiso?" a="Guardamos a sua conta e o histórico das suas execuções, para conseguir mostrar-lhe o resultado outra vez. Os alvos que pesquisa não vão para uma base de dados de vigilância — só para o seu histórico, que pode apagar quando quiser." />
-          <Faq q="Como pago o Pro?" a={`A ativação é feita à mão, depois de confirmada a transferência — não há gateway de pagamento, e nenhum cartão passa por este site. Escolhes o plano, o ARGUS abre o WhatsApp com o pedido já escrito (${wa?.label ?? 'WhatsApp'}) e combinamos daí para a frente.`} />
+          <Faq q="Como pago o Pro?" a={`A ativação é feita à mão, depois de confirmada a transferência — não há gateway de pagamento, e nenhum cartão passa por este site. Escolhes o plano, o ARGOS abre o WhatsApp com o pedido já escrito (${wa?.label ?? 'WhatsApp'}) e combinamos daí para a frente.`} />
         </div>
       </section>
 

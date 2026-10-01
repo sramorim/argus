@@ -1,5 +1,5 @@
 /**
- * Conjunto de ícones do ARGUS.
+ * Conjunto de ícones do ARGOS.
  *
  * Um traço, uma espessura, uma grelha: todos 24×24, `currentColor`, com
  * `stroke-linecap: round`. É o que faz a interface parecer uma só coisa. Os
@@ -42,6 +42,9 @@ export const Icon = {
   lock: (p: P) => (<svg {...base(p)}><rect x="4.6" y="10.4" width="14.8" height="9.6" rx="2.2" /><path d="M8.2 10.4V8a3.8 3.8 0 0 1 7.6 0v2.4" /></svg>),
   search: (p: P) => (<svg {...base(p)}><circle cx="10.8" cy="10.8" r="6.4" /><path d="m15.6 15.6 4.2 4.2" /></svg>),
   close: (p: P) => (<svg {...base(p)}><path d="M6.4 6.4l11.2 11.2M17.6 6.4 6.4 17.6" /></svg>),
+  minimize: (p: P) => (<svg {...base(p)}><path d="M6 17.4h12" /></svg>),
+  maximize: (p: P) => (<svg {...base(p)}><rect x="5.4" y="5.4" width="13.2" height="13.2" rx="1.6" /></svg>),
+  restore: (p: P) => (<svg {...base(p)}><rect x="4.6" y="7.6" width="11" height="11" rx="1.6" /><path d="M8 4.6h9.4a2 2 0 0 1 2 2v9.4" /></svg>),
   menu: (p: P) => (<svg {...base(p)}><path d="M4 7h16M4 12h16M4 17h16" /></svg>),
   chevronRight: (p: P) => (<svg {...base(p)}><path d="m9.5 5.5 6.5 6.5-6.5 6.5" /></svg>),
   chevronDown: (p: P) => (<svg {...base(p)}><path d="m5.5 9.5 6.5 6.5 6.5-6.5" /></svg>),

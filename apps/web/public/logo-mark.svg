@@ -1,15 +1,15 @@
 <!--
-  ARGUS — símbolo (o olho do guardião).
+  ARGOS — símbolo (o olho do guardião).
   Geometria: coordenadas 0..32, espelhada exactamente por scripts/make-icons.mjs,
   que gera os PNG (favicon, apple-touch-icon, 192, 512) a partir da mesma forma.
-  Cor: grafite de fundo, prata nos traços, vermelho profundo na pupila.
+  Cor: grafite de fundo, prata nos traços, azul metálico na pupila.
   Sem verde. Sem degradé berrante. Legível a 16 px.
 -->
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" role="img" aria-label="ARGUS">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" role="img" aria-label="ARGOS">
   <defs>
     <linearGradient id="argus-pupil" x1="0" y1="0" x2="0.35" y2="1">
-      <stop offset="0" stop-color="#DC2626"/>
-      <stop offset="1" stop-color="#B91C1C"/>
+      <stop offset="0" stop-color="#1677FF"/>
+      <stop offset="1" stop-color="#0B5FD6"/>
     </linearGradient>
     <linearGradient id="argus-bg" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#14171C"/>

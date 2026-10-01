@@ -14,11 +14,11 @@ import { CONF_LABEL, CONF_HINT } from '../api';
 import { Icon } from './Icons';
 
 const NODE_COLOR: Record<string, string> = {
-  seed: '#DC2626', pessoa: '#E6EBF1', username: '#E6EBF1', conta: '#D9A441',
+  seed: '#1677FF', pessoa: '#E6EBF1', username: '#E6EBF1', conta: '#D9A441',
   email: '#8FA9C4', telefone: '#B9A5D9', dominio: '#7FA8C9', ip: '#6F8DA8',
   servico: '#8A94A1', empresa: '#C8CDD4', socio: '#A7B0BC', endereco: '#9AA1AB',
-  wallet: '#D9A441', portfolio: '#8FA9C4', cve: '#DC2626', pacote: '#B9A5D9',
-  breach: '#DC2626', documento: '#8A94A1', hashtag: '#C7B48C',
+  wallet: '#D9A441', portfolio: '#8FA9C4', cve: '#1677FF', pacote: '#B9A5D9',
+  breach: '#1677FF', documento: '#8A94A1', hashtag: '#C7B48C',
 };
 const TYPE_LABEL: Record<string, string> = {
   pessoa: 'pessoa', username: 'username', conta: 'conta', email: 'email', telefone: 'telefone',

@@ -1,6 +1,6 @@
 {
-  "name": "ARGUS — inteligência de fontes abertas",
-  "short_name": "ARGUS",
+  "name": "ARGOS — inteligência de fontes abertas",
+  "short_name": "ARGOS",
   "description": "Investigação OSINT com fontes públicas reais, proveniência de cada resultado e grafo de correlação.",
   "lang": "pt-BR",
   "start_url": "/",

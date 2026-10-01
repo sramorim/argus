@@ -127,7 +127,7 @@ export default function Account({ user, onLogout }: { user: User; onLogout: () =
         <div className="card-head">Como tratamos os seus dados</div>
         <div className="t-sm muted" style={{ display: 'grid', gap: 8 }}>
           <p>• Guardamos o essencial: email, nome, hash da senha (scrypt), chaves cifradas e o histórico de execuções.</p>
-          <p>• As consultas a fontes públicas são feitas pelo ARGUS. O endereço IP do servidor é visto pelas fontes; o seu, em princípio, não.</p>
+          <p>• As consultas a fontes públicas são feitas pelo ARGOS. O endereço IP do servidor é visto pelas fontes; o seu, em princípio, não.</p>
           <p>• Só usamos fontes públicas e apenas com fundamento legal ou defensivo. Nada de dados de terceiros comprados, nada de port scanner ativo.</p>
           <p>• Pode pedir a eliminação a qualquer momento, aqui em cima, sem falar com ninguém.</p>
         </div>
