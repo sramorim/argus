@@ -12,7 +12,7 @@
  * sessões, diz que não há. Se a cota acabou, diz que acabou. Não se enche a
  * página de cartões a competir entre si para parecer mais cheio.
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import type { ReactElement } from 'react';
 import type { SVGProps } from 'react';
 import { api, type ToolPublic, type Usage, type User, ApiError } from '../api';
@@ -20,6 +20,7 @@ import { Icon } from '../components/Icons';
 import { Empty, Note, Skeleton, SearchInput, useToast } from '../components/ui';
 import { GRUPOS, porGrupo, buscar, ATALHOS, NOME_PLANO } from '../ia';
 import type { View } from './AppShell';
+import gsap from 'gsap';
 
 interface Resumo {
   sessoes: { id: string; title: string; seed: string; updated_at: string; node_count?: number; edge_count?: number }[];
@@ -60,16 +61,16 @@ export default function Dashboard({
   return (
     <div className="page">
       {/* ---------- 1. a ação principal ---------- */}
-      <section className="hero-panel">
+      <section className="hero-panel animate-pulse-glow">
         <div className="hero-panel-txt">
-          <span className="hero-kicker">Investigação de fontes abertas</span>
+          <span className="hero-kicker">INTELIGÊNCIA DE FONTES ABERTAS</span>
           <h1 className="t-h1" style={{ margin: '10px 0 6px' }}>
             Começa por um alvo. O ARGOS faz o resto.
           </h1>
           <p className="muted t-sm" style={{ maxWidth: '58ch' }}>
             Um username, um e-mail, um telefone, um domínio, um IP, uma URL ou uma carteira.
             O ARGOS escolhe as ferramentas certas, cruza o que encontra e mostra
-            <b style={{ color: 'var(--t-2)' }}> de onde veio cada achado</b>.
+            <b style={{ color: 'var(--blue-3)' }}> de onde veio cada achado</b>.
           </p>
         </div>
         <div className="hero-panel-cta">
@@ -288,7 +289,19 @@ function StatCard({
   rotulo: string; valor: string; nota: string;
   icone: (p: SVGProps<SVGSVGElement>) => ReactElement; estado?: 'ok' | 'warn';
 }) {
+  const numRef = useRef<HTMLSpanElement>(null);
+  const valorNum = Number(valor.split('/')[0]) || 0;
   const cor = estado === 'warn' ? 'var(--aviso)' : estado === 'ok' ? 'var(--blue-3)' : 'var(--t-3)';
+
+  useEffect(() => {
+    if (numRef.current) {
+      gsap.fromTo(numRef.current,
+        { innerHTML: 0 },
+        { innerHTML: valorNum, duration: 1.5, snap: { innerHTML: 1 }, ease: "power2.out" }
+      );
+    }
+  }, [valorNum]);
+
   return (
     <div className="card" style={{ padding: 'var(--s-4)' }}>
       <div className="row-tight" style={{ marginBottom: 7 }}>
@@ -296,7 +309,7 @@ function StatCard({
         <span className="tnum">{rotulo}</span>
       </div>
       <div className="v" style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-.02em', lineHeight: 1.15 }}>
-        {valor}
+        <span ref={numRef} className="num">{valorNum}</span>{valor.includes('/') ? `/${valor.split('/')[1]}` : ''}
       </div>
       <div className="t-xs dim" style={{ marginTop: 3 }}>{nota}</div>
     </div>

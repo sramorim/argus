@@ -19,6 +19,7 @@ import { Landing } from './pages/Landing';
 import AppShell from './pages/AppShell';
 import type { View } from './pages/AppShell';
 import { Icon, ToastHost } from './components/ui';
+import LoadingScreen from './components/LoadingScreen';
 
 type View2 = View;
 
@@ -92,6 +93,7 @@ function App() {
   const [usage, setUsage] = useState<Usage | null>(null);
   const [view, setViewState] = useState<View2>(hashToView(location.hash));
   const [loading, setLoading] = useState(true);
+  const [appReady, setAppReady] = useState(false);
   const [down, setDown] = useState(false);
   const [publicTools, setPublicTools] = useState<ToolPublic[]>([]);
 
@@ -112,7 +114,9 @@ function App() {
     setLoading(false);
   }, []);
 
-  useEffect(() => { loadAll(); }, [loadAll]);
+  useEffect(() => {
+    if (!loading) setAppReady(true);
+  }, [loading]);
 
   useEffect(() => {
     const on = () => setViewState(hashToView(location.hash));
@@ -135,6 +139,12 @@ function App() {
         <span className="spin" />
         <span className="t-sm dim">a ligar ao ARGOS…</span>
       </div>
+    );
+  }
+
+  if (!appReady) {
+    return (
+      <LoadingScreen onComplete={() => { /* appReady will be set by effect */ }} />
     );
   }
 

@@ -1,9 +1,9 @@
 /* =============================================================================
-   ARGOS — sistema visual
-   Azul profissional, tecnológico e elegante. Identidade própria do ARGOS.
+   ARGOS — sistema visual (Intel Fusion reference)
+   Azul metálico, tecnológico, dark-HUD. Identidade própria do ARGOS.
 
-   O azul entra com moderação: é a cor de ação, de destaque e de estado ativo.
-   Fundo, superfícies e texto são quase neutros (levam um tom azul muito baixo),
+   O azul entra como cor de ação, destaque e estado ativo.
+   Fundo, superfícies e texto são neutros profundos com tom azul muito baixo,
    para que o azul tenha peso sem a interface inteira ficar azul.
 
    Ordem do ficheiro:
@@ -11,68 +11,78 @@
      5. componentes 6. estados    7. responsivo
    ============================================================================= */
 
-/* ---------------------------------------------------------------- 1. tokens */
-:root {
-  /* Superfícies: azul quase ausente, para dar profundidade sem ser azul */
-  --bg:        #07111F;
-  --bg-2:      #091627;
-  --surface:   #0D1B2A;
-  --surface-2: #102338;
-  --surface-3: #16293F;
+ /* ---------------------------------------------------------------- 1. tokens */
+ :root {
+   /* Superfícies: azul quase ausente, para dar profundidade sem ser azul */
+   --bg:            #0a0a0f;
+   --bg-2:          #12121a;
+   --surface:       #0D1B2A;
+   --surface-2:     #102338;
+   --surface-3:     #16293F;
 
-  --line:        #1E334A;
-  --line-soft:   #17293C;
-  --line-strong: #2A4666;
+   --line:              #1E334A;
+   --line-soft:         #17293C;
+   --line-strong:       #2A4666;
+   --glass:             rgba(10, 10, 15, 0.85);
+   --glass-border:      rgba(255, 255, 255, 0.08);
 
-  /* Azul de acção e destaque */
-  --blue:      #1677FF;
-  --blue-2:    #2F8CFF;
-  --blue-3:    #58B0FF;
-  --blue-dim:  rgba(22,119,255,.14);
-  --blue-line: rgba(22,119,255,.38);
-  --blue-glow: rgba(22,119,255,.28);
+   /* Azul metálico de acção e destaque */
+   --blue:            #3b82f6;
+   --blue-2:          #1d4ed8;
+   --blue-3:          #60a5fa;
+   --blue-dim:        rgba(59, 130, 246, 0.14);
+   --blue-line:       rgba(59, 130, 246, 0.38);
+   --blue-glow:       rgba(59, 130, 246, 0.28);
+   --blue-glow-strong:rgba(59, 130, 246, 0.6);
 
-  /* Texto */
-  --t-1: #F4F7FB;
-  --t-2: #C6D3E2;
-  --t-3: #91A4B8;
-  --t-4: #64798F;
+   /* Texto */
+   --t-1:             #e4e4e7;
+   --t-2:             #a1a1aa;
+   --t-3:             #71717a;
+   --t-4:             #52525b;
 
-  /* Estados */
-  --erro:     #EF4444;
-  --erro-dim: rgba(239,68,68,.13);
-  --ok:       #22C55E;
-  --ok-dim:   rgba(34,197,94,.13);
-  --aviso:    #E0A33E;
-  --aviso-dim: rgba(224,163,62,.13);
-  --info:     var(--blue-3);
+   /* Estados */
+   --erro:            #ef4444;
+   --erro-dim:        rgba(239, 68, 68, 0.13);
+   --ok:              #10b981;
+   --ok-dim:          rgba(16, 185, 129, 0.13);
+   --aviso:           #f59e0b;
+   --aviso-dim:       rgba(245, 158, 11, 0.13);
+   --info:            var(--blue-3);
 
-  /* Confiança: escala de azuis + neutro. Sem verde, sem percentagem inventada. */
-  --c-confirmed:   #7FC4FF;
-  --c-corroborated:#4C9BE8;
-  --c-indicated:   #2F6FA8;
-  --c-weak:        #5C7791;
+   /* Confiança: escala de azuis + neutro. Sem verde, sem percentagem inventada. */
+   --c-confirmed:     #7fc4ff;
+   --c-corroborated:  #4c9be8;
+   --c-indicated:     #2f6fa8;
+   --c-weak:          #5c7791;
 
-  /* Espaço e forma */
-  --s-1: 4px; --s-2: 8px; --s-3: 12px; --s-4: 16px; --s-5: 22px; --s-6: 30px; --s-7: 44px; --s-8: 64px;
-  --r-sm: 7px; --r: 10px; --r-lg: 14px; --r-full: 999px;
+   /* Tipos de Inteligência */
+   --intel-osint:     #3b82f6;
+   --intel-humint:    #10b981;
+   --intel-imint:     #ef4444;
 
-  --shadow-1: 0 1px 2px rgba(0,0,0,.36);
-  --shadow-2: 0 6px 20px rgba(0,0,0,.42);
-  --shadow-3: 0 18px 44px rgba(0,0,0,.55);
-  --ring: 0 0 0 3px rgba(22,119,255,.24);
+   /* Espaço e forma */
+   --s-1: 4px; --s-2: 8px; --s-3: 12px; --s-4: 16px; --s-5: 22px; --s-6: 30px; --s-7: 44px; --s-8: 64px;
+   --r-sm: 7px; --r: 10px; --r-lg: 14px; --r-xl: 24px; --r-full: 999px;
 
-  --sidebar-w: 268px;
-  --appbar-h: 60px;
-  --taskbar-h: 40px;
-  --tabbar-h: 60px;
-  --maxw: 1320px;
+   --shadow-1: 0 1px 2px rgba(0,0,0,.36);
+   --shadow-2: 0 6px 20px rgba(0,0,0,.42);
+   --shadow-3: 0 18px 44px rgba(0,0,0,.55);
+   --shadow-4: 0 32px 80px rgba(0,0,0,.7);
+   --ring: 0 0 0 3px rgba(59,130,246,.24);
 
-  --font: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  --mono: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
-  --ease: cubic-bezier(.2, .7, .3, 1);
-  --t-fast: .13s; --t: .2s; --t-slow: .3s;
-}
+   --sidebar-w: 268px;
+   --appbar-h: 60px;
+   --taskbar-h: 40px;
+   --tabbar-h: 60px;
+   --maxw: 1320px;
+
+   --font: 'Geist', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+   --mono: 'Geist Mono', ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
+   --ease: cubic-bezier(.2, .7, .3, 1);
+   --ease-spring: cubic-bezier(.2, .7, .3, 1);
+   --t-fast: .13s; --t: .2s; --t-slow: .3s; --t-slower: .5s;
+ }
 
 /* ------------------------------------------------------------------ 2. base */
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -1137,3 +1147,178 @@ html[data-zebra='sim'] .tbl tbody tr:nth-child(even) td { background: rgba(16,35
 .ferr-erro { color: #FCA5A5; }
 .ferr-nota { color: var(--t-3); }
 .ferr-input { color: var(--t-4); }
+
+/* =============================================================
+   INTEL FUSION VISUAL PATTERNS — Radar sweep, typewriter, glass, pulse
+   ============================================================= */
+
+/* --------------------------------------- Radar sweep (loading screen) */
+@keyframes radar-sweep {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.animate-radar-sweep { animation: radar-sweep 2s linear infinite; }
+
+/* --------------------------------------- Typewriter cursor */
+@keyframes blink-cursor {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+.cursor-blink::after {
+  content: '_';
+  animation: blink-cursor 0.8s step-end infinite;
+  color: var(--blue-3);
+}
+
+/* --------------------------------------- Split reveal (vertical) */
+@keyframes split-reveal-left {
+  from { transform: translateX(0); }
+  to { transform: translateX(-100%); }
+}
+@keyframes split-reveal-right {
+  from { transform: translateX(0); }
+  to { transform: translateX(100%); }
+}
+.animate-split-left { animation: split-reveal-left 0.6s cubic-bezier(0.76, 0, 0.24, 1) forwards; }
+.animate-split-right { animation: split-reveal-right 0.6s cubic-bezier(0.76, 0, 0.24, 1) forwards; }
+
+/* --------------------------------------- Progress bar fill */
+@keyframes progress-fill {
+  from { width: 0%; }
+  to { width: 100%; }
+}
+.animate-progress { animation: progress-fill 2.5s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+
+/* --------------------------------------- Radar ping ring */
+@keyframes radar-ping {
+  0% { transform: translate(-50%, -50%) scale(0.5); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(2.5); opacity: 0; }
+}
+.animate-radar-ping {
+  animation: radar-ping 2s ease-out infinite;
+}
+
+/* --------------------------------------- Float marker bob */
+@keyframes float-marker {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+.animate-float { animation: float-marker 3s ease-in-out infinite; }
+
+/* --------------------------------------- FAB slow spin */
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.animate-spin-slow { animation: spin-slow 10s linear infinite; }
+
+/* --------------------------------------- FAB glow pulse */
+@keyframes fab-glow {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(59,130,246,0.4), 0 8px 32px rgba(0,0,0,0.5);
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(59,130,246,0.7), 0 0 80px rgba(59,130,246,0.2), 0 8px 32px rgba(0,0,0,0.5);
+  }
+}
+.animate-fab-glow { animation: fab-glow 2.5s ease-in-out infinite; }
+
+/* --------------------------------------- Sidebar pulse glow */
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow:
+      0 25px 60px rgba(0,0,0,0.5),
+      0 0 40px rgba(59,130,246,0.05);
+  }
+  50% {
+    box-shadow:
+      0 25px 60px rgba(0,0,0,0.6),
+      0 0 60px rgba(59,130,246,0.15);
+  }
+}
+.animate-pulse-glow { animation: pulse-glow 3s ease-in-out infinite; }
+
+/* --------------------------------------- HUD text flicker */
+@keyframes hud-flicker {
+  0%, 94%, 96%, 98%, 100% { opacity: 1; }
+  95%, 97% { opacity: 0.2; }
+}
+.hud-flicker { animation: hud-flicker 8s ease-in-out infinite; }
+
+/* --------------------------------------- Status dot pulse */
+@keyframes status-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.7); }
+}
+.status-dot { animation: status-pulse 2s ease-in-out infinite; }
+
+/* --------------------------------------- Scanline overlay */
+.scanline-overlay::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent, transparent 2px,
+    rgba(59,130,246,0.012) 2px, rgba(59,130,246,0.012) 4px
+  );
+  pointer-events: none; z-index: 1; border-radius: inherit;
+}
+
+/* --------------------------------------- Glass card hover */
+.glass-card {
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.glass-card:hover {
+  border-color: rgba(255, 255, 255, 0.15) !important;
+}
+
+/* --------------------------------------- Button hover scale */
+.btn-hover { transition: transform 0.15s ease, box-shadow 0.15s ease; }
+.btn-hover:hover { transform: scale(1.02); }
+.btn-hover:active { transform: scale(0.97); }
+
+/* --------------------------------------- Shimmer on hover */
+@keyframes shimmer-move {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+/* --------------------------------------- Confidence ring base styles */
+.conf-ring { transform: rotate(-90deg); }
+.conf-ring-bg { fill: none; stroke: rgba(255,255,255,0.08); stroke-width: 2.5; }
+.conf-ring-fg { fill: none; stroke-width: 2.5; stroke-linecap: round; transition: stroke-dasharray 0.6s ease-out; }
+
+/* --------------------------------------- Stat card GSAP counter will be applied via JS */
+
+/* --------------------------------------- Loading screen specific */
+.loading-radar-wrap { position: relative; width: 140px; height: 140px; }
+.loading-radar-ring { position: absolute; border-radius: 50%; border: 1px solid; }
+.loading-radar-sweep {
+  position: absolute; width: 100%; height: 100%; border-radius: 50%;
+  background: conic-gradient(from 0deg, rgba(59,130,246,0) 60%, rgba(59,130,246,0.4) 100%);
+  animation: radar-sweep 2s linear infinite;
+}
+.loading-radar-center { width: 10px; height: 10px; border-radius: 50%; background: var(--blue); box-shadow: 0 0 12px var(--blue); }
+.loading-radar-blip { position: absolute; width: 6px; height: 6px; border-radius: 50%; background: var(--intel-humint); box-shadow: 0 0 6px var(--intel-humint); opacity: 0.8; }
+
+/* --------------------------------------- Progress bar (loading) */
+.loading-progress-bar { height: 2px; border-radius: 2px; overflow: hidden; background: rgba(255,255,255,0.06); }
+.loading-progress-fill { height: 100%; width: 34%; background: linear-gradient(90deg, var(--blue-2), var(--blue), var(--blue-3)); box-shadow: 0 0 12px rgba(59,130,246,0.6); animation: slide 1.15s ease infinite; }
+@keyframes slide { from { transform: translateX(-100%); } to { transform: translateX(330%); } }
+
+/* --------------------------------------- Status lines (loading) */
+.loading-status-line { transition: opacity 0.4s ease; }
+.loading-status-done { opacity: 1; color: var(--ok); }
+.loading-status-pending { opacity: 0.3; color: rgba(255,255,255,0.2); }
+
+/* --------------------------------------- Radar marker colors */
+.marker-osint { --marker-main: var(--intel-osint); --marker-glow: rgba(59,130,246,0.7); }
+.marker-humint { --marker-main: var(--intel-humint); --marker-glow: rgba(16,185,129,0.7); }
+.marker-imint { --marker-main: var(--intel-imint); --marker-glow: rgba(239,68,68,0.7); }
+
+/* --------------------------------------- Floating desktop icons hint */
+.desk-hint { animation: float-marker 2s ease-in-out infinite; }
+
+/* --------------------------------------- Sidebar legal scanline */
+.side-legal { position: relative; }
+.side-legal::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, var(--blue-line), transparent); }

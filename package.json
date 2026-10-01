@@ -28,5 +28,9 @@
   },
   "allowScripts": {
     "esbuild@0.25.12": true
+  },
+  "dependencies": {
+    "framer-motion": "^13.5.0",
+    "gsap": "^3.15.0"
   }
 }
