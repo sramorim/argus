@@ -104,15 +104,30 @@ function App() {
   }, []);
 
   const loadAll = useCallback(async () => {
+    /* O arranque tem de terminar sempre. Se um dos pedidos não responder
+       dentro do prazo, o `AbortSignal` corta e o `catch` põe a app em
+       "sem ligação" — em vez de a deixar presa nos 90% para sempre.
+       Não é um timeout que esconde: é o servidor que não respondeu, e o
+       ecrã seguinte diz isso ao utilizador. */
+    const ctrl = new AbortController();
+    const limite = setTimeout(() => ctrl.abort(), 20_000);
     try {
-      const [t, m] = await Promise.all([api.tools(), api.me()]);
+      const [t, m] = await Promise.all([
+        api.tools({ signal: ctrl.signal }),
+        api.me({ signal: ctrl.signal }),
+      ]);
       setPublicTools(t.tools);
       setUser(m.user);
       if (m.user) { setTools(t.tools); setUsage(m.usage ?? null); }
       else { setTools([]); setUsage(null); }
     } catch { setDown(true); }
+    finally { clearTimeout(limite); }
     setLoading(false);
   }, []);
+
+  /* Quem dispara a primeira consulta. Sem este efeito a `loading` nunca
+     mudava, `pronto` ficava falso e a barra de abertura travava nos 90%. */
+  useEffect(() => { loadAll(); }, [loadAll]);
 
   useEffect(() => {
     const on = () => setViewState(hashToView(location.hash));

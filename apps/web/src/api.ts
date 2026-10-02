@@ -322,8 +322,8 @@ export async function pedidoSaude(detalhe: boolean): Promise<{
 export const api = {
   health: () => req<{ ok: boolean; tools: number }>('/api/health'),
   contacto: () => req<Contacto>('/api/contact'),
-  me: () => req<{ user: User | null; usage?: Usage }>('/api/me'),
-  tools: () => req<{ tools: ToolPublic[]; plan: PlanId; usage: Usage | null }>('/api/tools'),
+  me: (init?: RequestInit) => req<{ user: User | null; usage?: Usage }>('/api/me', init),
+  tools: (init?: RequestInit) => req<{ tools: ToolPublic[]; plan: PlanId; usage: Usage | null }>('/api/tools', init),
   tool: (id: string) => req<{ tool: ToolPublic }>(`/api/tools/${encodeURIComponent(id)}`),
   plans: () => req<{ plans: Plan[] }>('/api/plans'),
   byokProviders: () => req<{ providers: ByokProvider[] }>('/api/byok/providers'),
