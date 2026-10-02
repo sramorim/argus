@@ -21,6 +21,7 @@ import { Empty, Note, Skeleton, SearchInput, useToast } from '../components/ui';
 import { GRUPOS, porGrupo, buscar, ATALHOS, NOME_PLANO } from '../ia';
 import type { View } from './AppShell';
 import gsap from 'gsap';
+import { useReducedMotion } from 'framer-motion';
 
 interface Resumo {
   sessoes: { id: string; title: string; seed: string; updated_at: string; node_count?: number; edge_count?: number }[];
@@ -292,15 +293,21 @@ function StatCard({
   const numRef = useRef<HTMLSpanElement>(null);
   const valorNum = Number(valor.split('/')[0]) || 0;
   const cor = estado === 'warn' ? 'var(--aviso)' : estado === 'ok' ? 'var(--blue-3)' : 'var(--t-3)';
+  const suave = useReducedMotion();
 
+  /* O número começa a zero no DOM de propósito. Antes escrevia-se já o valor
+     final e o gsap punha-o a zero um instante depois: o número aparecia, era
+     reposto a 0 e voltava a contar — via-se isso duas vezes. */
   useEffect(() => {
-    if (numRef.current) {
-      gsap.fromTo(numRef.current,
-        { innerHTML: 0 },
-        { innerHTML: valorNum, duration: 1.5, snap: { innerHTML: 1 }, ease: "power2.out" }
-      );
-    }
-  }, [valorNum]);
+    const el = numRef.current;
+    if (!el || suave) { if (el) el.textContent = String(valorNum); return; }
+    el.textContent = '0';
+    const tween = gsap.fromTo(el,
+      { innerText: 0 },
+      { innerText: valorNum, duration: 1.1, snap: { innerText: 1 }, ease: 'power2.out', overwrite: true }
+    );
+    return () => { tween.kill(); };
+  }, [valorNum, suave]);
 
   return (
     <div className="card" style={{ padding: 'var(--s-4)' }}>
@@ -309,7 +316,7 @@ function StatCard({
         <span className="tnum">{rotulo}</span>
       </div>
       <div className="v" style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-.02em', lineHeight: 1.15 }}>
-        <span ref={numRef} className="num">{valorNum}</span>{valor.includes('/') ? `/${valor.split('/')[1]}` : ''}
+        <span ref={numRef} className="num">0</span>{valor.includes('/') ? `/${valor.split('/')[1]}` : ''}
       </div>
       <div className="t-xs dim" style={{ marginTop: 3 }}>{nota}</div>
     </div>
