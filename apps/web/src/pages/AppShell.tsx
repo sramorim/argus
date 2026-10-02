@@ -22,7 +22,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactElement } from 'react';
 import type { SVGProps } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { type ToolPublic, type Usage, type User, useContacto } from '../api';
 import { Icon, CATEGORY_ICON, CATEGORY_LABEL } from '../components/Icons';
 import Janela, { type Geom } from '../components/Janela';
@@ -83,6 +83,9 @@ export default function AppShell({
 }) {
   const [drawer, setDrawer] = useState(false);
   const wa = useContacto();
+  /* Uma só decisão para todo o ecrã: se o sistema pede menos movimento, as
+     molas daqui abaixo desaparecem todas. */
+  const suave = useReducedMotion();
   const areaRef = useRef<HTMLElement | null>(null);
   const espacoRef = useRef({ w: 1200, h: 760 });
   const [espaco, setEspaco] = useState({ w: 1200, h: 760 });
@@ -339,7 +342,9 @@ export default function AppShell({
                     initial={{ height: 0, opacity: 0 }}
                     animate={{ height: 'auto', opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}
-                    transition={{ type: 'spring', stiffness: 260, damping: 26, mass: 0.6 }}
+                    transition={suave
+                      ? { duration: 0 }
+                      : { type: 'spring', stiffness: 260, damping: 26, mass: 0.6 }}
                     style={{ overflow: 'hidden' }}
                   >
                     <div>
@@ -675,10 +680,12 @@ export default function AppShell({
             key="gaveta"
             className="sidebar"
             data-open={drawer}
-            initial={{ x: '-100%', opacity: 0.4 }}
+            initial={suave ? { opacity: 0 } : { x: '-100%', opacity: 0.4 }}
             animate={{ x: 0, opacity: 1 }}
-            exit={{ x: '-100%', opacity: 0.4 }}
-            transition={{ type: 'spring', stiffness: 240, damping: 28, mass: 0.8 }}
+            exit={suave ? { opacity: 0 } : { x: '-100%', opacity: 0.4 }}
+            transition={suave
+              ? { duration: 0 }
+              : { type: 'spring', stiffness: 240, damping: 28, mass: 0.8 }}
           >
             <Brand />
             {conteudoLateral}

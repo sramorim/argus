@@ -17,7 +17,7 @@
  */
 import type { CSSProperties, PointerEvent as RPointerEvent, ReactElement, ReactNode } from 'react';
 import type { SVGProps } from 'react';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import { Icon } from './Icons';
 
 export interface Geom { x: number; y: number; w: number; h: number }
@@ -44,6 +44,9 @@ export default function Janela({
   onGeom: (g: Geom) => void;
   children: ReactNode;
 }) {
+  /* Quem pediu menos movimento no sistema não fica com a janela a saltar. */
+  const suave = useReducedMotion();
+
   const arrastar = (e: RPointerEvent<HTMLElement>, modo: 'mover' | 'e' | 's' | 'se') => {
     // Um clique num botão da barra de título não pode começar um arrasto.
     if (max || e.button !== 0) return;
@@ -99,11 +102,10 @@ export default function Janela({
       onPointerDown={onFocar}
       /* A posição vem de `--wx/--wy` no CSS, por isso aqui só mexemos em
          transform e opacidade: os dois nunca escreve a mesma propriedade. */
-      initial={{ opacity: 0, scale: 0.93, y: 16 }}
+      initial={suave ? { opacity: 0 } : { opacity: 0, scale: 0.93, y: 16 }}
       animate={{ opacity: 1, scale: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.93, y: 10 }}
+      exit={suave ? { opacity: 0 } : { opacity: 0, scale: 0.93, y: 10 }}
       transition={{ type: 'spring', stiffness: 320, damping: 30, mass: 0.7 }}
-      whileFocus={{ scale: 1.004 }}
     >
       <motion.header
         className="win-title"
