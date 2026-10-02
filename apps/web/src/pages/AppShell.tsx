@@ -22,6 +22,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactElement } from 'react';
 import type { SVGProps } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { type ToolPublic, type Usage, type User, useContacto } from '../api';
 import { Icon, CATEGORY_ICON, CATEGORY_LABEL } from '../components/Icons';
 import Janela, { type Geom } from '../components/Janela';
@@ -328,29 +329,46 @@ export default function AppShell({
                 <span className="layer-count">{lista.length}</span>
                 <Icon.chevronRight className="layer-caret" />
               </button>
-              <div className="layer-body">
-                <div>
-                  <div className="layer-inner">
-                    {lista.map((t) => {
-                      const Cat = CATEGORY_ICON[t.category] ?? Icon.grid;
-                      return (
-                        <button
-                          key={t.id}
-                          className="nav-item"
-                          type="button"
-                          aria-current={view.k === 'tool' && (view as { id: string }).id === t.id}
-                          onClick={() => go({ k: 'tool', id: t.id })}
-                          title={t.summary}
-                        >
-                          <Cat className="nav-ico" />
-                          <span className="nav-label-txt">{t.name}</span>
-                          {t.lock === 'locked' && <Icon.lock width={12} height={12} style={{ color: 'var(--t-4)' }} />}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
+              {/* O corpo da camada é medido pelo próprio framer: sem isto o
+                  conteúdo salta de 0 para a altura final. */}
+              <AnimatePresence initial={false}>
+                {aberto && (
+                  <motion.div
+                    key="corpo"
+                    className="layer-body"
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ type: 'spring', stiffness: 260, damping: 26, mass: 0.6 }}
+                    style={{ overflow: 'hidden' }}
+                  >
+                    <div>
+                      <div className="layer-inner">
+                        {lista.map((t) => {
+                          const Cat = CATEGORY_ICON[t.category] ?? Icon.grid;
+                          return (
+                            <motion.button
+                              key={t.id}
+                              className="nav-item"
+                              type="button"
+                              aria-current={view.k === 'tool' && (view as { id: string }).id === t.id}
+                              onClick={() => go({ k: 'tool', id: t.id })}
+                              title={t.summary}
+                              whileHover={{ x: 4 }}
+                              whileTap={{ scale: 0.97 }}
+                              transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                            >
+                              <Cat className="nav-ico" />
+                              <span className="nav-label-txt">{t.name}</span>
+                              {t.lock === 'locked' && <Icon.lock width={12} height={12} style={{ color: 'var(--t-4)' }} />}
+                            </motion.button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           );
         })}
@@ -388,9 +406,17 @@ export default function AppShell({
         <button className="icon-btn only-narrow" onClick={() => setDrawer(true)} aria-label="Abrir menu" type="button">
           <Icon.menu />
         </button>
-        <button className="topbar-brand" type="button" onClick={() => go({ k: 'dashboard' })} title="Painel">
+        <motion.button
+          className="topbar-brand"
+          type="button"
+          onClick={() => go({ k: 'dashboard' })}
+          title="Painel"
+          whileHover={{ scale: 1.03 }}
+          whileTap={{ scale: 0.97 }}
+          transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+        >
           <Brand />
-        </button>
+        </motion.button>
         <div className="topbar-clock only-desk">
           <Icon.clock />
           <span className="topbar-data">{data}</span>
@@ -403,9 +429,30 @@ export default function AppShell({
           <span className="topbar-quota only-desk">{usage.daily - usage.today} execuções hoje</span>
         )}
         <nav className="topbar-links only-desk" aria-label="Atalhos">
-          <button className="topbar-link" type="button" onClick={() => go({ k: 'inv' })}>Sessões</button>
-          <button className="topbar-link" type="button" onClick={() => go({ k: 'history' })}>Histórico</button>
-          <button className="topbar-link" type="button" onClick={() => go({ k: 'plans' })}>Planos</button>
+          <motion.button
+            className="topbar-link"
+            type="button"
+            onClick={() => go({ k: 'inv' })}
+            whileHover={{ y: -1 }}
+            whileTap={{ scale: 0.95 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 22 }}
+          >Sessões</motion.button>
+          <motion.button
+            className="topbar-link"
+            type="button"
+            onClick={() => go({ k: 'history' })}
+            whileHover={{ y: -1 }}
+            whileTap={{ scale: 0.95 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 22 }}
+          >Histórico</motion.button>
+          <motion.button
+            className="topbar-link"
+            type="button"
+            onClick={() => go({ k: 'plans' })}
+            whileHover={{ y: -1 }}
+            whileTap={{ scale: 0.95 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 22 }}
+          >Planos</motion.button>
         </nav>
         <details className="user-menu">
           <summary className="avatar" title={user.email}>{inicial}</summary>
@@ -415,13 +462,26 @@ export default function AppShell({
               <div className="user-pop-mail">{user.email}</div>
             </div>
             {apps.map((v) => (
-              <button key={v.id} className="user-pop-item" type="button" onClick={() => go({ k: v.id } as View)}>
+              <motion.button
+                key={v.id}
+                className="user-pop-item"
+                type="button"
+                onClick={() => go({ k: v.id } as View)}
+                whileHover={{ x: 4 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+              >
                 <v.icon /> {v.nome}
-              </button>
+              </motion.button>
             ))}
-            <button className="user-pop-item" type="button" onClick={onLogout}>
+            <motion.button
+              className="user-pop-item"
+              type="button"
+              onClick={onLogout}
+              whileHover={{ x: 4 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+            >
               <Icon.logout /> Sair
-            </button>
+            </motion.button>
           </div>
         </details>
       </header>
@@ -432,12 +492,25 @@ export default function AppShell({
           <section className="desk-group">
             <h2 className="desk-title">Aplicação</h2>
             <div className="desk-row">
-              {apps.map((v) => (
-                <button key={v.id} className="desk-icon" type="button" onClick={() => go({ k: v.id } as View)}
-                  data-aberta={ordem.includes(chave({ k: v.id } as View))}>
+              {apps.map((v, i) => (
+                <motion.button
+                  key={v.id}
+                  className="desk-icon"
+                  type="button"
+                  onClick={() => go({ k: v.id } as View)}
+                  data-aberta={ordem.includes(chave({ k: v.id } as View))}
+                  initial={{ opacity: 0, y: 14, scale: 0.94 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  transition={{
+                    type: 'spring', stiffness: 260, damping: 22, mass: 0.5,
+                    delay: 0.05 + i * 0.022,
+                  }}
+                  whileHover={{ scale: 1.06, y: -5 }}
+                  whileTap={{ scale: 0.94 }}
+                >
                   <span className="desk-ico"><v.icon /></span>
                   <span className="desk-label">{v.nome}</span>
-                </button>
+                </motion.button>
               ))}
             </div>
           </section>
@@ -450,11 +523,11 @@ export default function AppShell({
               <section className="desk-group" key={g.id}>
                 <h2 className="desk-title"><Ico /> {g.nome}</h2>
                 <div className="desk-row">
-                  {lista.map((t) => {
+                  {lista.map((t, i) => {
                     const Cat = CATEGORY_ICON[t.category] ?? Icon.grid;
                     const k = chave({ k: 'tool', id: t.id });
                     return (
-                      <button
+                      <motion.button
                         key={t.id}
                         className="desk-icon"
                         type="button"
@@ -462,10 +535,18 @@ export default function AppShell({
                         data-tool={t.id}
                         data-aberta={ordem.includes(k)}
                         onClick={() => go({ k: 'tool', id: t.id })}
+                        initial={{ opacity: 0, y: 14, scale: 0.94 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        transition={{
+                          type: 'spring', stiffness: 260, damping: 22, mass: 0.5,
+                          delay: 0.05 + i * 0.018,
+                        }}
+                        whileHover={{ scale: 1.06, y: -5 }}
+                        whileTap={{ scale: 0.94 }}
                       >
                         <span className="desk-ico"><Cat /></span>
                         <span className="desk-label">{t.name}</span>
-                      </button>
+                      </motion.button>
                     );
                   })}
                 </div>
@@ -474,59 +555,79 @@ export default function AppShell({
           })}
         </div>
 
-        {ordem.length === 0 && (
-          <div className="desk-hint">
-            <Icon.target />
-            <p className="t-sm">Escolhe um ícone para abrir uma ferramenta. Várias podem ficar abertas ao mesmo tempo.</p>
-          </div>
-        )}
-
-        {ordem.map((k, i) => {
-          const j = abertas[k];
-          if (!j) return null;
-          return (
-            <Janela
-              key={k}
-              titulo={tituloDe(j.vista)}
-              icone={iconeDe(j.vista)}
-              geom={j.geom}
-              espaco={espaco}
-              z={20 + i}
-              ativa={ativa === k}
-              max={j.max}
-              min={j.min}
-              onFocar={() => focar(k)}
-              onFechar={() => fechar(k)}
-              onMin={() => alternarMin(k)}
-              onMax={() => alternarMax(k)}
-              onGeom={(g) => porGeom(k, g)}
+        <AnimatePresence>
+          {ordem.length === 0 && (
+            <motion.div
+              className="desk-hint"
+              key="dica"
+              initial={{ opacity: 0, y: 22, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -10, scale: 0.97 }}
+              transition={{ type: 'spring', stiffness: 140, damping: 18, delay: 0.35 }}
             >
-              {conteudo(j.vista)}
-            </Janela>
-          );
-        })}
+              <Icon.target />
+              <p className="t-sm">Escolhe um ícone para abrir uma ferramenta. Várias podem ficar abertas ao mesmo tempo.</p>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <AnimatePresence>
+          {ordem.map((k, i) => {
+            const j = abertas[k];
+            if (!j) return null;
+            return (
+              <Janela
+                key={k}
+                titulo={tituloDe(j.vista)}
+                icone={iconeDe(j.vista)}
+                geom={j.geom}
+                espaco={espaco}
+                z={20 + i}
+                ativa={ativa === k}
+                max={j.max}
+                min={j.min}
+                onFocar={() => focar(k)}
+                onFechar={() => fechar(k)}
+                onMin={() => alternarMin(k)}
+                onMax={() => alternarMax(k)}
+                onGeom={(g) => porGeom(k, g)}
+              >
+                {conteudo(j.vista)}
+              </Janela>
+            );
+          })}
+        </AnimatePresence>
       </main>
 
       {/* ------------------------------------------------------------- barra de tarefas */}
       <footer className="taskbar only-desk">
         <div className="task-list">
-          {ordem.map((k) => {
-            const j = abertas[k];
-            if (!j) return null;
-            const Ico = iconeDe(j.vista);
-            return (
-              <button
-                key={k}
-                className="task-item"
-                type="button"
-                data-ativa={ativa === k && !j.min ? 'true' : 'false'}
-                onClick={() => focar(k)}
-                title={tituloDe(j.vista)}
-              >
-                <Ico /> <span className="task-name">{tituloDe(j.vista)}</span>
-              </button>
-            );
-          })}
+          <AnimatePresence initial={false} mode="popLayout">
+            {ordem.map((k) => {
+              const j = abertas[k];
+              if (!j) return null;
+              const Ico = iconeDe(j.vista);
+              return (
+                <motion.button
+                  key={k}
+                  className="task-item"
+                  type="button"
+                  layout
+                  data-ativa={ativa === k && !j.min ? 'true' : 'false'}
+                  onClick={() => focar(k)}
+                  title={tituloDe(j.vista)}
+                  initial={{ opacity: 0, scale: 0.7, y: 14 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.7, y: 14 }}
+                  whileHover={{ scale: 1.06, y: -3 }}
+                  whileTap={{ scale: 0.94 }}
+                  transition={{ type: 'spring', stiffness: 420, damping: 30 }}
+                >
+                  <Ico /> <span className="task-name">{tituloDe(j.vista)}</span>
+                </motion.button>
+              );
+            })}
+          </AnimatePresence>
         </div>
         <span className="grow" />
         {usage && <span className="task-quota">{usage.today}/{usage.daily}</span>}
@@ -536,29 +637,89 @@ export default function AppShell({
       {/* ------------------------------------------------------------ canal de contacto */}
       <div className="dock only-desk" aria-label="Contacto">
         {wa && (
-          <a className="dock-btn" href={wa.link} target="_blank" rel="noopener noreferrer" title={wa.label} aria-label={wa.label}>
+          <motion.a
+            className="dock-btn"
+            href={wa.link}
+            target="_blank"
+            rel="noopener noreferrer"
+            title={wa.label}
+            aria-label={wa.label}
+            whileHover={{ scale: 1.16, y: -6 }}
+            whileTap={{ scale: 0.9 }}
+            transition={{ type: 'spring', stiffness: 420, damping: 18 }}
+          >
             <Icon.phone />
-          </a>
+          </motion.a>
         )}
-        <a className="dock-btn" href="https://github.com/sramorim/argus" target="_blank" rel="noopener noreferrer"
-          title="Código-fonte" aria-label="Código-fonte">
+        <motion.a
+          className="dock-btn"
+          href="https://github.com/sramorim/argus"
+          target="_blank"
+          rel="noopener noreferrer"
+          title="Código-fonte"
+          aria-label="Código-fonte"
+          whileHover={{ scale: 1.16, y: -6 }}
+          whileTap={{ scale: 0.9 }}
+          transition={{ type: 'spring', stiffness: 420, damping: 18 }}
+        >
           <Icon.code />
-        </a>
+        </motion.a>
       </div>
 
       {/* -------------------------------------------------------------- gaveta (estreito) */}
-      <aside className="sidebar" data-open={drawer}>
-        <Brand />
-        {conteudoLateral}
-      </aside>
-      {drawer && <div className="side-scrim" onClick={() => setDrawer(false)} />}
+      {/* A gaveta nascia instantânea. Sem `AnimatePresence` o `data-open`
+          desligava a transform do CSS no mesmo frame e o slide nunca via-se. */}
+      <AnimatePresence>
+        {drawer && (
+          <motion.aside
+            key="gaveta"
+            className="sidebar"
+            data-open={drawer}
+            initial={{ x: '-100%', opacity: 0.4 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: '-100%', opacity: 0.4 }}
+            transition={{ type: 'spring', stiffness: 240, damping: 28, mass: 0.8 }}
+          >
+            <Brand />
+            {conteudoLateral}
+          </motion.aside>
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {drawer && (
+          <motion.div
+            key="scrim"
+            className="side-scrim"
+            onClick={() => setDrawer(false)}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.22, ease: 'easeOut' }}
+          />
+        )}
+      </AnimatePresence>
 
       <nav className="tabbar" aria-label="Navegação principal">
         {TABS.map((t) => (
-          <button key={t.id} className="tab" type="button" aria-current={view.k === t.v.k} onClick={() => go(t.v)}>
-            <t.icon />
+          <motion.button
+            key={t.id}
+            className="tab"
+            type="button"
+            aria-current={view.k === t.v.k}
+            onClick={() => go(t.v)}
+            whileHover={{ y: -3 }}
+            whileTap={{ scale: 0.92 }}
+            transition={{ type: 'spring', stiffness: 420, damping: 22 }}
+          >
+            <motion.span
+              className="tab-ico"
+              animate={{ scale: view.k === t.v.k ? 1.12 : 1, rotate: view.k === t.v.k ? -4 : 0 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 18 }}
+            >
+              <t.icon />
+            </motion.span>
             {t.label}
-          </button>
+          </motion.button>
         ))}
       </nav>
     </div>

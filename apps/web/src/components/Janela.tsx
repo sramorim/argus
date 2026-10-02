@@ -17,6 +17,7 @@
  */
 import type { CSSProperties, PointerEvent as RPointerEvent, ReactElement, ReactNode } from 'react';
 import type { SVGProps } from 'react';
+import { motion } from 'framer-motion';
 import { Icon } from './Icons';
 
 export interface Geom { x: number; y: number; w: number; h: number }
@@ -88,7 +89,7 @@ export default function Janela({
   } as CSSProperties;
 
   return (
-    <section
+    <motion.section
       className="janela"
       data-ativa={ativa ? 'true' : 'false'}
       data-max={max ? 'true' : 'false'}
@@ -96,23 +97,56 @@ export default function Janela({
       style={estilo}
       aria-label={titulo}
       onPointerDown={onFocar}
+      /* A posição vem de `--wx/--wy` no CSS, por isso aqui só mexemos em
+         transform e opacidade: os dois nunca escreve a mesma propriedade. */
+      initial={{ opacity: 0, scale: 0.93, y: 16 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.93, y: 10 }}
+      transition={{ type: 'spring', stiffness: 320, damping: 30, mass: 0.7 }}
+      whileFocus={{ scale: 1.004 }}
     >
-      <header className="win-title" onPointerDown={(e) => arrastar(e, 'mover')} onDoubleClick={onMax}>
+      <motion.header
+        className="win-title"
+        onPointerDown={(e) => arrastar(e, 'mover')}
+        onDoubleClick={onMax}
+        /* Enquanto não está em foco, a barra de título recua um pouco — é o
+           que dá a noção de que a janela está ao fundo. */
+        animate={{ opacity: ativa ? 1 : 0.72 }}
+        transition={{ duration: 0.22, ease: 'easeOut' }}
+      >
         <Ico className="win-ico" />
         <span className="win-name">{titulo}</span>
         <div className="win-btns">
           <button className="win-btn" type="button" onClick={onMin} title="Minimizar" aria-label={`Minimizar ${titulo}`}>
             <Icon.minimize />
           </button>
-          <button className="win-btn" type="button" onClick={onMax} title={max ? 'Restaurar' : 'Maximizar'}
-            aria-label={`${max ? 'Restaurar' : 'Maximizar'} ${titulo}`} aria-pressed={max}>
+          <motion.button
+            className="win-btn"
+            type="button"
+            onClick={onMax}
+            title={max ? 'Restaurar' : 'Maximizar'}
+            aria-label={`${max ? 'Restaurar' : 'Maximizar'} ${titulo}`}
+            aria-pressed={max}
+            whileHover={{ scale: 1.14 }}
+            whileTap={{ scale: 0.9 }}
+            transition={{ type: 'spring', stiffness: 420, damping: 20 }}
+          >
             {max ? <Icon.restore /> : <Icon.maximize />}
-          </button>
-          <button className="win-btn win-close" type="button" onClick={onFechar} title="Fechar" aria-label={`Fechar ${titulo}`}>
+          </motion.button>
+          <motion.button
+            className="win-btn win-close"
+            type="button"
+            onClick={onFechar}
+            title="Fechar"
+            aria-label={`Fechar ${titulo}`}
+            whileHover={{ scale: 1.14, background: 'var(--erro-dim)', color: 'var(--erro)' }}
+            whileTap={{ scale: 0.9 }}
+            transition={{ type: 'spring', stiffness: 420, damping: 20 }}
+          >
             <Icon.close />
-          </button>
+          </motion.button>
         </div>
-      </header>
+      </motion.header>
 
       <div className="win-body">{children}</div>
 
@@ -124,6 +158,6 @@ export default function Janela({
           onPointerDown={(e) => arrastar(e, d)}
         />
       ))}
-    </section>
+    </motion.section>
   );
 }

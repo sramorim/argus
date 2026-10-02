@@ -189,11 +189,9 @@ img, svg { display: block; max-width: 100%; }
 .layer[data-current='true'] > .layer-head { color: var(--blue-3); }
 .layer[data-current='true'] > .layer-head > svg:first-child { color: var(--blue-3); }
 
-.layer-body {
-  display: grid; grid-template-rows: 0fr;
-  transition: grid-template-rows var(--t) var(--ease);
-}
-.layer[data-open='true'] > .layer-body { grid-template-rows: 1fr; }
+/* A altura da camada é animada pelo framer (mola), não por aqui: deixar os
+   dois a mexer na mesma propriedade fazia o content saltitar. */
+.layer-body { display: block; }
 .layer-body > div { overflow: hidden; }
 .layer-inner { padding: 2px 0 4px 8px; margin-left: 8px; border-left: 1px solid var(--line-soft); }
 
@@ -850,10 +848,10 @@ select.input {
   .sidebar {
     display: flex;
     position: fixed; inset: 0 auto 0 0; width: min(86vw, var(--sidebar-w));
-    transform: translateX(-102%); transition: transform var(--t-slow) var(--ease);
+    /* A gaveta só existe quando `drawer` é verdadeiro (ver AppShell). O
+       deslocamento é do framer; aqui só fica a caixa e a sombra. */
     box-shadow: var(--shadow-3); z-index: 70;
   }
-  .sidebar[data-open='true'] { transform: translateX(0); }
   .page { padding: var(--s-4) var(--s-4) calc(var(--tabbar-h) + var(--s-6)); }
 
   /* Telemóvel: a janela ocupa a área toda. Arrastar não faz sentido aqui,
@@ -887,6 +885,22 @@ select.input {
   .tab[aria-current='true'] { color: var(--t-1); }
   .tab[aria-current='true'] svg { color: var(--blue-3); }
   .tab:active { background: var(--surface); }
+
+  /* O ícone é um contentor à parte porque é ele que o framer escala e roda
+     quando o destino fica selecionado. */
+  .tab-ico { display: grid; place-items: center; position: relative; }
+  .tab-ico svg { display: block; }
+  .tab[aria-current='true'] .tab-ico::after {
+    content: ''; position: absolute; left: 50%; bottom: -6px;
+    width: 18px; height: 2px; margin-left: -9px; border-radius: 2px;
+    background: linear-gradient(90deg, transparent, var(--blue-3), transparent);
+    box-shadow: 0 0 10px var(--blue-line), 0 0 18px var(--blue-glow);
+    animation: tabUnderline var(--t) var(--ease);
+  }
+  @keyframes tabUnderline {
+    from { transform: scaleX(0.2); opacity: 0; }
+    to { transform: scaleX(1); opacity: 1; }
+  }
 
   .finding { flex-direction: column; gap: 6px; }
   .finding-key { min-width: 0; max-width: none; display: flex; align-items: baseline; gap: 8px; }
