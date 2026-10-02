@@ -1,243 +1,203 @@
-"use client";
+/**
+ * Abertura da aplicação.
+ *
+ * O ecrã de entrada é a primeira coisa que alguém vê, e é onde a ARGOS se
+ * apresenta: antes de aparecer uma tabela de resultados há um radar a varrer,
+ * uma linha a escrever-se e a barra a encher. Ao fim, o ecrã parte-se ao meio
+ * e a aplicação entra por trás.
+ *
+ * Duas decisões que valem mais do que a animação:
+ *
+ * 1. **A barra não mente.** Ela avança com o tempo mas trava nos 90% enquanto
+ *    o servidor não responder. Um `100%` que depois fica hanging seria pior do
+ *    que não haver barra nenhuma.
+ * 2. **O tempo tem um mínimo.** Houve um atraso entre a resposta e a pintura do
+ *    painel que deixava a abertura a piscar. O `MIN_MS` segura o ecrã tempo
+ *    suficiente para a sequência ser lida, mas nunca mais do que isso.
+ */
+import { useEffect, useRef, useState } from 'react';
+import { motion } from 'framer-motion';
 
-import React, { useEffect, useState, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import gsap from "gsap";
-import { Icon } from "./Icons";
+const TITULO = 'A INICIAR ARQUITECTURA DE INTELIGÊNCIA...';
+const MIN_MS = 2400;
+const TRAVA = 90;
 
-const TYPEWRITER_TEXT = "INITIALIZING ARGOS INTELLIGENCE...";
+/** As linhas entram uma a uma, à medida que a barra passa cada marca. */
+const ETAPAS = [
+  { em: 12, texto: 'a estabelecer ligação segura…' },
+  { em: 32, texto: 'a carregar fontes de inteligência…' },
+  { em: 54, texto: 'a mapear marcadores ativos…' },
+  { em: 74, texto: 'a inicializar camadas OSINT/HUMINT/IMINT…' },
+  { em: 93, texto: 'sistema pronto.' },
+];
 
-interface LoadingScreenProps {
+export default function LoadingScreen({
+  pronto, onComplete,
+}: {
+  /** O servidor já respondeu? A barra só chega ao fim quando isto é verdade. */
+  pronto: boolean;
   onComplete: () => void;
-}
+}) {
+  const [progresso, setProgresso] = useState(0);
+  const [escrito, setEscrito] = useState('');
+  const [esperou, setEsperou] = useState(false);
+  const [aAbrir, setAAbrir] = useState(false);
+  const [fora, setFora] = useState(false);
+  const inicio = useRef(0);
+  const aoAbrir = useRef(onComplete);
+  aoAbrir.current = onComplete;
 
-export default function LoadingScreen({ onComplete }: LoadingScreenProps) {
-  const [visible, setVisible] = useState(true);
-  const [displayText, setDisplayText] = useState("");
-  const [progress, setProgress] = useState(0);
-  const [splitting, setSplitting] = useState(false);
-  const progressRef = useRef<HTMLDivElement>(null);
-  const radarSvgRef = useRef<SVGSVGElement>(null);
-
-  // Typewriter effect
+  // A linha escreve-se sozinha, ao ritmo de leitura — não ao ritmo da barra.
   useEffect(() => {
     let i = 0;
-    const interval = setInterval(() => {
-      setDisplayText(TYPEWRITER_TEXT.slice(0, i + 1));
-      i++;
-      if (i >= TYPEWRITER_TEXT.length) clearInterval(interval);
-    }, 45);
-    return () => clearInterval(interval);
+    const t = setInterval(() => {
+      i += 1;
+      setEscrito(TITULO.slice(0, i));
+      if (i >= TITULO.length) clearInterval(t);
+    }, 42);
+    return () => clearInterval(t);
   }, []);
 
-  // Progress animation
+  // O relógio do mínimo. Separado do progresso de propósito: se o servidor
+  // responder cedo, a barra já está no fim mas a revelação tem de esperar na
+  // mesma — e o progresso, já no alvo, deixa de mexer no estado.
   useEffect(() => {
-    const start = Date.now();
-    const duration = 2500;
-    const raf = () => {
-      const elapsed = Date.now() - start;
-      const pct = Math.min((elapsed / duration) * 100, 100);
-      setProgress(pct);
-      if (pct < 100) requestAnimationFrame(raf);
-      else {
-        setTimeout(() => {
-          setSplitting(true);
-          setTimeout(() => {
-            setVisible(false);
-            onComplete();
-          }, 700);
-        }, 200);
-      }
+    const t = setTimeout(() => setEsperou(true), MIN_MS);
+    return () => clearTimeout(t);
+  }, []);
+
+  /* O progresso é o mais lento dos dois: avança sozinho, trava nos 90% e só
+     completa quando o servidor disse que está tudo cá. */
+  useEffect(() => {
+    inicio.current = performance.now();
+    let raf = 0;
+    const passo = () => {
+      const t = performance.now() - inicio.current;
+      const alvo = pronto ? 100 : Math.min((t / MIN_MS) * 100, TRAVA);
+      setProgresso((p) => {
+        // Aproximação suave: a barra não dá saltos, mesmo quando o alvo muda.
+        const proximo = p + (alvo - p) * 0.12;
+        return Math.abs(proximo - alvo) < 0.4 ? alvo : proximo;
+      });
+      raf = requestAnimationFrame(passo);
     };
-    requestAnimationFrame(raf);
-  }, [onComplete]);
+    raf = requestAnimationFrame(passo);
+    return () => cancelAnimationFrame(raf);
+  }, [pronto]);
 
-  // GSAP counter for progress text
-  const progressTextRef = useRef<HTMLElement>(null);
+  /* A revelação só arranca com as três coisas certas: o servidor respondeu, o
+     mínimo passou e a barra chegou ao fim. O `liberado` garante que isto
+     corre uma vez só, mesmo que o componente se redesenhe entretanto. */
+  const liberado = useRef(false);
   useEffect(() => {
-    if (progressTextRef.current) {
-      gsap.fromTo(progressTextRef.current,
-        { innerText: "0%" },
-        { innerText: `${Math.round(progress)}%`, duration: 0.05, snap: { innerText: 1 }, ease: "none" }
-      );
-    }
-  }, [progress]);
+    if (liberado.current || !pronto || !esperou || progresso < 99.5) return;
+    liberado.current = true;
+    setAAbrir(true);
+    const t = setTimeout(() => {
+      setFora(true);
+      aoAbrir.current();
+    }, 640);
+    return () => clearTimeout(t);
+  }, [pronto, esperou, progresso]);
 
-  if (!visible) return null;
+  if (fora) return null;
 
   return (
-    <AnimatePresence>
-      {!splitting ? (
-        <motion.div
-          key="loading"
-          className="fixed inset-0 z-[9999] flex items-center justify-center"
-          style={{ background: "#0a0a0f" }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.3 }}
-        >
-          {/* Background grid */}
-          <div
-            className="absolute inset-0"
-            style={{
-              backgroundImage:
-                "linear-gradient(rgba(59,130,246,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(59,130,246,0.04) 1px, transparent 1px)",
-              backgroundSize: "60px 60px",
-            }}
-          />
+    <div className="boot" role="status" aria-live="polite" aria-label="A carregar a ARGOS">
+      <div className="boot-grid" />
+      <div className="scanline-overlay boot-scan" />
 
-          {/* Scanlines overlay */}
-          <div
-            className="absolute inset-0 pointer-events-none scanline-overlay"
-            style={{ borderRadius: "inherit" }}
-          />
-
-          <div className="relative flex flex-col items-center gap-8 px-8 max-w-lg w-full">
-            {/* Radar circle */}
-            <div className="relative flex items-center justify-center" style={{ width: 140, height: 140 }}>
-              {/* Outer rings */}
-              {[1, 0.66, 0.33].map((scale, i) => (
-                <div
-                  key={i}
-                  className="absolute rounded-full border"
-                  style={{
-                    width: 140 * scale,
-                    height: 140 * scale,
-                    borderColor: `rgba(59,130,246,${0.15 + i * 0.05})`,
-                  }}
-                />
-              ))}
-
-              {/* Sweep */}
-              <div
-                className="absolute rounded-full animate-radar-sweep"
-                style={{
-                  width: 140,
-                  height: 140,
-                  background:
-                    "conic-gradient(from 0deg, rgba(59,130,246,0) 60%, rgba(59,130,246,0.4) 100%)",
-                }}
-              />
-
-              {/* Center dot */}
-              <div
-                className="absolute w-2.5 h-2.5 rounded-full"
-                style={{ background: "#3b82f6", boxShadow: "0 0 12px #3b82f6" }}
-              />
-
-              {/* Blip dots */}
-              {[
-                { top: "20%", left: "68%" },
-                { top: "58%", left: "30%" },
-                { top: "40%", left: "75%" },
-              ].map((pos, i) => (
-                <div
-                  key={i}
-                  className="absolute w-1.5 h-1.5 rounded-full"
-                  style={{
-                    ...pos,
-                    background: "#10b981",
-                    boxShadow: "0 0 6px #10b981",
-                    opacity: 0.8,
-                  }}
-                />
-              ))}
-            </div>
-
-            {/* Title */}
-            <div className="text-center">
-              <p
-                className="font-mono text-xs tracking-[0.3em] mb-3 uppercase"
-                style={{ color: "rgba(59,130,246,0.6)" }}
-              >
-                MULTI-SOURCE INTELLIGENCE SYSTEM
-              </p>
-              <h1
-                className="font-mono font-bold text-lg tracking-widest text-white"
-                style={{
-                  textShadow: "0 0 20px rgba(59,130,246,0.5)",
-                  minHeight: "28px",
-                }}
-              >
-                {displayText}
-                <span
-                  className="inline-block w-0.5 h-5 ml-0.5 align-bottom"
-                  style={{
-                    background: "#3b82f6",
-                    animation: "blink-cursor 0.8s step-end infinite",
-                  }}
-                />
-              </h1>
-            </div>
-
-            {/* Progress bar */}
-            <div className="w-full">
-              <div className="flex justify-between mb-1.5">
-                <span className="font-mono text-xs" style={{ color: "rgba(255,255,255,0.3)" }}>
-                  LOADING INTEL SOURCES
-                </span>
-                <span ref={progressTextRef} className="font-mono text-xs" style={{ color: "#3b82f6" }}>
-                  0%
-                </span>
-              </div>
-              <div
-                className="w-full h-1 rounded-full overflow-hidden"
-                style={{ background: "rgba(255,255,255,0.06)" }}
-              >
-                <motion.div
-                  className="h-full rounded-full"
-                  style={{
-                    width: `${progress}%`,
-                    background: "linear-gradient(90deg, #1d4ed8, #3b82f6, #60a5fa)",
-                    boxShadow: "0 0 12px rgba(59,130,246,0.6)",
-                  }}
-                  transition={{ ease: "linear", duration: 0.1 }}
-                />
-              </div>
-            </div>
-
-            {/* Status lines */}
-            <div className="mt-4 space-y-1.5">
-              {[
-                { label: "Establishing secure connection...", done: progress > 20 },
-                { label: "Loading intelligence feeds...", done: progress > 45 },
-                { label: "Mapping active markers...", done: progress > 65 },
-                { label: "Initializing OSINT/HUMINT/IMINT layers...", done: progress > 80 },
-                { label: "System ready.", done: progress > 95 },
-              ].map(({ label, done }, i) => (
-                <div key={i} className="flex items-center gap-2 font-mono text-[10px]"
-                  style={{ opacity: done ? 1 : 0.3, transition: "opacity 0.4s ease" }}>
-                  <span style={{ color: done ? "#10b981" : "rgba(255,255,255,0.2)" }}>
-                    {done ? "✓" : "○"}
-                  </span>
-                  <span style={{ color: done ? "rgba(255,255,255,0.7)" : "rgba(255,255,255,0.2)" }}>
-                    {label}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </motion.div>
-      ) : (
-        /* Split reveal */
-        <div className="fixed inset-0 z-[9999] pointer-events-none flex">
-          <motion.div
-            key="left"
+      {aAbrir ? (
+        <div className="boot-split">
+          <motion.i
+            className="boot-half"
             initial={{ x: 0 }}
-            animate={{ x: "-100%" }}
-            transition={{ duration: 0.6, ease: [0.76, 0, 0.24, 1] }}
-            className="w-1/2 h-full"
-            style={{ background: "#0a0a0f" }}
+            animate={{ x: '-101%' }}
+            transition={{ duration: 0.62, ease: [0.76, 0, 0.24, 1] }}
           />
-          <motion.div
-            key="right"
+          <motion.i
+            className="boot-half"
             initial={{ x: 0 }}
-            animate={{ x: "100%" }}
-            transition={{ duration: 0.6, ease: [0.76, 0, 0.24, 1] }}
-            className="w-1/2 h-full"
-            style={{ background: "#0a0a0f" }}
+            animate={{ x: '101%' }}
+            transition={{ duration: 0.62, ease: [0.76, 0, 0.24, 1] }}
           />
         </div>
+      ) : (
+        <motion.div
+          className="boot-corpo"
+          initial={{ opacity: 0, scale: 0.97 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ type: 'spring', stiffness: 200, damping: 26 }}
+        >
+          <div className="boot-radar">
+            {[1, 0.68, 0.36].map((escala, i) => (
+              <motion.i
+                key={escala}
+                className="boot-anel"
+                style={{
+                  width: 132 * escala, height: 132 * escala,
+                  borderColor: `rgba(96,165,250,${0.14 + i * 0.07})`,
+                }}
+                animate={{ scale: [1, 1.045, 1], opacity: [1, 0.72, 1] }}
+                transition={{
+                  duration: 3.2, repeat: Infinity, ease: 'easeInOut',
+                  delay: i * 0.42,
+                }}
+              />
+            ))}
+            <span className="animate-radar-sweep boot-sweep" />
+            <span className="boot-nucleo" />
+            {[
+              { top: '20%', left: '68%' },
+              { top: '58%', left: '30%' },
+              { top: '40%', left: '75%' },
+              { top: '72%', left: '60%' },
+            ].map((p, i) => (
+              <span
+                key={i}
+                className="boot-blip"
+                style={{
+                  ...p,
+                  animation: `radar-ping 2.6s ${i * 0.65}s ease-out infinite`,
+                }}
+              />
+            ))}
+          </div>
+
+          <div className="boot-titulo">
+            <p className="boot-sobre">SISTEMA DE INTELIGÊNCIA MULTI-FONTE</p>
+            <h1 className="boot-linha">
+              {escrito}
+              <span className="boot-cursor" />
+            </h1>
+          </div>
+
+          <div className="boot-barra">
+            <div className="boot-barra-topo">
+              <span>A CARREGAR FONTES</span>
+              <span className="boot-pct">{Math.round(progresso)}%</span>
+            </div>
+            <div className="boot-trilho">
+              <i
+                className="boot-cheio"
+                style={{ width: `${progresso}%`, boxShadow: '0 0 14px var(--blue-glow-strong)' }}
+              />
+            </div>
+          </div>
+
+          <ul className="boot-etapas">
+            {ETAPAS.map(({ em, texto }) => {
+              const feito = progresso >= em;
+              return (
+                <li key={texto} className="boot-etapa" data-feito={feito ? 'true' : 'false'}>
+                  <span className="boot-marca">{feito ? '✓' : '○'}</span>
+                  <span>{texto}</span>
+                </li>
+              );
+            })}
+          </ul>
+        </motion.div>
       )}
-    </AnimatePresence>
+    </div>
   );
 }

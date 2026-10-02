@@ -1184,25 +1184,6 @@ html[data-zebra='sim'] .tbl tbody tr:nth-child(even) td { background: rgba(16,35
   color: var(--blue-3);
 }
 
-/* --------------------------------------- Split reveal (vertical) */
-@keyframes split-reveal-left {
-  from { transform: translateX(0); }
-  to { transform: translateX(-100%); }
-}
-@keyframes split-reveal-right {
-  from { transform: translateX(0); }
-  to { transform: translateX(100%); }
-}
-.animate-split-left { animation: split-reveal-left 0.6s cubic-bezier(0.76, 0, 0.24, 1) forwards; }
-.animate-split-right { animation: split-reveal-right 0.6s cubic-bezier(0.76, 0, 0.24, 1) forwards; }
-
-/* --------------------------------------- Progress bar fill */
-@keyframes progress-fill {
-  from { width: 0%; }
-  to { width: 100%; }
-}
-.animate-progress { animation: progress-fill 2.5s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
-
 /* --------------------------------------- Radar ping ring */
 @keyframes radar-ping {
   0% { transform: translate(-50%, -50%) scale(0.5); opacity: 1; }
@@ -1336,3 +1317,126 @@ html[data-zebra='sim'] .tbl tbody tr:nth-child(even) td { background: rgba(16,35
 /* --------------------------------------- Sidebar legal scanline */
 .side-legal { position: relative; }
 .side-legal::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, var(--blue-line), transparent); }
+
+/* =============================================================
+   ECRÃ DE ABERTURA
+   O primeiro ecrã do ARGOS. Tudo o que está aqui é do sistema — a paleta
+   vem das mesmas tokens do resto da aplicação, para a abertura não ser um
+   bocado de outra interface colado à frente da verdadeira.
+   ============================================================= */
+.boot {
+  position: fixed; inset: 0; z-index: 9999;
+  display: grid; place-items: center;
+  background: var(--bg);
+  overflow: hidden;
+}
+
+/* A malha de fundo: dá a referência de escala enquanto nada carrega. */
+.boot-grid {
+  position: absolute; inset: -10%;
+  background-image:
+    linear-gradient(rgba(59,130,246,.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(59,130,246,.045) 1px, transparent 1px);
+  background-size: 64px 64px;
+  mask-image: radial-gradient(ellipse 62% 58% at 50% 48%, #000 25%, transparent 78%);
+  animation: bootDrift 22s linear infinite;
+}
+@keyframes bootDrift { to { background-position: 64px 64px, 64px 64px; } }
+
+.boot-scan { position: absolute; inset: 0; }
+
+.boot-corpo {
+  position: relative; z-index: 2;
+  display: flex; flex-direction: column; align-items: center;
+  gap: 30px; width: min(430px, calc(100vw - 40px));
+}
+
+/* ---- radar ---- */
+.boot-radar { position: relative; width: 132px; height: 132px; }
+.boot-anel {
+  position: absolute; top: 50%; left: 50%;
+  margin: -66px 0 0 -66px;
+  border: 1px solid; border-radius: 50%;
+}
+.boot-sweep {
+  position: absolute; inset: 0; border-radius: 50%;
+  background: conic-gradient(from 0deg, rgba(59,130,246,0) 58%, rgba(59,130,246,.38) 100%);
+  mask-image: radial-gradient(circle, #000 62%, transparent 64%);
+}
+.boot-nucleo {
+  position: absolute; top: 50%; left: 50%;
+  width: 9px; height: 9px; margin: -4.5px 0 0 -4.5px;
+  border-radius: 50%; background: var(--blue-3);
+  box-shadow: 0 0 14px var(--blue-3), 0 0 34px var(--blue-glow-strong);
+}
+/* Cada blip é o mesmo traço, defasado: dá a leitura de "movimento" sem
+   precisar de uma imagem. */
+.boot-blip {
+  position: absolute; width: 5px; height: 5px; margin: -2.5px 0 0 -2.5px;
+  border-radius: 50%; background: var(--ok);
+  box-shadow: 0 0 8px var(--ok);
+}
+
+/* ---- título ---- */
+.boot-titulo { text-align: center; }
+.boot-sobre {
+  margin: 0 0 10px; font-size: 9.5px; font-weight: 700;
+  letter-spacing: .34em; text-transform: uppercase; color: var(--blue-3);
+  opacity: .68;
+}
+.boot-linha {
+  margin: 0; min-height: 22px;
+  font-family: var(--mono); font-size: 13.5px; font-weight: 700;
+  letter-spacing: .13em; color: var(--t-1);
+  text-shadow: 0 0 22px var(--blue-glow-strong);
+}
+.boot-cursor {
+  display: inline-block; width: 7px; height: 15px; margin-left: 2px;
+  vertical-align: -2px; background: var(--blue-3);
+  animation: blink-cursor .8s step-end infinite;
+}
+
+/* ---- barra ---- */
+.boot-barra { width: 100%; }
+.boot-barra-topo {
+  display: flex; justify-content: space-between; align-items: baseline;
+  margin-bottom: 7px;
+  font-family: var(--mono); font-size: 9.5px; font-weight: 600;
+  letter-spacing: .2em; text-transform: uppercase; color: var(--t-4);
+}
+.boot-pct { color: var(--blue-3); font-variant-numeric: tabular-nums; }
+.boot-trilho {
+  height: 3px; border-radius: 3px; overflow: hidden;
+  background: var(--surface-3); box-shadow: inset 0 0 0 1px var(--line-soft);
+}
+.boot-cheio {
+  display: block; height: 100%; border-radius: 3px;
+  background: linear-gradient(90deg, var(--blue-2), var(--blue-3), #93c5fd);
+}
+
+/* ---- etapas ---- */
+.boot-etapas { list-style: none; margin: 0; padding: 0; display: grid; gap: 5px; width: 100%; }
+.boot-etapa {
+  display: flex; align-items: center; gap: 8px;
+  font-family: var(--mono); font-size: 10.5px; color: var(--t-4);
+  transition: color .4s var(--ease), opacity .4s var(--ease);
+}
+.boot-etapa[data-feito='true'] { color: var(--t-2); }
+.boot-marca { width: 12px; flex: 0 0 12px; color: var(--t-4); }
+.boot-etapa[data-feito='true'] .boot-marca { color: var(--ok); }
+
+/* ---- revelação ao meio ---- */
+.boot-split { position: absolute; inset: 0; display: flex; }
+.boot-half {
+  flex: 1 1 50%; background: var(--bg);
+  border-right: 1px solid var(--blue-line);
+  box-shadow: inset 0 0 60px rgba(59,130,246,.07);
+}
+.boot-half:last-child { border-right: 0; border-left: 1px solid var(--blue-line); }
+
+/* Quem não quer movimento não o tem — nem a varredura, nem a revelação. */
+@media (prefers-reduced-motion: reduce) {
+  .boot-grid, .boot-anel, .boot-blip, .boot-cursor { animation: none !important; }
+  .boot-corpo { opacity: 1 !important; transform: none !important; }
+  .boot-half { transition: none !important; }
+}

@@ -115,10 +115,6 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (!loading) setAppReady(true);
-  }, [loading]);
-
-  useEffect(() => {
     const on = () => setViewState(hashToView(location.hash));
     addEventListener('hashchange', on);
     addEventListener('popstate', on);
@@ -133,19 +129,14 @@ function App() {
 
   const refreshUser = useCallback(() => { api.me().then((m) => setUsage(m.usage ?? null)).catch(() => {}); }, []);
 
-  if (loading) {
-    return (
-      <div style={{ display: 'grid', placeItems: 'center', minHeight: '100vh', gap: 14 }}>
-        <span className="spin" />
-        <span className="t-sm dim">a ligar ao ARGOS…</span>
-      </div>
-    );
-  }
+  const abrirApp = useCallback(() => setAppReady(true), []);
 
+  /* A abertura é a primeira coisa que se vê, por isso tapa a espera da API e
+     não aparece depois dela. A revelação só arranca quando o servidor já
+     respondeu (`pronto`) — a barra trava nos 90% até lá, em vez de mostrar
+     100% e ficar à espera. */
   if (!appReady) {
-    return (
-      <LoadingScreen onComplete={() => { /* appReady will be set by effect */ }} />
-    );
+    return <LoadingScreen pronto={!loading} onComplete={abrirApp} />;
   }
 
   if (down && !publicTools.length) {
