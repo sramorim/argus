@@ -82,6 +82,7 @@ export default function AppShell({
   view: View; setView: (v: View) => void; onLogout: () => void; refreshUser: () => void;
 }) {
   const [drawer, setDrawer] = useState(false);
+  const [fabAberto, setFabAberto] = useState(false);
   const wa = useContacto();
   /* Uma só decisão para todo o ecrã: se o sistema pede menos movimento, as
      molas daqui abaixo desaparecem todas. */
@@ -225,6 +226,17 @@ export default function AppShell({
     document.body.style.overflow = 'hidden';
     return () => { document.body.style.overflow = prev; };
   }, [drawer]);
+
+  /* O menu do botão flutuante é um menu: Escape fecha, e voltar a abrir a
+     gaveta fecha-o, para os dois nunca ficarem abertos um por cima do outro. */
+  useEffect(() => {
+    if (!fabAberto) return;
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') setFabAberto(false); };
+    addEventListener('keydown', esc);
+    return () => removeEventListener('keydown', esc);
+  }, [fabAberto]);
+
+  useEffect(() => { if (drawer) setFabAberto(false); }, [drawer]);
 
   const alternar = (id: string) => setAbertos((s) => {
     const n = new Set(s);
@@ -729,6 +741,65 @@ export default function AppShell({
           </motion.button>
         ))}
       </nav>
+
+      {/* ------------------------------------------------------------------ atalho rápido */}
+      {/* O botão flutuante é o caminho de um clique para o que se faz a toda a
+          hora. Abre para cima, sobre a barra de tarefas, e fecha-se sozinho com
+          Escape — é um menu, e um menu que fica aberto a tapar o ecrã é pior
+          do que não o ter. */}
+      <div className="fab-wrap">
+        <AnimatePresence>
+          {fabAberto && (
+            <motion.div
+              className="fab-menu"
+              key="menu"
+              initial={{ opacity: 0, scale: 0.7, y: 16 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.7, y: 16 }}
+              transition={{ type: 'spring', stiffness: 320, damping: 26, mass: 0.6 }}
+            >
+              {ATALHOS.map((a, i) => {
+                const v: View = { k: 'tool', id: a.id };
+                return (
+                  <motion.button
+                    key={a.id}
+                    className="fab-item"
+                    type="button"
+                    title={a.nome}
+                    onClick={() => { go(v); setFabAberto(false); }}
+                    initial={{ opacity: 0, y: 12, scale: 0.8 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 8, scale: 0.8 }}
+                    transition={{ type: 'spring', stiffness: 400, damping: 28, delay: i * 0.03 }}
+                    whileHover={{ scale: 1.07, x: -3 }}
+                    whileTap={{ scale: 0.94 }}
+                  >
+                    {a.icon({})}
+                    <span>{a.nome}</span>
+                  </motion.button>
+                );
+              })}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <motion.button
+          className="fab"
+          type="button"
+          aria-label={fabAberto ? 'Fechar atalhos' : 'Abrir atalhos'}
+          aria-expanded={fabAberto}
+          onClick={() => setFabAberto((a) => !a)}
+          animate={{ rotate: fabAberto ? 135 : 0 }}
+          whileHover={{ scale: 1.08 }}
+          whileTap={{ scale: 0.92 }}
+          transition={{ type: 'spring', stiffness: 340, damping: 24 }}
+        >
+          <span className="animate-spin-slow fab-anel" aria-hidden />
+          <span className="animate-fab-glow fab-nucleo" aria-hidden>
+            <Icon.plus />
+          </span>
+        </motion.button>
+      </div>
     </div>
   );
 }
