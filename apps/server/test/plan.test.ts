@@ -27,17 +27,14 @@ import { PLANS, type PlanId } from '../src/plans.ts';
 
 // Registar o catálogo inteiro é o mesmo que faz o servidor: os ids que este
 // teste valida têm de ser os ids reais, não uma lista escrita à mão.
-import '../src/tools/infra.ts';
 import '../src/tools/identity.ts';
 import '../src/tools/username-intel.ts';
-import '../src/tools/threat.ts';
-import '../src/tools/finance-dev-br.ts';
-import '../src/tools/tls.ts';
+import '../src/tools/paste.ts';
 import '../src/tools/graph.ts';
-import '../src/tools/social.ts';
 import '../src/tools/social-search.ts';
 import '../src/tools/osint-engine.ts';
 import '../src/tools/apify.ts';
+import '../src/tools/datalikers.ts';
 
 let pass = 0, fail = 0;
 function ok(cond: boolean, msg: string, extra = '') {
@@ -80,7 +77,7 @@ function clisDe(seedType: string): Factos['clis'] {
 }
 
 function factos(o: Opcoes = {}): Factos {
-  const seedType = o.seedType ?? 'dominio';
+  const seedType = o.seedType ?? 'username';
   return {
     plano: o.plano ?? 'free',
     seed: seedType === 'username' ? 'ana' : 'example.com',
@@ -115,7 +112,7 @@ eq(FASES, ['Discovery', 'OSINT', 'Social', 'Apify', 'Normalization', 'Correlatio
   'a ordem das 8 fases é a do spec');
 eq(MODOS, ['QUICK', 'FULL', 'CUSTOM'], 'os três modos');
 for (const m of MODOS) {
-  const p = plano(m, m === 'CUSTOM' ? ['domain-analyzer'] : undefined, factos());
+  const p = plano(m, m === 'CUSTOM' ? ['intel-perfil'] : undefined, factos());
   eq(p.fases.map((f) => f.fase), [...FASES], `modo ${m} tem as 8 fases pela ordem`);
   ok(p.fases.every((f) => f.descricao.length > 20), `modo ${m}: todas as fases têm descrição`);
   eq(p.resumo.fases, 8, `modo ${m}: resumo.fases = 8`);
@@ -126,8 +123,8 @@ console.log('\n── QUICK ─────────────────�
 const quick = plano('QUICK', undefined, factos());
 const disc = fase(quick, 'Discovery');
 ok(!disc.pulada, 'QUICK: Discovery não é pulada');
-eq(disc.ferramentas.map((f) => f.id).sort(), ['domain-analyzer', 'dorks-generator'],
-  'QUICK sobre um domínio: só as ferramentas rápidas desse domínio');
+eq(disc.ferramentas.map((f) => f.id).sort(), ['username-finder'],
+  'QUICK sobre um username: só as ferramentas rápidas desse tipo de alvo');
 ok(disc.ferramentas.every((f) => f.estado === 'PRONTO'), 'QUICK: o que entra está PRONTO (free)');
 for (const f of quick.fases.slice(1)) {
   ok(f.pulada, `QUICK: ${f.fase} está dita como pulada, não escondida`);
@@ -139,28 +136,34 @@ eq(quick.resumo.puladas, 7, 'QUICK: 7 fases puladas');
 ok(quick.resumo.ferramentas >= 1 && quick.resumo.ferramentas <= 2, 'QUICK: 1–2 ferramentas no total', String(quick.resumo.ferramentas));
 
 const quickEmail = plano('QUICK', undefined, factos({ seedType: 'email' }));
-eq(fase(quickEmail, 'Discovery').ferramentas.map((f) => f.id).sort(), ['dorks-generator', 'email-analyzer'],
-  'QUICK sobre um email escolhe as ferramentas do email');
+eq(fase(quickEmail, 'Discovery').ferramentas.map((f) => f.id).sort(), [],
+  'QUICK sobre um email não tem descoberta rápida: Discovery fica dita como sem ferramenta aplicável');
+eq(fase(quickEmail, 'Discovery').estado, 'BLOQUEADA',
+  'e a fase diz porque é que não há nada a correr');
 
 // ============================================================ FULL
 console.log('\n── FULL ──────────────────────────────────────────────────────────');
 const full = plano('FULL', undefined, factos());
 ok(full.fases.every((f) => !f.pulada), 'FULL: nenhuma fase é pulada');
 ok(full.resumo.catalogo === CATALOGO.length, 'FULL: o resumo diz o tamanho do catálogo');
-ok(full.resumo.fora >= 7, 'FULL: as ferramentas fora das 8 fases são contadas, não ignoradas', String(full.resumo.fora));
+ok(full.resumo.fora >= 1, 'FULL: as ferramentas fora das 8 fases são contadas, não ignoradas', String(full.resumo.fora));
 const foraDoPlano = Object.keys(FORA_DO_PLANO);
 ok(foraDoPlano.every((id) => !todos(full).includes(id)),
   `fora das 8 fases e mesmo assim no plano: ${foraDoPlano.filter((id) => todos(full).includes(id)).join(', ')}`);
 // As que ficaram de fora por serem de outro tipo de alvo NÃO são "fora do
 // plano": são filtradas, e o resumo tem de o contar para não as esconder.
+// Num domínio é que se vê: as ferramentas de username ficam de fora por tipo.
+const fullDominio = plano('FULL', undefined, factos({ seedType: 'dominio' }));
 const filtradas = CATALOGO.map((c) => c.id)
-  .filter((id) => !todos(full).includes(id) && !FORA_DO_PLANO[id]);
+  .filter((id) => !todos(fullDominio).includes(id) && !FORA_DO_PLANO[id]);
 ok(filtradas.length > 0 && filtradas.every((id) => faseDe(id) !== null),
   'as filtradas por tipo continuam a ser ferramentas de uma das 8 fases', filtradas.join(', '));
-eq(full.resumo.fora, foraDoPlano.length + filtradas.length, 'resumo.fora conta tudo o que não entrou');
+eq(fullDominio.resumo.fora, foraDoPlano.length + filtradas.length, 'resumo.fora conta tudo o que não entrou');
 ok(!todos(full).includes('graph-investigation'), 'graph-investigation nunca entra no plano (criaria outra investigação)');
-ok(todos(full).includes('domain-analyzer') && !todos(full).includes('username-finder'),
+ok(todos(fullDominio).includes('osint-engine') && !todos(fullDominio).includes('username-finder'),
   'FULL só traz ferramentas do tipo de alvo deste alvo (domínio)');
+ok(todos(full).includes('username-finder'),
+  'FULL traz a ferramenta de descoberta quando o alvo é um username');
 ok(full.resumo.prontas >= 5, 'FULL traz fases prontas', String(full.resumo.prontas));
 
 const semNos = plano('FULL', undefined, factos({ nos: 0 }));
@@ -173,22 +176,22 @@ for (const f of ['Normalization', 'Correlation', 'Intelligence', 'Snapshots'] as
 
 // ============================================================ CUSTOM
 console.log('\n── CUSTOM ────────────────────────────────────────────────────────');
-const custom = plano('CUSTOM', ['intel-perfil', 'domain-analyzer'], factos());
+const custom = plano('CUSTOM', ['intel-perfil', 'username-finder'], factos());
 eq(custom.resumo.ferramentas, 2, 'CUSTOM: só o que foi pedido');
 eq(custom.fases.filter((f) => !f.pulada).map((f) => f.fase), ['Discovery', 'Intelligence'],
   'CUSTOM: só as fases que têm ferramentas pedidas');
 eq(fase(custom, 'OSINT').motivo, 'fora do plano personalizado', 'CUSTOM: a fóra diz que está fora');
 eq(fase(custom, 'Intelligence').ferramentas[0]?.id, 'intel-perfil', 'CUSTOM aceita uma etapa do motor');
 
-const customNaoAplica = plano('CUSTOM', ['email-analyzer'], factos({ seedType: 'dominio' }));
-const na = ferramenta(customNaoAplica, 'Discovery', 'email-analyzer');
+const customNaoAplica = plano('CUSTOM', ['username-finder'], factos({ seedType: 'dominio' }));
+const na = ferramenta(customNaoAplica, 'Discovery', 'username-finder');
 eq(na.estado, 'BLOQUEADA', 'CUSTOM: ferramenta de outro tipo de alvo fica BLOQUEADA, não desaparece');
 ok((na.motivo ?? '').includes('não se aplica'), 'CUSTOM: e diz que não se aplica', na.motivo);
 
 // ============================================================ motivos
 console.log('\n── MOTIVOS CONCRETOS ─────────────────────────────────────────────');
-const tranca = ferramenta(plano('FULL', undefined, factos()), 'Discovery', 'port-scanner');
-eq(tranca.estado, 'BLOQUEADA', 'port-scanner é pro: no free está BLOQUEADA');
+const tranca = ferramenta(plano('FULL', undefined, factos()), 'OSINT', 'paste-search');
+eq(tranca.estado, 'BLOQUEADA', 'paste-search é Pro: no free está BLOQUEADA');
 ok(tranca.motivo!.includes('plano free não inclui') && tranca.motivo!.includes('Pro'),
   'a tranca diz o plano actual e o que é preciso', tranca.motivo);
 
@@ -241,7 +244,7 @@ eq(fase(apifyNoPlano, 'Apify').estado, 'PRONTO', 'aplicabilidade: serviço é ac
 eq(fase(plano('FULL', undefined, factos({ seedType: 'cve' })), 'Apify').estado, 'BLOQUEADA',
   'aplicabilidade: um CVE não é um alvo para scraping');
 
-const estadoFase = fase(plano('FULL', undefined, factos()), 'Apify');
+const estadoFase = fase(plano('FULL', undefined, factos({ seedType: 'dominio' })), 'Apify');
 eq(estadoFase.estado, 'BLOQUEADA', 'fase sem ferramentas aplicáveis fica BLOQUEADA');
 ok((estadoFase.motivo ?? '').includes('tipo "dominio"'), 'e diz porque é que não há nada a correr', estadoFase.motivo);
 
@@ -254,15 +257,15 @@ eq(validarEscolhas('CUSTOM', [], CATALOGO)?.erro, 'custom_vazio', 'CUSTOM sem li
 eq(validarEscolhas('QUICK', undefined, CATALOGO), null, 'QUICK válido');
 const e2 = validarEscolhas('CUSTOM', ['imaginei'], CATALOGO);
 eq(e2?.erro, 'ferramenta_desconhecida', 'id que não existe');
-ok((e2!.aceites ?? []).includes('domain-analyzer') && (e2!.aceites ?? []).length > 20,
+ok((e2!.aceites ?? []).includes('username-finder') && (e2!.aceites ?? []).length >= 6,
   'o erro ensina os ids reais', String(e2!.aceites?.length));
-const e3 = validarEscolhas('CUSTOM', ['password-check'], CATALOGO);
+const e3 = validarEscolhas('CUSTOM', ['graph-investigation'], CATALOGO);
 eq(e3?.erro, 'ferramenta_fora_do_plano', 'id real mas fora das 8 fases');
-eq(e3?.fase, 'OSINT', 'e diz em que fase cairia');
-ok(e3!.msg.includes('password'), 'o erro explica porque é que não entra', e3!.msg);
+eq(e3?.fase, 'Discovery', 'e diz em que fase cairia');
+ok(e3!.msg.includes('graph-investigation'), 'o erro explica porque é que não entra', e3!.msg);
 eq(faseSugerida('graph-investigation')?.fase, 'Discovery', 'graph-investigation explicado');
 eq(faseDe('intel-snapshot'), 'Snapshots', 'etapa pertence à sua fase');
-eq(faseDe('tls-audit'), 'Discovery', 'ferramenta pertence à sua fase');
+eq(faseDe('username-finder'), 'Discovery', 'ferramenta pertence à sua fase');
 eq(faseDe('nada'), null, 'id sem fase devolve null');
 
 // ============================================================ progresso
@@ -405,13 +408,13 @@ eq(s.executadas, 0, 'resumo: nada executado sem confirmação');
 eq(s.bloqueadas, 1, 'resumo: a única fase do plano ficou bloqueada');
 eq(s.pendentes, 7, 'resumo: as 7 puladas continuam pendentes');
 ok(Object.values(ETAPAS).length === 4, 'quatro etapas do motor');
-eq(Object.keys(FORA_DO_PLANO).length, 7, 'sete ferramentas do catálogo fora das 8 fases, com explicação');
+eq(Object.keys(FORA_DO_PLANO).length, 1, 'uma ferramenta do catálogo fora das 8 fases, com explicação');
 eq(ETAPAS['intel-snapshot']?.fase, 'Snapshots', 'a etapa de snapshot pertence aos Snapshots');
 for (const [id, v] of Object.entries(ETAPAS)) {
   ok(faseDe(id) === v.fase, `etapa ${id} na fase certa`);
 }
 ok(todos(pFull).every((id) => faseDe(id) !== null), 'toda a ferramenta do plano tem fase');
-ok(CATALOGO.length >= 30, 'o catálogo real é o que está registado', String(CATALOGO.length));
+eq(CATALOGO.length, 8, 'o catálogo real é o que está registado');
 ok(Object.keys(PLANS).length === 3, 'três planos');
 
 console.log(`\n${pass} passaram, ${fail} falharam`);

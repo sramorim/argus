@@ -109,8 +109,12 @@ export interface LockedTool {
  * scraping, quotas de terceiros) é Pro; o que é cálculo local ou uma única
  * chamada leve é Free.
  *
- * Um bloco importante: `leak-check` saiu daqui. A ferramenta foi removida por
- * não entregar nada sem chave (ver o comentário em tools/identity.ts).
+ * Dois blocos importantes: `leak-check` saiu por não entregar nada sem chave
+ * (ver o comentário em tools/identity.ts, na versão que o removia), e a limpeza
+ * de reposição para Social Intelligence tirou do catálogo as ferramentas de
+ * infraestrutura, vulnerabilidades, cripto, senhas e OSINT técnico genérico.
+ * Este mapa tem de bater certo com o registry — o teste de segurança
+ * "TOOL_LOCKS nao referencia ferramentas inexistentes" é que o garante.
  */
 export const TOOL_LOCKS: Record<string, LockedTool['minPlan']> = {
   // Free — fontes leves, sem custo para terceiros, ou cálculo local
@@ -119,33 +123,9 @@ export const TOOL_LOCKS: Record<string, LockedTool['minPlan']> = {
   'username-intel': 'free',   // 3 registos locais (MIT/CC BY-SA), sem API paga por trás
   'osint-engine': 'free',     // CLI de terceiros: custo zero para o ARGOS, só exige instalação local
   'apify': 'free',           // registry aberto; sem APIFY_API_TOKEN devolve NOT_CONFIGURED, não gasta nada
-  'email-analyzer': 'free',
-  'domain-analyzer': 'free',
-  'ip-analyzer': 'free',
-  'url-scanner': 'free',
-  'web-crawler': 'free',
-  'hash-analyzer': 'free',
-  'dorks-generator': 'free',
-  'crypto-tracer': 'free',
-  'github-osint': 'free',
-  'metadata-extractor': 'free',
-  'cve-lookup': 'free',
-  'package-audit': 'free',
-  'asn-lookup': 'free',
-  'company-br': 'free',
-  'zipcode-br': 'free',
-  'password-check': 'free',
-  'phone-analyzer': 'free',
-  'geo-lookup': 'free',
-  'tls-audit': 'free',        // 1 handshake ao alvo, sem API de terceiros
-  'bluesky-osint': 'free',    // API publica do Bluesky, sem chave e sem custo
-  'mastodon-osint': 'free',   // API publica de qualquer instancia, sem chave
 
-  // Pro — blocklists grandes, pesquisa web, scraping, quotas de terceiros
-  'port-scanner': 'pro',      // quota do Shodan InternetDB
-  'reputation-check': 'pro',   // 4 feeds de blocklist (centenas de mil de IOCs)
-  'telegram-osint': 'pro',     // scraping público, com política de 1 pedido/utilizador
+  // Pro — pesquisa web real, com pedidos de terceiros por execução
   'paste-search': 'pro',       // pesquisa web real (Bing RSS)
-  'reverse-image': 'pro',      // descarrega e descodifica imagens
   'social-search': 'pro',      // 13 pedidos de pesquisa web em paralelo (Bing RSS)
+  'datalikers': 'pro',         // Cache API da DataLikers: cada pedido desconta do saldo da conta
 };

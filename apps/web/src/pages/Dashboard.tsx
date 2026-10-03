@@ -15,13 +15,13 @@
 import { useEffect, useState, useRef } from 'react';
 import type { ReactElement } from 'react';
 import type { SVGProps } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 import { api, type ToolPublic, type Usage, type User, ApiError } from '../api';
 import { Icon } from '../components/Icons';
 import { Empty, Note, Skeleton, SearchInput, useToast } from '../components/ui';
 import { GRUPOS, porGrupo, buscar, ATALHOS, NOME_PLANO } from '../ia';
 import type { View } from './AppShell';
 import gsap from 'gsap';
-import { useReducedMotion } from 'framer-motion';
 
 interface Resumo {
   sessoes: { id: string; title: string; seed: string; updated_at: string; node_count?: number; edge_count?: number }[];
@@ -62,23 +62,30 @@ export default function Dashboard({
   return (
     <div className="page">
       {/* ---------- 1. a ação principal ---------- */}
-      <section className="hero-panel animate-pulse-glow">
+      <section className="hero-panel">
         <div className="hero-panel-txt">
           <span className="hero-kicker">INTELIGÊNCIA DE FONTES ABERTAS</span>
           <h1 className="t-h1" style={{ margin: '10px 0 6px' }}>
-            Começa por um alvo. O ARGOS faz o resto.
+            Começa por um alvo. O ARGUS faz o resto.
           </h1>
-          <p className="muted t-sm" style={{ maxWidth: '58ch' }}>
-            Um username, um e-mail, um telefone, um domínio, um IP, uma URL ou uma carteira.
-            O ARGOS escolhe as ferramentas certas, cruza o que encontra e mostra
-            <b style={{ color: 'var(--blue-3)' }}> de onde veio cada achado</b>.
+          <p className="muted t-sm" style={{ maxWidth: '60ch', lineHeight: 1.64 }}>
+            Um username, e-mail, telefone, domínio, IP, URL ou carteira.
+            O ARGUS escolhe as ferramentas certas, cruza resultados e mostra
+            <b style={{ color: 'var(--blue-3)' }}> a proveniência de cada achado</b>.
           </p>
         </div>
         <div className="hero-panel-cta">
-          <button className="btn btn-primary btn-lg" type="button" onClick={() => setView({ k: 'nova' })}>
+          <motion.button
+            className="btn btn-primary btn-lg"
+            type="button"
+            onClick={() => setView({ k: 'nova' })}
+            whileHover={{ y: -1 }}
+            whileTap={{ scale: 0.995 }}
+            transition={{ type: 'spring', stiffness: 420, damping: 24 }}
+          >
             <Icon.target /> Nova investigação
-          </button>
-          <button className="btn btn-lg" type="button" onClick={() => document.getElementById('ferramentas')?.scrollIntoView({ behavior: 'smooth' })}>
+          </motion.button>
+              <button className="btn btn-lg" type="button" onClick={() => document.getElementById('ferramentas')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>
             ver as {tools.length} ferramentas
           </button>
         </div>
@@ -115,6 +122,34 @@ export default function Dashboard({
         />
       </div>
 
+      {/* ---------- 2.5 o módulo independente ---------- */}
+      {/* O OmniDork não é uma ferramenta do catálogo — não há servidor que o
+          execute — por isso não entra no grid de ferramentas nem na busca:
+          aparece uma vez, como módulo próprio, e abre na mesma janela de
+          sempre. */}
+      <section className="od-entry" aria-label="OmniDork Builder">
+        <div className="od-entry-txt">
+          <span className="od-kicker">OSINT QUERY MODULE</span>
+          <div className="od-entry-title">OmniDork Builder</div>
+          <p className="od-entry-sub">
+            Monta a dork com <code className="od-code">filetype:</code>,{' '}
+            <code className="od-code">site:</code> e <code className="od-code">inurl:</code>{' '}
+            e entrega-a ao motor de busca numa separador nova. Corre no teu
+            browser — sem custo de servidor e sem consulta a sair daqui.
+          </p>
+        </div>
+        <motion.button
+          className="od-btn od-btn-main"
+          type="button"
+          onClick={() => setView({ k: 'tool', id: 'omnidork' })}
+          whileHover={{ y: -1 }}
+          whileTap={{ scale: 0.99 }}
+          transition={{ type: 'spring', stiffness: 420, damping: 24 }}
+        >
+          <Icon.search /> abrir o construtor
+        </motion.button>
+      </section>
+
       {/* ---------- 3. o trabalho a continuar ---------- */}
       <div className="grid grid-2" style={{ marginTop: 'var(--s-4)', alignItems: 'start' }}>
         <section className="card">
@@ -146,7 +181,7 @@ export default function Dashboard({
                 <Icon.network width={15} height={15} style={{ color: 'var(--blue-3)' }} />
                 <div className="grow">
                   <div className="t">{s.title}</div>
-                  <div className="s">
+                  <div className="s" style={{ lineHeight: 1.58 }}>
                     {s.seed} · {s.node_count ?? 0} nós · {s.edge_count ?? 0} ligações ·{' '}
                     {new Date(s.updated_at).toLocaleDateString('pt-BR')}
                   </div>
@@ -172,14 +207,22 @@ export default function Dashboard({
               const t = tools.find((x) => x.id === a.id);
               if (!t || t.lock === 'locked') return null;
               return (
-                <button key={a.id} className="shortcut" type="button" onClick={() => setView({ k: 'tool', id: t.id })}>
+                <motion.button
+                  key={a.id}
+                  className="shortcut"
+                  type="button"
+                  onClick={() => setView({ k: 'tool', id: t.id })}
+                  whileHover={{ y: -1 }}
+                  whileTap={{ scale: 0.995 }}
+                  transition={{ type: 'spring', stiffness: 420, damping: 24 }}
+                >
                   <a.icon />
                   <div className="grow" style={{ minWidth: 0 }}>
                     <div className="sc-t">{a.nome}</div>
                     <div className="sc-x">{a.exemplo}</div>
                   </div>
                   <Icon.chevronRight width={14} height={14} style={{ color: 'var(--t-4)' }} />
-                </button>
+                </motion.button>
               );
             })}
           </div>
@@ -191,7 +234,7 @@ export default function Dashboard({
         <div className="row" style={{ marginBottom: 'var(--s-3)' }}>
           <div style={{ flex: 1, minWidth: 0 }}>
             <h2 className="t-h2">Ferramentas</h2>
-            <p className="t-sm muted" style={{ marginTop: 3 }}>
+            <p className="t-sm muted" style={{ marginTop: 4, lineHeight: 1.64 }}>
               {tools.length} registadas, todas testadas com alvos reais antes de entrarem aqui.
             </p>
           </div>
@@ -201,7 +244,7 @@ export default function Dashboard({
           <SearchInput
             value={q}
             onChange={setQ}
-            placeholder="Procurar ferramenta, alvo ou etiqueta…  (ex.: username, dns, telefone)"
+            placeholder="Procurar ferramenta, alvo ou etiqueta… (ex.: username, domínio, DNS, telefone)"
           />
         </div>
 
@@ -234,7 +277,7 @@ export default function Dashboard({
                     <span className="layer-card-ico"><Ico /></span>
                     <div style={{ minWidth: 0, flex: 1 }}>
                       <div className="card-title">{g.nome}</div>
-                      <div className="card-sub">{g.resumo}</div>
+                      <div className="card-sub" style={{ lineHeight: 1.62 }}>{g.resumo}</div>
                     </div>
                     <span className="layer-card-n">{lista.length}</span>
                   </div>

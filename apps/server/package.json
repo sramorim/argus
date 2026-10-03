@@ -10,7 +10,7 @@
     "typecheck": "node ../../node_modules/typescript/lib/tsc.js -p tsconfig.json --noEmit",
     "build": "node ../../node_modules/typescript/lib/tsc.js -p tsconfig.json --noEmit",
     "test": "npm run test:unit",
-    "test:unit": "node test/security.test.ts && node test/parsers.test.ts && node test/username-intel.test.ts && node test/osint-engine.test.ts && node test/apify.test.ts && node test/pdf.test.ts && node test/intel.test.ts && node test/plan.test.ts",
+    "test:unit": "node test/security.test.ts && node test/parsers.test.ts && node test/username-intel.test.ts && node test/osint-engine.test.ts && node test/apify.test.ts && node test/pdf.test.ts && node test/intel.test.ts && node test/plan.test.ts && node test/datalikers.test.ts",
     "test:api": "node test/api.test.ts",
     "test:prod": "node test/smoke-prod.ts",
     "test:audit": "node test/audit-tools.ts",

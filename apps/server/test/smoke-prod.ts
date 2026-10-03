@@ -190,7 +190,7 @@ await t('health diz que o disco tem escrita (é o que separa "arrancou" de "serv
   const j = (await r.json()) as any;
   ok(j.db.writable, 'o health check diz que o disco não tem escrita');
   ok(j.db.path === db, `caminho inesperado: ${j.db.path}`);
-  ok(j.tools >= 25, `só ${j.tools} ferramentas`);
+  ok(j.tools === 8, `catálogo inesperado: ${j.tools} ferramentas`);
   ok(j.env === 'production', `env=${j.env}`);
   function eq200(v: number) { ok(v === 200, `status ${v}`); }
 });
@@ -233,9 +233,9 @@ await t('os dados sobrevivem a um reinicio do processo (o que o Render faz a cad
   const reg = await c1.post('/api/auth/register', { email, name: 'Persiste', password: 'senhaforte123' });
   ok(reg.status === 201, 'registo falhou: ' + reg.status + ' ' + JSON.stringify(reg.body));
   // O que se quer provar aqui é a PERSISTÊNCIA, não o grafo. Por isso usa-se
-  // `phone-analyzer`, que é cálculo local puro: o teste deixa de depender da
-  // rede e de terceiros, e deixa de poder falhar por uma API lenta ou caída —
-  // passava de 4 minutos para poucos segundos.
+  // um alvo cujo plano não tem passos de rede: o grafo guarda-se com o nó
+  // semente e o teste deixa de depender de terceiros — deixa de poder falhar
+  // por uma API lenta ou caída (passava de 4 minutos para poucos segundos).
   const inv = await c1.post('/api/run/graph-investigation', { seed: '+5511998877665' });
   ok(inv.status === 200, 'investigacao falhou: ' + inv.status);
   const antes = (await c1.get('/api/investigations')).body.investigations.length;

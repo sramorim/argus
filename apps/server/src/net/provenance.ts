@@ -41,6 +41,15 @@ export interface Finding {
   value: FindingValue;
   evidence: Evidence;
   link?: string;
+  /**
+   * Atributos que a camada de inteligência lê deste achado quando ele vira nó
+   * do grafo: `plataforma`, `username`, `url`. É assim que um resultado de
+   * rede social chega ao Perfil Unificado como CONTA e não como "desconhecida"
+   * — sem estes atributos a plataforma vista nunca é registada e o Presence
+   * Radar não a consegue comparar. Opcional: os achados que não descrevem uma
+   * presença não trazem nenhum.
+   */
+  attrs?: Record<string, string>;
 }
 
 export interface ToolRun {
@@ -151,7 +160,7 @@ export function finding(
   label: string,
   value: FindingValue,
   sourceIds: string[],
-  opts: { kind?: Evidence['kind']; confidence?: Confidence; link?: string } = {},
+  opts: { kind?: Evidence['kind']; confidence?: Confidence; link?: string; attrs?: Record<string, string> } = {},
 ): Finding {
   return {
     id: newFindingId(),
@@ -160,5 +169,6 @@ export function finding(
     value,
     evidence: evidence(opts.kind ?? 'fact', sourceIds, opts.confidence),
     link: opts.link,
+    ...(opts.attrs ? { attrs: opts.attrs } : {}),
   };
 }

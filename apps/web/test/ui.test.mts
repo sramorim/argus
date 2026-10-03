@@ -62,6 +62,15 @@ if (!g.Element.prototype.scrollIntoView) g.Element.prototype.scrollIntoView = fu
 g.cancelAnimationFrame ??= (id: any) => clearTimeout(id);
 g.window.requestAnimationFrame ??= g.requestAnimationFrame;
 g.IS_REACT_ACT_ENVIRONMENT = true;
+// O linkedom expõe `innerText` como getter só-leitura e o GSAP (animações de
+// entrada) escreve nele: sem este shim TODA a montagem do AppShell rebenta com
+// "Cannot set property innerText" e dez testes falham por uma limitação do DOM
+// de teste, não pelo que a app faz. No browser real `innerText` é gravável.
+Object.defineProperty(g.Element.prototype, 'innerText', {
+  configurable: true,
+  get() { return this.textContent ?? ''; },
+  set(v) { this.textContent = String(v); },
+});
 
 /** Rede falsa: nada sai para a rede, e o teste sabe o que devolveu. */
 function stubFetch() {
@@ -71,10 +80,10 @@ function stubFetch() {
     if (url.includes('/api/tools')) {
       return {
         tools: [{
-          id: 'domain-analyzer', name: 'Analisador de Domínio', category: 'infra',
-          summary: 'RDAP, DNS e subdomínios por transparency logs.', longDesc: 'detalhe',
-          minPlan: 'free', fields: [{ name: 'domain', label: 'Domínio', type: 'text', required: true }],
-          freeTier: true, legalGate: 'none', tags: ['dns', 'rdap'], lock: 'open',
+          id: 'username-finder', name: 'Localizador de Username', category: 'identidade',
+          summary: 'Procura o username em várias plataformas.', longDesc: 'detalhe',
+          minPlan: 'free', fields: [{ name: 'username', label: 'Username', type: 'text', required: true }],
+          freeTier: true, legalGate: 'none', tags: ['username', 'redes'], lock: 'open',
           dailyRuns: 15, maxItems: 25,
         }],
         plan: 'free', usage: null,
@@ -207,11 +216,14 @@ test('as categorias de ferramenta têm todas ícone e nome próprios', () => {
   const catLabel = bloco('CATEGORY_LABEL');
 
   const usadas = new Set<string>();
-  for (const f of ['infra', 'identity', 'threat', 'finance-dev-br', 'tls', 'graph']) {
+  // Uma por uma das ferramentas registadas no servidor (as 8 de Social
+  // Intelligence): se uma nova aparecer sem categoria própria, este teste
+  // falha — é para isso que ele lê o código do servidor e não uma lista feita.
+  for (const f of ['graph', 'identity', 'paste', 'social-search', 'username-intel', 'osint-engine', 'apify', 'datalikers']) {
     const p = join(ROOT, 'apps', 'server', 'src', 'tools', `${f}.ts`);
     for (const m of readFileSync(p, 'utf8').matchAll(/category:\s*'([a-z-]+)'/g)) usadas.add(m[1]!);
   }
-  assert.ok(usadas.size >= 8, `só encontrei ${usadas.size} categorias`);
+  assert.ok(usadas.size >= 2, `só encontrei ${usadas.size} categorias`);
 
   const semIcone = [...usadas].filter((c) => !new RegExp(`\\b${c}:`).test(catIcon));
   const semNome = [...usadas].filter((c) => !new RegExp(`\\b${c}:`).test(catLabel));
@@ -232,7 +244,7 @@ test('as categorias de ferramenta têm todas ícone e nome próprios', () => {
 test('a navegação é por grupos, e cada ferramenta está exactamente num', () => {
   const tools = H.stubApi();
 
-  // 1. As 26 ferramentas do catálogo estão todas em algum grupo.
+  // 1. As 8 ferramentas do catálogo estão todas em algum grupo.
   const porId = new Map(tools.map((t) => [t.id, t]));
   const faltam = H.GRUPOS.flatMap((g) => g.ferramentas).filter((id) => !porId.has(id));
   assert.equal(faltam.join(', '), '', 'ferramentas em grupos que não existem no catálogo: ' + faltam.join(', '));
@@ -254,7 +266,7 @@ test('a organização não promete ferramentas que não existem', () => {
   const ids = new Set(tools.map((t) => t.id));
   // A referência tem Instagram/TikTok/X/Reddit/YouTube e Leak Check. Aqui não
   // existem e não podem ser prometidas. Este teste existe para travar essa
-  // tentação, que é o modo mais fácil de passar de "26 reais" a "36 inventadas".
+  // tentação, que é o modo mais fácil de passar de "8 reais" a "18 inventadas".
   const inexistentes = ['instagram', 'tiktok', 'twitter', 'reddit', 'youtube', 'leak-check', 'onion-finder'];
   for (const g of H.GRUPOS) {
     for (const id of g.ferramentas) {
@@ -285,9 +297,9 @@ test('a busca encontra por nome, etiqueta e grupo', () => {
   // ferramenta E as irmãs do mesmo grupo. O que se exige é que a ferramenta
   // esteja lá — não que a busca seja uma lista exacta.
   assert.ok(H.buscar(tools, 'username').some((t: any) => t.id === 'username-finder'), 'devia achar o localizador de username');
-  assert.ok(H.buscar(tools, 'telefone').length >= 1, 'devia achar o analisador de telefone');
-  assert.ok(H.buscar(tools, 'dns').length >= 1, 'devia achar por etiqueta');
-  assert.ok(H.buscar(tools, 'infraestrutura').length >= 1, 'devia achar pelo nome do grupo');
+  assert.ok(H.buscar(tools, 'paste').length >= 1, 'devia achar pela descrição da ferramenta');
+  assert.ok(H.buscar(tools, 'social').length >= 1, 'devia achar por etiqueta');
+  assert.ok(H.buscar(tools, 'identidade').length >= 1, 'devia achar pelo nome do grupo');
   assert.equal(H.buscar(tools, 'nao-existe-nada').length, 0, 'não devia inventar resultados');
 });
 
@@ -308,6 +320,10 @@ function montaApp(so: Record<string, unknown> = {}, vista: string = 'dashboard')
 
 test('a app monta a sidebar com camadas expansíveis e marca a atual', () => {
   const { t } = montaApp();
+  // A lateral só está montada quando o menu está aberto (no ecrã largo fica
+  // escondida), por isso o teste abre-a como o utilizador abre — é o mesmo
+  // elemento `.sidebar` de sempre, com as camadas de sempre lá dentro.
+  H.clica(t, '[aria-label="Abrir menu"]');
   const html = t.html();
   // Não se assume a ordem dos atributos no HTML (o renderizador põe-nos por
   // ordem alfabética): apanha-se o <div ...> cujos atributos trazem class="layer".
@@ -321,7 +337,10 @@ test('a app monta a sidebar com camadas expansíveis e marca a atual', () => {
   assert.ok(abertas.slice(1).every((a) => a === false), 'as restantes deviam estar fechadas');
   assert.ok(/aria-expanded="false"/.test(html), 'o botão das camadas fechadas devia dizer aria-expanded=false');
   // Cada camada abre e fecha: é o comportamento que se pede, não uma lista.
-  assert.equal((html.match(/aria-expanded="(true|false)"/g) ?? []).length, H.GRUPOS.length,
+  // Conta-se só dentro da lateral — o botão flutuante do fim também tem
+  // aria-expanded e não é uma camada.
+  const lateral = /<aside[^>]*class="sidebar"[\s\S]*?<\/aside>/.exec(html)?.[0] ?? '';
+  assert.equal((lateral.match(/aria-expanded="/g) ?? []).length, H.GRUPOS.length,
     'cada camada tem de ter um botão que abre e fecha');
   t.desmontar();
 });
@@ -354,20 +373,37 @@ test('a área de trabalho tem um ícone por ferramenta e por aplicação', () =>
   t.desmontar();
 });
 
-test('um clique num ícone abre a janela, e o × a fecha e a tira da barra de tarefas', () => {
+/**
+ * Espera que uma condição seja verdadeira no DOM montado.
+ *
+ * O framer-motion só tira a janela do DOM quando a animação de saída termina:
+ * no browser isso é invisível para quem olha, mas no teste é assíncrono, e
+ * afirmar logo a seguir ao clique estava a contar uma janela que já não estava
+ * lá para o utilizador.
+ */
+async function ate(condicao: () => boolean, o: string) {
+  const fim = Date.now() + 3000;
+  while (Date.now() < fim) {
+    if (condicao()) return;
+    await new Promise((r) => setTimeout(r, 20));
+  }
+  assert.fail(o);
+}
+
+test('um clique num ícone abre a janela, e o × a fecha e a tira da barra de tarefas', async () => {
   const { t } = montaApp();
   // O painel abre sozinho: é o primeiro ecrã.
   assert.equal(t.caixa.querySelectorAll('.janela').length, 1, 'o painel devia estar aberto de inicio');
   assert.equal(t.caixa.querySelectorAll('.task-item').length, 1, 'a barra de tarefas devia mostrar a janela do painel');
 
-  H.clica(t, '.desk-icon[data-tool="domain-analyzer"]');
+  H.clica(t, '.desk-icon[data-tool="username-finder"]');
   const nomes = [...t.caixa.querySelectorAll('.win-name')].map((n) => n.textContent);
   assert.equal(t.caixa.querySelectorAll('.janela').length, 2, 'a ferramenta devia abrir sem fechar o painel');
-  assert.ok(nomes.includes('Analisador de Domínio'), `janelas abertas: ${nomes.join(' | ')}`);
+  assert.ok(nomes.includes('Localizador de Username'), `janelas abertas: ${nomes.join(' | ')}`);
   assert.equal(t.caixa.querySelectorAll('.task-item').length, 2, 'a barra de tarefas devia listar as duas');
 
   // O conteúdo da ferramenta está DENTRO da janela, não numa página à parte.
-  const janela = t.caixa.querySelector('.janela[aria-label="Analisador de Domínio"]');
+  const janela = t.caixa.querySelector('.janela[aria-label="Localizador de Username"]');
   assert.ok(janela, 'a janela devia ser identificável pelo título');
   assert.ok(janela!.querySelector('.win-body'), 'a janela não tem área de conteúdo');
   // Os três controlos da barra de título, com nome para quem usa leitor de ecrã.
@@ -375,8 +411,8 @@ test('um clique num ícone abre a janela, e o × a fecha e a tira da barra de ta
     assert.ok(janela!.querySelector(`[aria-label^="${o}"]`), `falta o botão ${o}`);
   }
 
-  H.clica(t, '.janela[aria-label="Analisador de Domínio"] .win-close');
-  assert.equal(t.caixa.querySelectorAll('.win-name').length, 1, 'o × devia fechar a janela');
+  H.clica(t, '.janela[aria-label="Localizador de Username"] .win-close');
+  await ate(() => t.caixa.querySelectorAll('.win-name').length === 1, 'o × devia fechar a janela');
   assert.equal(t.caixa.querySelectorAll('.task-item').length, 1, 'a barra de tarefas devia seguir a janela fechada');
   assert.ok(
     [...t.caixa.querySelectorAll('.win-name')].some((n) => n.textContent === 'Painel'),
@@ -417,7 +453,7 @@ test('o painel é o primeiro ecrã e tem a acção principal em grande', () => {
   const html = t.html();
   assert.match(html, /Nova investigação/, 'falta a acção principal');
   assert.match(html, /hero-panel/, 'falta o bloco principal do painel');
-  // O painel não pode despejar 26 cartões: tem de estar agrupado.
+  // O painel não pode despejar 8 cartões: tem de estar agrupado.
   const cartoes = (html.match(/class="tool-card"/g) ?? []).length;
   assert.ok(cartoes <= H.GRUPOS.length, `${cartoes} cartões soltos no painel — o objectivo é agrupar, não despejar`);
   // E tem de mostrar o estado real da cota, não um número inventado.
@@ -439,17 +475,17 @@ test('a paleta é azul profissional — sem verde de Matrix nem vermelho de game
   // Lê o valor pelo nome do token, sem depender do alinhamento de espaços.
   const token = (nome: string) => new RegExp(nome + '\\s*:\\s*(#[0-9A-Fa-f]{3,8})').exec(css)?.[1];
   const esperado: Record<string, string> = {
-    '--bg': '#07111F',
+    '--bg': '#0a0a0f',
     '--surface': '#0D1B2A',
     '--surface-2': '#102338',
     '--line': '#1E334A',
-    '--blue': '#1677FF',
-    '--blue-2': '#2F8CFF',
-    '--blue-3': '#58B0FF',
-    '--t-1': '#F4F7FB',
-    '--t-3': '#91A4B8',
-    '--erro': '#EF4444',
-    '--ok': '#22C55E',
+    '--blue': '#3b82f6',
+    '--blue-2': '#1d4ed8',
+    '--blue-3': '#60a5fa',
+    '--t-1': '#e4e4e7',
+    '--t-3': '#71717a',
+    '--erro': '#ef4444',
+    '--ok': '#10b981',
   };
   for (const [nome, valor] of Object.entries(esperado)) {
     assert.equal(token(nome), valor, `${nome} devia ser ${valor}, obtive ${token(nome)}`);
@@ -516,10 +552,15 @@ test('o contacto e a autoria vêm do servidor, não escritos à mão', () => {
 test('a marca é a mesma no React e nos ficheiros SVG', () => {
   const ui = readFileSync(join(SRC, 'components', 'ui.tsx'), 'utf8');
   const svg = readFileSync(join(WEB, 'public', 'logo-mark.svg'), 'utf8');
-  for (const cor of ['#DC2626', '#B91C1C', '#C8CDD4']) {
-    assert.ok(ui.includes(cor), `a marca em React perdeu ${cor}`);
-    assert.ok(svg.includes(cor), `o logo-mark.svg perdeu ${cor}`);
-  }
+  // O que se exige é que as duas marcas sejam A MESMA: cada cor que o SVG usa
+  // tem de estar também no componente React. As cores não são fixadas aqui —
+  // quando a marca muda de paleta, muda nos dois sítios ou o teste queixa-se.
+  const cores = (s: string) => new Set([...s.matchAll(/#[0-9A-Fa-f]{6}\b/g)].map((m) => m[0].toUpperCase()));
+  const noSvg = cores(svg);
+  const noReact = cores(ui);
+  assert.ok(noSvg.size >= 3, `o logo-mark.svg só tem ${noSvg.size} cores — parece incompleto`);
+  const emFalta = [...noSvg].filter((c) => !noReact.has(c));
+  assert.equal(emFalta.join(', '), '', 'cores do logo-mark.svg que a marca em React não tem: ' + emFalta.join(', '));
 });
 
 test('a capa social é 1200x630 e as etiquetas OG são absolutas', () => {
@@ -645,10 +686,13 @@ test('os comandos do Blueprint partem da raiz, onde estão as workspaces', () =>
 test('toda variável de produção de que o código precisa está no render.yaml', () => {
   const yml = readFileSync(join(ROOT, 'render.yaml'), 'utf8');
   const usadas = new Set<string>();
-  for (const f of ['config.ts', 'security.ts', 'index.ts', 'registry.ts']) {
+  for (const f of ['config.ts', 'security.ts', 'index.ts', 'registry.ts', 'net/apify.ts', 'net/datalikers.ts']) {
     const src = readFileSync(join(ROOT, 'apps', 'server', 'src', f), 'utf8');
     for (const m of src.matchAll(/process\.env\.([A-Z_][A-Z0-9_]*)/g)) usadas.add(m[1]!);
     for (const m of src.matchAll(/(?:str|bool|int|list)\('([A-Z_][A-Z0-9_]*)'/g)) usadas.add(m[1]!);
+    // As chaves das APIs externas não são lidas como `process.env.X` mas como
+    // `env.X` dentro de `token(env: NodeJS.ProcessEnv = process.env)`.
+    for (const m of src.matchAll(/(?:^|[^.\w])env\.([A-Z_][A-Z0-9_]*)/g)) usadas.add(m[1]!);
   }
 
   // HOST e PORT são injected pelo Render; as de tuning e as deliberadamente
@@ -661,6 +705,9 @@ test('toda variável de produção de que o código precisa está no render.yaml
     // O link do autor só existe se o dono tiver um site para pôr lá. Vazio =
     // o rodapé mostra o copyright sem link, que é o comportamento pretendido.
     'ARGUS_AUTHOR_LINK',
+    // Nome alternativo do token do Apify (é o que a documentação oficial usa).
+    // Aceitamos os dois por isso não precisa de estar no Blueprint.
+    'APIFY_TOKEN',
   ]);
 
   const declaradas = new Set([...yml.matchAll(/^\s*-\s*key:\s*([A-Z_][A-Z0-9_]*)/gm)].map((m) => m[1]!));

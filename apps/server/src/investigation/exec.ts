@@ -24,6 +24,7 @@ import { PROVIDERS, TIPOS_DE_ALVO, planejar, type TipoAlvo } from '../providers/
 import { existe } from '../providers/runtime.ts';
 import { carregar as lerRegisto, type ProviderId } from '../tools/username-intel.ts';
 import { token as tokenApify } from '../net/apify.ts';
+import { token as tokenDataLikers } from '../net/datalikers.ts';
 import { calcular } from '../intel/routes.ts';
 import { capturar, carregar as lerSnapshot, guardar, presencaDe } from '../intel/snapshots.ts';
 import { radar as radarDe } from '../intel/radar.ts';
@@ -114,6 +115,7 @@ export async function recolherFactos(inv: InvAlvo, plano: PlanId): Promise<Facto
     nos: contarNos(inv.id),
     clis,
     apifyToken: !!tokenApify().token,
+    datalikersChave: !!tokenDataLikers().token,
   };
 }
 

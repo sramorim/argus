@@ -31,6 +31,7 @@ import { dbHealth } from './db.ts';
 import { existe, versao } from './providers/runtime.ts';
 import { PROVIDERS, type ProviderOsint } from './providers/osint.ts';
 import { ACTORS, estadoDe, saude as saudeApify, token, foraDeAlcance } from './net/apify.ts';
+import { saude as saudeDataLikers, token as tokenDataLikers, ENDPOINTS as ENDPOINTS_DL } from './net/datalikers.ts';
 
 export type EstadoSistema =
   | 'READY' | 'NOT_INSTALLED' | 'NOT_CONFIGURED' | 'MISSING_SECRET'
@@ -222,6 +223,52 @@ export async function saudeSistema(opts: { detalhe?: boolean } = {}): Promise<Re
     }
   }
 
+  // ---- DataLikers (Social Intelligence) ----
+  // Três linhas: o serviço e as duas plataformas que ele cobre. O número de
+  // recursos por plataforma vem do catálogo oficial, não de uma constante à
+  // mão — se o OpenAPI mudar, a linha muda com ele.
+  const contaRecursos = (p: string) => ENDPOINTS_DL.filter((e) => e.plataforma === p).length;
+  const linhasPlataforma = (status: EstadoSistema, saudeNota: string | null, lat: number | null) => {
+    for (const p of ['instagram', 'tiktok'] as const) {
+      linhas.push(linha({
+        nome: `DataLikers · ${p === 'instagram' ? 'Instagram' : 'TikTok'}`, modulo: 'DATALIKERS',
+        tipo: 'endpoint', runtime: 'API remota', servicoExterno: `api.datalikers.com`,
+        apikey: 'DATALIKERS_API_KEY', cliApi: 'REST', dependencias: 'nenhuma local',
+        status,
+        healthCheck: saudeNota ?? `${contaRecursos(p)} endpoints REST documentados (OpenAPI Cache API 2.10.1)`,
+        latenciaMs: lat,
+        configuracao: `${contaRecursos(p)} recursos · ${p === 'instagram' ? 'perfis, media, stories, destaques, seguidores, comentários, hashtags, locais e áudios' : 'perfis, vídeos, comentários, hashtags e playlists'}`,
+      }));
+    }
+  };
+
+  const dl = tokenDataLikers();
+  if (!dl.token) {
+    linhas.push(linha({
+      nome: 'DataLikers', modulo: 'DATALIKERS', tipo: 'api', runtime: 'API remota',
+      servicoExterno: 'api.datalikers.com', apikey: 'DATALIKERS_API_KEY',
+      cliApi: 'REST', dependencias: 'nenhuma local', status: 'NOT_CONFIGURED',
+      healthCheck: `${dl.falta} em falta — sem pedido feito`,
+      configuracao: `${dl.falta} no ambiente do servidor (backend/secret manager)`,
+    }));
+    linhasPlataforma('NOT_CONFIGURED', `${dl.falta} em falta`, null);
+  } else {
+    const t1 = Date.now();
+    const h = await saudeDataLikers();
+    const status: EstadoSistema = h.status === 'READY' ? 'READY'
+      : h.status === 'NOT_CONFIGURED' ? 'MISSING_SECRET'
+      : h.status as EstadoSistema;
+    linhas.push(linha({
+      nome: 'DataLikers', modulo: 'DATALIKERS', tipo: 'api', runtime: 'API remota',
+      servicoExterno: 'api.datalikers.com', apikey: 'DATALIKERS_API_KEY',
+      cliApi: 'REST', dependencias: 'nenhuma local', status,
+      healthCheck: h.nota, latenciaMs: h.latenciaMs ?? Date.now() - t1,
+      erro: h.status === 'ERROR' ? h.nota : null,
+      configuracao: h.conta ?? 'chave presente (não exposta)',
+    }));
+    linhasPlataforma(status, h.status === 'READY' ? `${ENDPOINTS_DL.length} endpoints REST · chave aceite` : h.nota, h.latenciaMs);
+  }
+
   const porEstado: Partial<Record<EstadoSistema, number>> = {};
   for (const l of linhas) porEstado[l.status] = (porEstado[l.status] ?? 0) + 1;
   const estadoGeral = SEVERIDADE.find((s) => porEstado[s]) ?? 'READY';
@@ -241,8 +288,10 @@ export async function saudeSistema(opts: { detalhe?: boolean } = {}): Promise<Re
 
   // Verificação final do /api/health: o relatório devolvido nunca contém o valor
   // do token — nem nas linhas, nem na nota. Os campos mostram o NOME da variável
-  // (`APIFY_API_TOKEN`) e o ESTADO (READY / NOT_CONFIGURED / ...), nunca a chave.
-  return foraDeAlcance(rel, token().token);
+  // (`APIFY_API_TOKEN`, `DATALIKERS_API_KEY`) e o ESTADO (READY / NOT_CONFIGURED
+  // / ...), nunca a chave. Duas passagens, uma por segredo: se por engano uma
+  // linha futura escrever qualquer um dos dois, nenhum dos dois sai daqui.
+  return foraDeAlcance(foraDeAlcance(rel, token().token), tokenDataLikers().token);
 }
 
 /** Matriz no formato do spec: uma linha por dependência. */

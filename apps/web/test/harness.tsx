@@ -89,7 +89,7 @@ export const porGrupo = ia.porGrupo;
 
 /**
  * Rede falsa com o catálogo real, para os testes de UI montarem a app sem
- * servidor. As 26 ferramentas e os 7 grupos vêm do próprio código: se a
+ * servidor. As 8 ferramentas e os 6 grupos vêm do próprio código: se a
  * arquitectura de informação mudar, os testes mudam com ela.
  */
 export function stubApi(so: Record<string, unknown> = {}) {
@@ -97,35 +97,11 @@ export function stubApi(so: Record<string, unknown> = {}) {
     ['graph-investigation', 'Investigação (Grafo)', 'investigar', 'free', 'Correlaciona as ferramentas e monta o grafo.'],
     ['username-finder', 'Localizador de Username', 'identidade', 'free', 'Procura o username em várias plataformas.'],
     ['username-intel', 'Inteligência de Username', 'identidade', 'free', 'Quatro registos independentes sobre o mesmo username.'],
-    ['email-analyzer', 'Analisador de Email', 'identidade', 'free', 'Verifica MX, disposable e reputação.'],
-    ['phone-analyzer', 'Analisador de Telefone', 'identidade', 'free', 'E.164, país, DDD e validação.'],
-    ['dorks-generator', 'Gerador de Dorks', 'identidade', 'free', 'Gera consultas de pesquisa.'],
-    ['github-osint', 'GitHub OSINT', 'social', 'free', 'Perfil, repositórios e atividade.'],
-    ['telegram-osint', 'Telegram OSINT', 'social', 'pro', 'Canal, inscritos e descrição.'],
-    ['bluesky-osint', 'Bluesky OSINT', 'social', 'free', 'Perfil, publicações e rede.'],
-    ['mastodon-osint', 'Mastodon OSINT', 'social', 'free', 'Perfil em qualquer instância.'],
     ['social-search', 'Busca por Nome nas Redes', 'social', 'pro', 'Perfis públicos que mencionam um nome.'],
+    ['datalikers', 'DataLikers', 'social', 'pro', 'Perfis, publicações e seguidores de Instagram e TikTok.'],
     ['osint-engine', 'OSINT Engine', 'osint', 'free', 'SpiderFoot, Photon, OpenOSINT, GHunt e Holehe isolados.'],
     ['apify', 'APIFY', 'apify', 'free', 'Actors do Apify (Instagram, TikTok, Facebook, X).'],
-    ['url-scanner', 'Scanner de URL', 'web', 'free', 'Estado HTTP, headers e título.'],
-    ['web-crawler', 'Rastreador Web', 'web', 'free', 'robots.txt e páginas.'],
-    ['metadata-extractor', 'Extrator de Metadados', 'web', 'free', 'EXIF e metadados de PDF.'],
-    ['reverse-image', 'Análise de Imagem', 'web', 'pro', 'pHash e distância de Hamming.'],
-    ['domain-analyzer', 'Analisador de Domínio', 'infra', 'free', 'RDAP, DNS e subdomínios.'],
-    ['ip-analyzer', 'Analisador de IP', 'infra', 'free', 'Geo, ASN e portas.'],
-    ['tls-audit', 'Auditoria TLS', 'infra', 'free', 'Certificado e validade.'],
-    ['port-scanner', 'Scanner de Portas', 'infra', 'pro', 'Passivo, via InternetDB.'],
-    ['asn-lookup', 'Consulta de ASN', 'infra', 'free', 'Dados de ASN e WHOIS.'],
-    ['reputation-check', 'Verificador de Reputação', 'seguranca', 'pro', 'Blocklists e feeds de ameaça.'],
-    ['hash-analyzer', 'Analisador de Hash', 'seguranca', 'free', 'Algoritmo e exposição.'],
-    ['cve-lookup', 'Consulta de CVE', 'seguranca', 'free', 'NVD e CIRCL.'],
-    ['package-audit', 'Auditoria de Pacotes', 'seguranca', 'free', 'Vulns via OSV.'],
-    ['password-check', 'Verificador de Password', 'seguranca', 'free', 'k-anonymity nos vazamentos.'],
-    ['paste-search', 'Exposição Pública', 'seguranca', 'pro', 'Busca em sites de paste.'],
-    ['crypto-tracer', 'Rastreador Crypto', 'fontes', 'free', 'Saldo e transações.'],
-    ['geo-lookup', 'Geo Lookup', 'fontes', 'free', 'Geocode e reverse.'],
-    ['zipcode-br', 'Consulta de CEP', 'fontes', 'free', 'CEP com duas fontes.'],
-    ['company-br', 'Consulta de Empresa', 'fontes', 'free', 'CNPJ e QSA.'],
+    ['paste-search', 'Exposição Pública', 'exposicao', 'pro', 'Busca em sites de paste.'],
   ] as const;
 
   const tools = ferramentas.map(([id, name, category, minPlan, summary]) => ({

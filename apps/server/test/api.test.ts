@@ -141,7 +141,7 @@ await t('health responde 200 e diz quantas ferramentas existem', async () => {
   const r = await new Client().get('/api/health');
   eq(r.status, 200);
   eq(r.data.ok, true);
-  ok(r.data.tools >= 25, `só ${r.data.tools} ferramentas registadas`);
+  eq(r.data.tools, 8, 'o catálogo é o conjunto Social Intelligence');
   eq(r.data.db.writable, true, 'o disco tem de aceitar escrita');
 });
 await t('health estendido: por provider, com os campos do spec e estados honestos', async () => {
@@ -268,7 +268,7 @@ console.log('\n── CATÁLOGO E TRANCAS ────────────�
 await t('catálogo público devolve todas as ferramentas com estado de tranca', async () => {
   const r = await new Client().get('/api/tools', UA);
   eq(r.status, 200);
-  ok(r.data.tools.length >= 25, `só ${r.data.tools.length} ferramentas`);
+  eq(r.data.tools.length, 8, `catálogo inesperado: ${r.data.tools.length} ferramentas`);
   const graves = r.data.tools.filter((x: any) => x.lock === 'locked');
   const abertos = r.data.tools.filter((x: any) => x.lock === 'open');
   ok(graves.length > 0 && abertos.length > 0, 'faltam ferramentas de um dos lados');
@@ -290,7 +290,7 @@ await t('plano Free: tranca exatamente as ferramentas Pro, e só essas', async (
     ok(coerente, `${tl.id}: minPlan=${tl.minPlan} mas lock=${tl.lock}`);
   }
   ok(authLocked.length > 0, 'o plano Free devia ter ferramentas trancadas');
-  ok(auth.data.tools.filter((x: any) => x.lock === 'open').length > 15, 'quase tudo trancado no Free');
+  ok(auth.data.tools.filter((x: any) => x.lock === 'open').length >= 5, 'o Free devia ter as ferramentas leves abertas');
 });
 await t('ferramenta inexistente dá 404', async () => {
   const r = await c1.get('/api/tools/nao-existe', UA);
@@ -314,7 +314,7 @@ await t('login para a conta de execução', async () => {
   eq(r.status, 200, JSON.stringify(r.data));
 });
 await t('executar devolve run com achados, fontes e notas', async () => {
-  const r = await c2.post('/api/run/hash-analyzer', { hash: '5baa61e4c9b93f3f0682250b6cf8331b7ee68fd8' }, UA);
+  const r = await c2.post('/api/run/osint-engine', { alvo: 'example.com' }, UA);
   eq(r.status, 200, JSON.stringify(r.data).slice(0, 300));
   ok(r.data.run.id, 'o run não tem id (histórico não liga)');
   ok(r.data.run.findings.length > 0, 'sem achados');
@@ -322,13 +322,13 @@ await t('executar devolve run com achados, fontes e notas', async () => {
   ok(r.data.usage.daily === 15, 'a cota não voltou no payload');
 });
 await t('campo obrigatório em falta dá 400 com o nome do campo', async () => {
-  const r = await c2.post('/api/run/domain-analyzer', {}, UA);
+  const r = await c2.post('/api/run/graph-investigation', {}, UA);
   eq(r.status, 400);
   eq(r.data.error, 'campo_obrigatorio');
-  eq(r.data.field, 'domain');
+  eq(r.data.field, 'seed');
 });
 await t('campo que não existe é ignorado (não crasha, não inventa)', async () => {
-  const r = await c2.post('/api/run/hash-analyzer', { hash: '5baa61e4c9b93f3f0682250b6cf8331b7ee68fd8', invencao: 'x' }, UA);
+  const r = await c2.post('/api/run/osint-engine', { alvo: 'example.com', invencao: 'x' }, UA);
   eq(r.status, 200);
   ok(!('invencao' in r.data.run.input), 'o campo inventado passou para o run');
 });
@@ -336,13 +336,13 @@ await t('corpo maior que o tecto é recusado com 413', async () => {
   const c = new Client();
   await c.post('/api/auth/login', { email: 'ana@exemplo.test', password: 'senhaforte123' }, UA);
   const enorme = 'x'.repeat(70 * 1024);
-  const r = await c.post('/api/run/hash-analyzer', { hash: enorme }, UA);
+  const r = await c.post('/api/run/osint-engine', { alvo: enorme }, UA);
   eq(r.status, 413, `status=${r.status}`);
   eq(r.data.error, 'corpo_grande');
 });
 await t('execução sem sessão dá 401 e não gasta nada', async () => {
   const anon = new Client();
-  const r = await anon.post('/api/run/hash-analyzer', { hash: 'a'.repeat(40) }, UA);
+  const r = await anon.post('/api/run/osint-engine', { alvo: 'a'.repeat(40) }, UA);
   eq(r.status, 401);
 });
 await t('a cota diária é aplicada no servidor', async () => {
@@ -354,9 +354,9 @@ await t('a cota diária é aplicada no servidor', async () => {
   const db = new DatabaseSync(dbPath);
   const uid = db.prepare('SELECT id FROM users WHERE email = ?').get(reg.data.user.email) as any;
   const ins = db.prepare('INSERT INTO usage(user_id, tool_id, at) VALUES(?,?,?)');
-  for (let i = 0; i < 15; i++) ins.run(uid.id, 'hash-analyzer', new Date().toISOString());
+  for (let i = 0; i < 15; i++) ins.run(uid.id, 'osint-engine', new Date().toISOString());
   db.close();
-  const r = await c.post('/api/run/hash-analyzer', { hash: 'a'.repeat(40) }, UA);
+  const r = await c.post('/api/run/osint-engine', { alvo: 'a'.repeat(40) }, UA);
   eq(r.status, 429);
   eq(r.data.error, 'limite');
   eq(r.data.kind, 'daily');
@@ -367,8 +367,8 @@ await t('o limite de concorrência é aplicado no servidor', async () => {
   await c.post('/api/auth/register', { email, name: 'Par', password: 'senhaforte123' }, UA);
   // Free = 1 em curso. Duas execuções lentas ao mesmo tempo: a segunda tem de falhar.
   const r = await Promise.all([
-    c.post('/api/run/graph-investigation', { seed: 'wikipedia.org' }, UA),
-    c.post('/api/run/graph-investigation', { seed: 'example.com' }, UA),
+    c.post('/api/run/graph-investigation', { seed: 'torvalds' }, UA),
+    c.post('/api/run/graph-investigation', { seed: 'grimes' }, UA),
   ]);
   const quarte = r.filter((x) => x.status === 429 && x.data.kind === 'concorrente');
   ok(quarte.length >= 1, `nenhuma execução foi barrada por concorrência (status: ${r.map((x) => x.status).join(',')})`);
@@ -425,7 +425,7 @@ await t('investigação fica guardada e pode ser relida por id', async () => {
   const c = new Client();
   const email = `inv${Date.now()}@exemplo.test`;
   await c.post('/api/auth/register', { email, name: 'Inv', password: 'senhaforte123' }, UA);
-  const r = await c.post('/api/run/graph-investigation', { seed: 'example.com' }, UA);
+  const r = await c.post('/api/run/graph-investigation', { seed: 'torvalds' }, UA);
   eq(r.status, 200, JSON.stringify(r.data).slice(0, 200));
   const list = await c.get('/api/investigations', UA);
   ok(list.data.investigations.length >= 1, 'nada foi guardado');
@@ -449,7 +449,7 @@ await t('investigação de outra pessoa dá 404 (não 403 — não confirma exis
   const a = new Client();
   const b = new Client();
   const ra = await a.post('/api/auth/register', { email: `a${Date.now()}@exemplo.test`, name: 'Alu', password: 'senhaforte123' }, UA);
-  await a.post('/api/run/graph-investigation', { seed: 'example.com' }, UA);
+  await a.post('/api/run/graph-investigation', { seed: 'torvalds' }, UA);
   const inv = (await a.get('/api/investigations', UA)).data.investigations[0];
   await b.post('/api/auth/register', { email: `b${Date.now()}@exemplo.test`, name: 'Bia', password: 'senhaforte123' }, UA);
   const r = await b.get(`/api/investigations/${inv.id}`, UA);
@@ -459,7 +459,7 @@ await t('investigação de outra pessoa dá 404 (não 403 — não confirma exis
 // =========================================================== PLANO DE INVESTIGAÇÃO
 console.log('\n── PLANO DE INVESTIGAÇÃO (8 fases) ───────────────────────────────');
 const FASES_ESPERADAS = ['Discovery', 'OSINT', 'Social', 'Apify', 'Normalization', 'Correlation', 'Intelligence', 'Snapshots'];
-async function planFix(seed = 'example.com') {
+async function planFix(seed = 'torvalds') {
   const c = new Client();
   const n = `${Date.now()}${Math.random().toString(36).slice(2, 6)}`;
   const reg = await c.post('/api/auth/register', { email: `pl${n}@exemplo.test`, name: 'Plano', password: 'senhaforte123' }, UA);
@@ -542,13 +542,13 @@ await t('FULL: as 8 fases activas, com as bloqueadas pelo plano e sem ferramenta
   eq(r.data.plano.fases.map((f: any) => f.fase), FASES_ESPERADAS);
   ok(r.data.plano.fases.every((f: any) => !f.pulada), 'FULL não pula nada');
   const ids = r.data.plano.fases.flatMap((f: any) => f.ferramentas.map((x: any) => x.id));
-  ok(ids.includes('domain-analyzer') && !ids.includes('username-finder'),
-    `só ferramentas do tipo de alvo (domínio): ${JSON.stringify(ids)}`);
+  ok(ids.includes('username-finder') && !ids.includes('domain-analyzer'),
+    `só ferramentas do tipo de alvo (username): ${JSON.stringify(ids)}`);
   const bloqueadas = r.data.plano.fases.flatMap((f: any) => f.ferramentas.filter((x: any) => x.estado === 'BLOQUEADA'));
   ok(bloqueadas.length >= 1, 'há ferramentas trancadas no free para mostrar');
   ok(bloqueadas.every((x: any) => typeof x.motivo === 'string' && x.motivo.length > 5),
     `toda a bloqueada tem motivo concreto: ${JSON.stringify(bloqueadas)}`);
-  const planoFree = bloqueadas.find((x: any) => x.id === 'port-scanner');
+  const planoFree = bloqueadas.find((x: any) => x.id === 'paste-search');
   ok(planoFree && planoFree.motivo.includes('Pro'),
     `a tranca diz o plano e o que falta: ${JSON.stringify(planoFree)}`);
   const etapas = r.data.plano.fases.filter((f: any) => ['Normalization', 'Correlation', 'Intelligence', 'Snapshots'].includes(f.fase));
@@ -597,7 +597,7 @@ await t('CUSTOM: id desconhecido, id fora das 8 fases e modo inválido são 400 
   const desconhecida = await c.post(`/api/investigations/${inv.id}/plan`, { modo: 'CUSTOM', ferramentas: ['inventada'] }, UA);
   eq(desconhecida.status, 400);
   eq(desconhecida.data.error, 'ferramenta_desconhecida');
-  ok((desconhecida.data.aceites ?? []).includes('domain-analyzer'), 'o erro ensina os ids reais');
+  ok((desconhecida.data.aceites ?? []).includes('username-finder'), 'o erro ensina os ids reais');
   const fora = await c.post(`/api/investigations/${inv.id}/plan`, { modo: 'CUSTOM', ferramentas: ['graph-investigation'] }, UA);
   eq(fora.status, 400);
   eq(fora.data.error, 'ferramenta_fora_do_plano');
@@ -624,7 +624,7 @@ console.log('\n── INTEL (motor de inteligência) ─────────
 async function intelFix() {
   const c = new Client();
   await c.post('/api/auth/register', { email: `int${Date.now()}${Math.random().toString(36).slice(2, 6)}@exemplo.test`, name: 'Int', password: 'senhaforte123' }, UA);
-  const run = await c.post('/api/run/graph-investigation', { seed: 'example.com' }, UA);
+  const run = await c.post('/api/run/graph-investigation', { seed: 'torvalds' }, UA);
   eq(run.status, 200, JSON.stringify(run.data).slice(0, 200));
   const inv = (await c.get('/api/investigations', UA)).data.investigations[0];
   return { c, inv };
@@ -643,7 +643,12 @@ await t('unified profile vem das arestas da investigação, com faixa de confian
   ok(Array.isArray(r.data.perfil.evidencias) && r.data.perfil.evidencias.length > 0, 'sem evidências');
   ok(r.data.resumo.nos > 0 && r.data.resumo.arestas > 0, 'resumo vazio');
   const txt = JSON.stringify(r.data);
-  ok(!txt.includes('prova que'), 'mensagem a afirmar prova identidade');
+  // Pode haver frases com "prova que" — o que não pode é haver uma que AFIRME
+  // identidade. A nota do cross-platform diz explicitamente "NÃO prova que é a
+  // mesma pessoa", e é isso que se exige de qualquer frase da resposta.
+  const frases = (txt.match(/[^"]*\bprova que\b[^"]*/g) ?? []).filter((f) => f.length > 0);
+  ok(frases.every((f) => /N[ÃA]O prova que|não prova que|NÃO prova/i.test(f)),
+    'mensagem a afirmar prova identidade: ' + frases.join(' | ').slice(0, 300));
 });
 await t('presence radar: sem anterior diz-se; ao repetir, há anterior guardado', async () => {
   const { c, inv } = await intelFix();
@@ -682,7 +687,7 @@ await t('histórico lista as execuções e reabre o resultado completo', async (
   const c = new Client();
   const email = `h${Date.now()}@exemplo.test`;
   await c.post('/api/auth/register', { email, name: 'Hugo', password: 'senhaforte123' }, UA);
-  const run = await c.post('/api/run/phone-analyzer', { phone: '+5511998877665' }, UA);
+  const run = await c.post('/api/run/osint-engine', { alvo: 'example.com' }, UA);
   eq(run.status, 200);
   const hist = await c.get('/api/historico', UA);
   ok(hist.data.runs.length >= 1, 'histórico vazio');
@@ -695,7 +700,7 @@ await t('histórico de outro utilizador dá 404', async () => {
   const a = new Client();
   const b = new Client();
   await a.post('/api/auth/register', { email: `ha${Date.now()}@exemplo.test`, name: 'Alu', password: 'senhaforte123' }, UA);
-  await a.post('/api/run/phone-analyzer', { phone: '+5511998877665' }, UA);
+  await a.post('/api/run/osint-engine', { alvo: 'example.com' }, UA);
   const id = (await a.get('/api/historico', UA)).data.runs[0].id;
   await b.post('/api/auth/register', { email: `hb${Date.now()}@exemplo.test`, name: 'Bia', password: 'senhaforte123' }, UA);
   eq((await b.get(`/api/historico/${id}`, UA)).status, 404);
@@ -744,8 +749,8 @@ await t('admin: ativa e muda planos, e o servidor passa a unlocking', async () =
   const tools = await c.get('/api/tools', UA);
   const trancadas = tools.data.tools.filter((x: any) => x.lock === 'locked').map((x: any) => x.id);
   eq(trancadas, [], `ainda há trancas no Pro Max: ${trancadas.join(', ')}`);
-  const run = await c.post('/api/run/port-scanner', { target: '1.1.1.1' }, UA);
-  ok(run.status === 200 || run.status === 429, `port-scanner no Pro Max: status ${run.status}`);
+  const run = await c.post('/api/run/paste-search', { term: 'pastebin', exec: 'nao' }, UA);
+  ok(run.status === 200 || run.status === 429, `paste-search no Pro Max: status ${run.status}`);
   ok(run.status !== 402, 'a ferramenta trancada continuou bloqueada depois do upgrade');
 });
 await t('admin: suspender encerra as sessões e bloqueia o acesso', async () => {

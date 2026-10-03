@@ -65,6 +65,12 @@ export interface Factos {
     motivo: string;
   }[];
   apifyToken: boolean;
+  /**
+   * `DATALIKERS_API_KEY` está no ambiente do servidor. Opcional de propósito:
+   * quem monta factos sem este campo (testes, scripts) não pode afirmar por
+   * engano que a chave existe — `undefined` conta como ausente.
+   */
+  datalikersChave?: boolean;
 }
 
 export interface FerramentaPlano {
@@ -163,18 +169,12 @@ export const FORA_DO_PLANO: Record<string, { fase: FaseNome; motivo: string }> =
     fase: 'Discovery',
     motivo: 'cria a própria investigação — corra-a pelo catálogo, não por cima de uma já existente',
   },
-  'metadata-extractor': { fase: 'Normalization', motivo: 'precisa de um ficheiro enviado, não do alvo da investigação' },
-  'hash-analyzer': { fase: 'Normalization', motivo: 'precisa de um hash, não do alvo da investigação' },
-  'reverse-image': { fase: 'Discovery', motivo: 'precisa de uma imagem enviada, não do alvo da investigação' },
-  'asn-lookup': { fase: 'Discovery', motivo: 'precisa de um número AS (AS13335), não do alvo da investigação' },
-  'package-audit': { fase: 'Discovery', motivo: 'precisa de um nome de pacote, não do alvo da investigação' },
-  'password-check': { fase: 'OSINT', motivo: 'precisa de uma password escrita, não do alvo da investigação' },
 };
 
 const DESCRICOES: Record<FaseNome, string> = {
   Discovery: 'O que o próprio alvo revela: análise direta do alvo, sem chave nem serviço pago.',
   OSINT: 'Motores externos e registos de usernames — exige os CLIs instalados ou a pesquisa coberta pelo plano.',
-  Social: 'Redes sociais: perfis públicos, publicações, seguidores e presença.',
+  Social: 'Redes sociais: busca pública por nome e a Cache API da DataLikers (Instagram e TikTok), que exige DATALIKERS_API_KEY.',
   Apify: 'Actors do Apify, pagos por evento: exigem APIFY_API_TOKEN e a confirmação do custo antes de correr.',
   Normalization: 'Converte os nós do grafo em entidades canónicas e funde as que são a mesma coisa.',
   Correlation: 'Cruza as entidades: correlações, indicadores partilhados e relações derivadas.',
@@ -192,8 +192,6 @@ interface DefFerramenta {
   quik?: boolean;
 }
 
-const comUrl = (s: string): string => (/^https?:\/\//i.test(s) ? s : `https://${s}`);
-
 /**
  * As 8 fases e o que cada uma executa de facto.
  *
@@ -204,21 +202,6 @@ const comUrl = (s: string): string => (/^https?:\/\//i.test(s) ? s : `https://${
 const POR_FASE: Record<FaseNome, DefFerramenta[]> = {
   Discovery: [
     { id: 'username-finder', tipos: ['username'], input: (s) => ({ username: s }), quik: true },
-    { id: 'email-analyzer', tipos: ['email'], input: (s) => ({ email: s }), quik: true },
-    { id: 'phone-analyzer', tipos: ['telefone'], input: (s) => ({ phone: s }), quik: true },
-    { id: 'domain-analyzer', tipos: ['dominio'], input: (s) => ({ domain: s }), quik: true },
-    { id: 'ip-analyzer', tipos: ['ip'], input: (s) => ({ ip: s }), quik: true },
-    { id: 'url-scanner', tipos: ['servico'], input: (s) => ({ url: comUrl(s) }), quik: true },
-    { id: 'cve-lookup', tipos: ['cve'], input: (s) => ({ query: s }), quik: true },
-    { id: 'company-br', tipos: ['empresa'], input: (s) => ({ cnpj: s }), quik: true },
-    { id: 'zipcode-br', tipos: ['endereco'], input: (s) => ({ cep: s }), quik: true },
-    { id: 'crypto-tracer', tipos: ['wallet'], input: (s) => ({ address: s }), quik: true },
-    { id: 'dorks-generator', tipos: ['username', 'email', 'dominio', 'servico', 'telefone'], input: (s) => ({ term: s, engine: 'sim' }), quik: true },
-    { id: 'tls-audit', tipos: ['dominio', 'ip'], input: (s) => ({ host: s }) },
-    { id: 'web-crawler', tipos: ['servico'], input: (s) => ({ url: comUrl(s) }) },
-    { id: 'geo-lookup', tipos: ['endereco'], input: (s) => ({ q: s }) },
-    { id: 'reputation-check', tipos: ['dominio', 'ip', 'servico'], input: (s) => ({ target: s }) },
-    { id: 'port-scanner', tipos: ['dominio', 'ip'], input: (s) => ({ target: s }) },
   ],
   OSINT: [
     { id: 'osint-engine', tipos: ['username', 'email', 'dominio', 'ip'], input: (s) => ({ alvo: s }) },
@@ -226,11 +209,8 @@ const POR_FASE: Record<FaseNome, DefFerramenta[]> = {
     { id: 'paste-search', tipos: ['username', 'email', 'dominio', 'ip', 'telefone'], input: (s) => ({ term: s, exec: 'sim' }) },
   ],
   Social: [
-    { id: 'github-osint', tipos: ['username'], input: (s) => ({ username: s }) },
-    { id: 'bluesky-osint', tipos: ['username'], input: (s) => ({ target: s }) },
-    { id: 'mastodon-osint', tipos: ['username'], input: (s) => ({ target: s }) },
-    { id: 'telegram-osint', tipos: ['username'], input: (s) => ({ target: s }) },
     { id: 'social-search', tipos: ['username', 'dominio', 'email'], input: (s) => ({ name: s }) },
+    { id: 'datalikers', tipos: ['username'], input: (s) => ({ plataforma: 'instagram', recurso: 'perfil', alvo: s }) },
   ],
   Apify: [
     { id: 'apify', tipos: ['username', 'servico'], input: (s) => ({ alvo: s }) },
@@ -370,6 +350,11 @@ function dependencia(id: string, f: Factos): { ok: boolean; motivo?: string; not
   if (id === 'apify') {
     if (!f.apifyToken) return { ok: false, motivo: '`APIFY_API_TOKEN` em falta' };
     return { ok: true, nota: 'actors pay-per-event: na execução é pedida a confirmação do custo' };
+  }
+
+  if (id === 'datalikers') {
+    if (!f.datalikersChave) return { ok: false, motivo: '`DATALIKERS_API_KEY` em falta' };
+    return { ok: true, nota: 'Cache API: um pedido por recurso, com o saldo da conta a descontar' };
   }
 
   return { ok: true };

@@ -64,34 +64,7 @@ function planFor(type: NodeType, seed: string): PlanStep[] {
   switch (type) {
     case 'username': return [
       { toolId: 'username-finder', input: { username: s } },
-      { toolId: 'github-osint', input: { username: s } },
     ];
-    case 'email': return [
-      { toolId: 'email-analyzer', input: { email: s } },
-      { toolId: 'dorks-generator', input: { term: s, engine: 'sim' } },
-    ];
-    case 'dominio': return [
-      { toolId: 'domain-analyzer', input: { domain: s } },
-      { toolId: 'tls-audit', input: { host: s } },
-      { toolId: 'reputation-check', input: { target: s } },
-      { toolId: 'url-scanner', input: { url: `https://${s}` } },
-    ];
-    case 'ip': return [
-      { toolId: 'ip-analyzer', input: { ip: s } },
-      { toolId: 'reputation-check', input: { target: s } },
-      { toolId: 'port-scanner', input: { target: s } },
-    ];
-    case 'servico': return [
-      { toolId: 'url-scanner', input: { url: s } },
-      { toolId: 'web-crawler', input: { url: s } },
-      { toolId: 'reputation-check', input: { target: s } },
-    ];
-    case 'telefone': return [{ toolId: 'phone-analyzer', input: { phone: s } }];
-    case 'wallet': return [{ toolId: 'crypto-tracer', input: { address: s } }];
-    case 'cve': return [{ toolId: 'cve-lookup', input: { query: s } }];
-    case 'empresa': return [{ toolId: 'company-br', input: { cnpj: s } }];
-    case 'endereco': return [{ toolId: 'zipcode-br', input: { cep: s } }];
-    case 'pessoa': return [{ toolId: 'dorks-generator', input: { term: s, engine: 'sim' } }];
     default: return [];
   }
 }
@@ -137,9 +110,6 @@ function harvest(
 ): void {
   const goodSources = new Set(run.sources.filter((s) => s.status === 'ok').map((s) => s.id));
   const isUsername = run.toolId === 'username-finder';
-  const isCompany = run.toolId === 'company-br';
-  const isGitHub = run.toolId === 'github-osint';
-  const isDomain = run.toolId === 'domain-analyzer';
 
   for (const f of run.findings) {
     if (f.evidence.confidence === 'weak') continue;
@@ -148,7 +118,7 @@ function harvest(
     if (!srcIds.length) continue;
     const val = f.value;
     const forcedType: NodeType | null = isUsername ? 'conta' : null;
-    const forcedRel: string | null = isUsername ? 'tem_conta_em' : isCompany && f.group === 'socios' ? 'socio_de' : null;
+    const forcedRel: string | null = isUsername ? 'tem_conta_em' : null;
 
     const addNode = (raw: string, type: NodeType, rel: string, label: string, extra?: Record<string, unknown>) => {
       const key = `${type}::${raw}`;
@@ -158,7 +128,7 @@ function harvest(
       graph.nodes.push({
         id, type, label, value: raw.length > 300 ? `${raw.slice(0, 297)}...` : raw,
         confidence: f.evidence.confidence, sourceIds: srcIds, hop,
-        attrs: { group: f.group, kind: f.evidence.kind, via: run.toolId, ...extra },
+        attrs: { group: f.group, kind: f.evidence.kind, via: run.toolId, ...extra, ...f.attrs },
       });
       graph.edges.push({ from: seedId, to: id, rel, confidence: f.evidence.confidence, sourceIds: srcIds });
     };
@@ -169,8 +139,8 @@ function harvest(
         if (made >= 60) break;
         const s = displayItem(item);
         if (!s) continue;
-        const t = forcedType ?? (isDomain && f.group === 'subdominios' ? 'dominio' : null) ?? classifyValue(s) ?? 'servico';
-        const rel = forcedRel ?? (isDomain && f.group === 'subdominios' ? 'tem_subdominio' : 'relacionado_com');
+        const t = forcedType ?? classifyValue(s) ?? 'servico';
+        const rel = forcedRel ?? 'relacionado_com';
         addNode(s, t, rel, f.label);
         made++;
       }
@@ -184,11 +154,10 @@ function harvest(
     }
     if (val == null) continue;
     const s = String(val);
-    const forced = isGitHub && f.group === 'perfil' ? 'pessoa' : null;
-    const t = forcedType ?? forced ?? classifyValue(s);
+    const t = forcedType ?? classifyValue(s);
     if (!t) continue;
     // Um nó escalar trivial (ex.: "Saldo (BTC)") só entra se trouxer entidade.
-    if (!forced && !forcedType) {
+    if (!forcedType) {
       const informative = ['mx', 'dns', 'onchain', 'perfil', 'cve', 'breach', 'geo', 'resultados',
         'vulnerabilidade', 'empresa', 'endereco', 'repos', 'comparacao', 'exif', 'pdf', 'plataforma', 'prefixos', 'icp', 'handoff'];
       if (!informative.includes(f.group)) continue;

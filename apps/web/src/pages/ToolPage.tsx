@@ -15,11 +15,37 @@
  * Telemóvel: o formulário vem primeiro e a acção principal é fácil de alcançar.
  */
 import { useEffect, useRef, useState } from 'react';
+import type { ReactElement } from 'react';
+import type { SVGProps } from 'react';
+import { motion } from 'framer-motion';
 import { api, type ToolPublic, type ToolRun, type Usage, ApiError } from '../api';
 import { Icon } from '../components/Icons';
 import { Empty, Field, Note, PlanTag, Skeleton, useToast } from '../components/ui';
 import { GRUPOS } from '../ia';
 import ResultPanel from '../components/ResultPanel';
+import OmniDork from './OmniDork';
+
+/**
+ * Identificadores que a página não resolve contra o catálogo do servidor.
+ *
+ * O OmniDork Builder é cliente puro: monta a consulta no browser e entrega-a
+ * ao motor de busca numa separador nova, sem `api.run`, sem cota e sem
+ * proveniência a inventar. Por isso não pode ser uma `ToolPublic` — não há
+ * nada para o servidor executar. Vive na mesma rota `/ferramenta/:id` para
+ * abrir na mesma janela que as ferramentas, e é deste mapa que o AppShell
+ * tira o título e o ícone da barra de título.
+ */
+export const MODULOS: Record<string, {
+  titulo: string;
+  icone: (p: SVGProps<SVGSVGElement>) => ReactElement;
+  render: () => ReactElement;
+}> = {
+  omnidork: {
+    titulo: 'OmniDork Builder',
+    icone: Icon.search,
+    render: () => <OmniDork />,
+  },
+};
 
 const INPUT_MODE: Record<string, string> = {
   email: 'email', url: 'url', wallet: 'text', hash: 'text',
@@ -54,6 +80,11 @@ export default function ToolPage({
 
   useEffect(() => { setVals({}); setFiles({}); setRun(null); setErr(''); }, [id]);
   useEffect(() => { if (busy) resRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, [busy]);
+
+  /* Módulos independentes: existem mesmo sem estarem no catálogo, por isso
+     entram antes da procura que levaria a "Ferramenta não encontrada". */
+  const modulo = MODULOS[id];
+  if (modulo) return modulo.render();
 
   if (!t) {
     return (
@@ -109,7 +140,7 @@ export default function ToolPage({
   return (
     <div className="page page-wide">
       {!comoAlvo && grupo && (
-        <div className="t-xs dim" style={{ marginBottom: 'var(--s-3)' }}>
+        <div className="t-xs dim" style={{ marginBottom: 'var(--s-3)', lineHeight: 1.58 }}>
           {grupo.nome} · {grupo.resumo}
         </div>
       )}
@@ -119,7 +150,7 @@ export default function ToolPage({
         <div className="tool-form-col">
           <header className="card">
             <h1 className="t-h1">{t.name}</h1>
-            <p className="t-sm muted" style={{ marginTop: 8, lineHeight: 1.62 }}>{t.longDesc}</p>
+            <p className="t-sm muted" style={{ marginTop: 8, lineHeight: 1.7 }}>{t.longDesc}</p>
             <div className="row" style={{ marginTop: 13, gap: 6 }}>
               {locked
                 ? <PlanTag minPlan={t.minPlan} locked />
@@ -133,14 +164,21 @@ export default function ToolPage({
             <div className="card" style={{ textAlign: 'center' }}>
               <div className="empty-ico" style={{ margin: '0 auto 12px' }}><Icon.lock /></div>
               <h2 className="t-h3">Precisa de um plano superior</h2>
-              <p className="t-sm muted" style={{ margin: '9px 0 16px' }}>
+              <p className="t-sm muted" style={{ margin: '9px 0 16px', lineHeight: 1.64 }}>
                 Esta ferramenta está no plano {t.minPlan === 'pro_max' ? 'Pro Max' : 'Pro'}.
                 O plano Free nunca expira e não pede cartão — o desbloqueio é só se
                 precisares de mais volume.
               </p>
-              <button className="btn btn-primary btn-block" type="button" onClick={() => { location.hash = '#planos'; }}>
+              <motion.button
+                className="btn btn-primary btn-block"
+                type="button"
+                onClick={() => { location.hash = '#planos'; }}
+                whileHover={{ y: -1 }}
+                whileTap={{ scale: 0.995 }}
+                transition={{ type: 'spring', stiffness: 420, damping: 24 }}
+              >
                 ver planos
-              </button>
+              </motion.button>
             </div>
           ) : (
             <div className="card">
@@ -192,12 +230,15 @@ export default function ToolPage({
                 </Field>
               ))}
 
-              <button
-                className="btn btn-primary btn-lg btn-block" type="button"
-                onClick={go} disabled={busy || semEspaco}
-              >
-                {busy ? <><span className="spin" /> a analisar…</> : <><Icon.target /> {verbo}</>}
-              </button>
+          <motion.button
+            className="btn btn-primary btn-lg btn-block" type="button"
+            onClick={go} disabled={busy || semEspaco}
+            whileHover={{ y: -1 }}
+            whileTap={{ scale: 0.995 }}
+            transition={{ type: 'spring', stiffness: 420, damping: 24 }}
+          >
+            {busy ? <><span className="spin" /> a analisar…</> : <><Icon.target /> {verbo}</>}
+          </motion.button>
 
               {semEspaco && (
                 <div style={{ marginTop: 12 }}>
@@ -210,7 +251,7 @@ export default function ToolPage({
                 </div>
               )}
 
-              <p className="t-xs dim" style={{ marginTop: 11, textAlign: 'center', lineHeight: 1.55 }}>
+              <p className="t-xs dim" style={{ marginTop: 11, textAlign: 'center', lineHeight: 1.64 }}>
                 Só fontes públicas. O que não responder aparece como não respondeu —
                 nada é preenchido com um resultado plausível inventado.
               </p>
@@ -225,7 +266,7 @@ export default function ToolPage({
               <div className="card-head">A consultar fontes</div>
               <div className="progress" style={{ marginBottom: 15 }}><i /></div>
               <Skeleton lines={5} />
-              <p className="t-sm muted" style={{ marginTop: 13, lineHeight: 1.6 }}>
+              <p className="t-sm muted" style={{ marginTop: 13, lineHeight: 1.68 }}>
                 Cada fonte é contactada em tempo real, em paralelo. O resultado só
                 aparece quando todas responderam — ou falharam de forma explícita.
               </p>

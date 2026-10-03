@@ -7,7 +7,6 @@ import { newPasswordHash, verifyPass, encryptSecret, decryptSecret, newToken, to
 import { PLANS, meetsPlan, planRank, TOOL_LOCKS } from '../src/plans.ts';
 import { registerTool, lockState, executeTool, QuotaError, LockedError, dailyCount } from '../src/registry.ts';
 import { finding, SourceLog, confScore } from '../src/net/provenance.ts';
-import { parseRobots } from '../src/tools/infra.ts';
 
 let pass = 0, fail = 0;
 const t = (name: string, fn: () => void | Promise<void>) =>
@@ -115,13 +114,14 @@ await t('todo plano tem quotas coerentes', () => {
   }
 });
 await t('TOOL_LOCKS nao referencia ferramentas inexistentes', async () => {
-  await import('../src/tools/infra.ts'); await import('../src/tools/identity.ts');
+  await import('../src/tools/identity.ts');
   await import('../src/tools/username-intel.ts');
-  await import('../src/tools/threat.ts'); await import('../src/tools/finance-dev-br.ts');
-  await import('../src/tools/tls.ts'); await import('../src/tools/graph.ts');
-  await import('../src/tools/social.ts'); await import('../src/tools/social-search.ts');
+  await import('../src/tools/paste.ts');
+  await import('../src/tools/graph.ts');
+  await import('../src/tools/social-search.ts');
   await import('../src/tools/osint-engine.ts');
   await import('../src/tools/apify.ts');
+  await import('../src/tools/datalikers.ts');
   const { allTools } = await import('../src/registry.ts');
   const ids = new Set(allTools().map((x) => x.id));
   const orfaos = Object.keys(TOOL_LOCKS).filter((k) => !ids.has(k));
@@ -235,10 +235,6 @@ await t('cache: valor null nao e cacheado (re-consulta)', async () => {
 });
 
 console.log('\n── OUTROS ────────────────────────────────────────────────────────');
-await t('parseRobots extrai Disallow', () => {
-  const d = parseRobots('User-agent: *\nDisallow: /admin\nDisallow: /privado\n');
-  ok(d.length >= 2, `esperava 2+, obtive ${d.length}`);
-});
 await t('apiJson lanca HttpError com codigo (nao parse de mensagem)', async () => {
   let e: any = null;
   try { await apiJson('https://httpbin.org/status/404'); } catch (x) { e = x; }
@@ -375,80 +371,49 @@ await t('investigacao guarda contagens de nos/arestas', async () => {
   }
 });
 
-console.log('\n── FERRAMENTAS: honestidade do que é inventado ────────────────────');
-await t('phone-analyzer NAO inventa operadora a partir de prefixo', async () => {
-  const { getTool, executeTool } = await import('../src/registry.ts');
+console.log('\n── CATÁLOGO (Social Intelligence) ────────────────────────────────');
+const FERRAMENTAS_SOCIAIS = [
+  'apify', 'datalikers', 'graph-investigation', 'osint-engine',
+  'paste-search', 'social-search', 'username-finder', 'username-intel',
+];
+/** As 25 ferramentas de OSINT técnico/infraestrutura que a limpeza tirou. */
+const FERRAMENTAS_REMOVIDAS = [
+  'asn-lookup', 'bluesky-osint', 'company-br', 'crypto-tracer', 'cve-lookup',
+  'dorks-generator', 'domain-analyzer', 'email-analyzer', 'geo-lookup',
+  'github-osint', 'hash-analyzer', 'ip-analyzer', 'mastodon-osint',
+  'metadata-extractor', 'package-audit', 'password-check', 'phone-analyzer',
+  'port-scanner', 'reputation-check', 'reverse-image', 'telegram-osint',
+  'tls-audit', 'url-scanner', 'web-crawler', 'zipcode-br',
+];
+const carrega = async () => {
   await import('../src/tools/identity.ts');
-  const r = await executeTool('phone-analyzer', { phone: '+5511998877665' }, { userId: 't', plan: 'pro_max', byok: {} });
-  const ops = r.findings.filter((f) => /operadora/i.test(f.label));
-  ok(ops.length > 0, 'nao ha linha de operadora');
-  for (const o of ops) {
-    ok(/nao determinada/i.test(String(o.value)), `operadora inventada: ${o.value}`);
-    ok(o.evidence.kind === 'claim' || o.evidence.confidence === 'weak', 'operadora sem marca de Inferencia/fraca');
-  }
+  await import('../src/tools/username-intel.ts');
+  await import('../src/tools/paste.ts');
+  await import('../src/tools/graph.ts');
+  await import('../src/tools/social-search.ts');
+  await import('../src/tools/osint-engine.ts');
+  await import('../src/tools/apify.ts');
+  await import('../src/tools/datalikers.ts');
+  return (await import('../src/registry.ts')).allTools();
+};
+await t('o catalogo e exatamente o conjunto de ferramentas sociais', async () => {
+  const ids = (await carrega()).map((x) => x.id).filter((i) => !i.startsWith('__'));
+  eq(ids.slice().sort(), FERRAMENTAS_SOCIAIS.slice().sort());
 });
-await t('phone-analyzer situa o DDD na UF certa', async () => {
-  const { executeTool } = await import('../src/registry.ts');
-  await import('../src/tools/identity.ts');
-  const r = await executeTool('phone-analyzer', { phone: '+5511988887777' }, { userId: 't', plan: 'pro_max', byok: {} });
-  const uf = r.findings.find((f) => f.label === 'UF');
-  eq(uf?.value, 'SP', 'DDD 11 tem de dar São Paulo');
-  const reg = r.findings.find((f) => f.label === 'Regiao');
-  ok(/São Paulo/i.test(String(reg?.value)), `regiao errada: ${reg?.value}`);
+await t('nenhuma ferramenta removida na limpeza voltou', async () => {
+  const ids = new Set((await carrega()).map((x) => x.id));
+  const noCatalogo = FERRAMENTAS_REMOVIDAS.filter((r) => ids.has(r));
+  eq(noCatalogo, [], 'ferramenta removida voltou ao catalogo');
+  const nasTrancas = FERRAMENTAS_REMOVIDAS.filter((r) => r in TOOL_LOCKS);
+  eq(nasTrancas, [], 'ferramenta removida voltou para TOOL_LOCKS');
 });
-await t('hash-analyzer nao inventa uma "confirmacao" de hash↔password', async () => {
-  const { executeTool } = await import('../src/registry.ts');
-  await import('../src/tools/threat.ts');
-  const r = await executeTool('hash-analyzer', { hash: '5baa61e4c9b93f3f0682250b6cf8331b7ee68fd8', password: 'password' },
-    { userId: 't', plan: 'pro_max', byok: {} });
-  const maus = r.findings.filter((f) => /corresponde/i.test(f.label) || /corresponde/i.test(String(f.value)));
-  eq(maus.length, 0, `achado com afirmacao sem prova: ${JSON.stringify(maus.map((m) => m.label))}`);
-});
-await t('isBtcAddress aceita enderecos validos e recusa os inventados', async () => {
-  const { isBtcAddress } = await import('../src/tools/finance-dev-br.ts');
-  ok(isBtcAddress('1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa'), 'endereco do bloco genesis foi recusado');
-  ok(isBtcAddress('3J98t1WpEZ73CNmQviecrnyiWrnqRhWNLy'), 'endereco P2SH valido foi recusado');
-  ok(!isBtcAddress('1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNZ'), 'checksum errado foi aceite');
-  ok(!isBtcAddress('nao-e-um-endereco'), 'texto aceite como endereco');
-  ok(!isBtcAddress(''), 'vazio aceite como endereco');
-});
-await t('package-audit recusa ecossistema desconhecido SEM consultar', async () => {
-  const { executeTool } = await import('../src/registry.ts');
-  await import('../src/tools/threat.ts');
-  const r = await executeTool('package-audit', { ecosystem: 'nao-existe', name: 'x', version: '1.0.0' },
-    { userId: 't', plan: 'pro_max', byok: {} });
-  const rj = r.findings.find((f) => /nao reconhecido/i.test(f.label));
-  ok(rj, 'nao avisou que o ecossistema e invalido');
-  ok(!r.sources.some((s) => s.id === 'osv' && s.status === 'ok'), 'consultou a API mesmo assim');
-});
-await t('cve-lookup: se o NVD falhar, diz que os dados vem de uma fonte so', async () => {
-  const { executeTool } = await import('../src/registry.ts');
-  await import('../src/tools/threat.ts');
-  const r = await executeTool('cve-lookup', { query: 'CVE-2021-44228' }, { userId: 't', plan: 'pro_max', byok: {} });
-  const nvd = r.sources.find((s) => s.id === 'nvd');
-  if (nvd?.status !== 'ok') {
-    ok(r.notes.length > 0 || r.sources.some((s) => /fonte unica|fonte única/i.test(s.note ?? '')),
-      'fonte unica sem aviso');
-  }
-});
-
-console.log('\n── TOOL_LOCKS: nada de ferramenta morta ──────────────────────────');
-await t('leak-check saiu do catalogo e das trancas', async () => {
-  const { allTools } = await import('../src/registry.ts');
-  await import('../src/tools/identity.ts'); await import('../src/tools/tls.ts');
-  const ids = allTools().map((x) => x.id);
-  ok(!ids.includes('leak-check'), 'leak-check ainda existe');
+await t('leak-check continua fora do catalogo e das trancas', async () => {
+  const ids = new Set((await carrega()).map((x) => x.id));
+  ok(!ids.has('leak-check'), 'leak-check ainda existe');
   ok(!('leak-check' in TOOL_LOCKS), 'leak-check ainda tem tranca');
-  ok(ids.includes('tls-audit'), 'tls-audit nao foi registada');
-  ok('tls-audit' in TOOL_LOCKS, 'tls-audit sem tranca');
 });
 await t('toda ferramenta tem descricao, resumo e pelo menos um campo', async () => {
-  const { allTools } = await import('../src/registry.ts');
-  await import('../src/tools/infra.ts'); await import('../src/tools/identity.ts');
-  await import('../src/tools/threat.ts'); await import('../src/tools/finance-dev-br.ts');
-  await import('../src/tools/tls.ts'); await import('../src/tools/graph.ts');
-  await import('../src/tools/social.ts'); await import('../src/tools/social-search.ts');
-  for (const t of allTools()) {
+  for (const t of await carrega()) {
     if (t.id.startsWith('__')) continue;   // ferramentas de teste
     ok(t.name.length > 2, `${t.id}: nome curto`);
     ok(t.summary.length > 20, `${t.id}: resumo curto ou ausente`);
@@ -458,13 +423,9 @@ await t('toda ferramenta tem descricao, resumo e pelo menos um campo', async () 
   }
 });
 
+
 console.log('\n── BROADCAST DE CONFIANCA ────────────────────────────────────────');
 await t('nenhuma ferramenta diz "ok" numa fonte que nao devolveu nada', async () => {
-  const { allTools } = await import('../src/registry.ts');
-  await import('../src/tools/infra.ts'); await import('../src/tools/identity.ts');
-  await import('../src/tools/threat.ts'); await import('../src/tools/finance-dev-br.ts');
-  await import('../src/tools/tls.ts'); await import('../src/tools/graph.ts');
-  await import('../src/tools/social.ts'); await import('../src/tools/social-search.ts');
   // Regra estrutural do SourceLog ja testada acima; aqui confirmamos que
   // nenhuma fonte registada no codigo declara 'ok' com contagem implicita.
   const { SourceLog: SL } = await import('../src/net/provenance.ts');

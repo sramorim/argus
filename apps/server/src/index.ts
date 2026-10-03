@@ -31,17 +31,14 @@ import { criarPlanoRouter } from './investigation/routes.ts';
 import { SourceLog, type Finding } from './net/provenance.ts';
 
 // importa ficheiros de ferramentas para registar no registry
-import './tools/infra.ts';
 import './tools/identity.ts';
 import './tools/username-intel.ts';
-import './tools/threat.ts';
-import './tools/finance-dev-br.ts';
-import './tools/tls.ts';
+import './tools/paste.ts';
 import './tools/graph.ts';
-import './tools/social.ts';
 import './tools/social-search.ts';
 import './tools/osint-engine.ts';
 import './tools/apify.ts';
+import './tools/datalikers.ts';
 
 const app = new Hono();
 const PORT = config.port;
@@ -265,9 +262,6 @@ app.get('/api/byok/providers', (c) =>
   c.json({ providers: Object.entries(BYOK_PROVIDERS).map(([id, v]) => ({ id, ...v })) }));
 
 // ---------- execução ----------
-/** Ferramentas que aceitam ficheiro enviado pelo utilizador. */
-const FILE_TOOLS = new Set(['metadata-extractor', 'reverse-image']);
-
 app.post('/api/run/:id', async (c) => {
   const u = requireAuth(c);
   if (u instanceof Response) return u;

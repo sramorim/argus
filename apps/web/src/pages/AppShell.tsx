@@ -29,7 +29,7 @@ import Janela, { type Geom } from '../components/Janela';
 import { Brand } from '../components/ui';
 import { GRUPOS, VISTAS, ATALHOS, NOME_PLANO, porGrupo } from '../ia';
 import Dashboard from './Dashboard';
-import ToolPage from './ToolPage';
+import ToolPage, { MODULOS } from './ToolPage';
 import Investigations from './Investigations';
 import Plans from './Plans';
 import Keys from './Keys';
@@ -251,7 +251,12 @@ export default function AppShell({
 
   const iconeDe = (v: View): ((p: SVGProps<SVGSVGElement>) => ReactElement) => {
     if (v.k === 'tool') {
-      const t = tools.find((x) => x.id === (v as { id: string }).id);
+      const id = (v as { id: string }).id;
+      // Um módulo independente (OmniDork) não está no catálogo e não tem
+      // categoria: sem este ramo a sua janela abria com o ícone genérico.
+      const modulo = MODULOS[id];
+      if (modulo) return modulo.icone;
+      const t = tools.find((x) => x.id === id);
       return CATEGORY_ICON[t?.category ?? ''] ?? Icon.grid;
     }
     return VISTAS.find((x) => x.id === v.k)?.icon ?? Icon.grid;
@@ -261,7 +266,10 @@ export default function AppShell({
     switch (v.k) {
       case 'dashboard': return 'Painel';
       case 'nova': return 'Nova investigação';
-      case 'tool': return tools.find((t) => t.id === (v as { id: string }).id)?.name ?? 'Ferramenta';
+      case 'tool': {
+        const id = (v as { id: string }).id;
+        return MODULOS[id]?.titulo ?? tools.find((t) => t.id === id)?.name ?? 'Ferramenta';
+      }
       case 'inv': return (v as { id?: string }).id ? 'Sessão' : 'Sessões';
       case 'plans': return 'Planos';
       case 'keys': return 'Chaves API';
@@ -303,27 +311,20 @@ export default function AppShell({
     <>
       <div className="side-scroll">
         <div className="nav-group">
-          <button
+          <motion.button
             className="btn btn-primary btn-block"
             type="button"
             onClick={() => go({ k: 'nova' })}
-            style={{ marginBottom: 'var(--s-4)' }}
+            whileHover={{ y: -1 }}
+            whileTap={{ scale: 0.995 }}
+            transition={{ type: 'spring', stiffness: 420, damping: 24 }}
+            style={{ marginBottom: 8 }}
           >
             <Icon.target /> Nova investigação
-          </button>
-          {apps.map((v) => (
-            <NavItem
-              key={v.id}
-              v={{ k: v.id } as View}
-              view={view}
-              onGo={go}
-              icon={v.icon}
-              label={v.nome}
-            />
-          ))}
+          </motion.button>
         </div>
 
-        <div className="nav-title">Ferramentas por objetivo</div>
+        <div className="nav-title" style={{ padding: '4px 6px 2px' }}>Ferramentas</div>
         {GRUPOS.map((g) => {
           const lista = porGrupo(tools, g.id);
           if (!lista.length) return null;
@@ -371,9 +372,9 @@ export default function AppShell({
                               aria-current={view.k === 'tool' && (view as { id: string }).id === t.id}
                               onClick={() => go({ k: 'tool', id: t.id })}
                               title={t.summary}
-                              whileHover={{ x: 4 }}
-                              whileTap={{ scale: 0.97 }}
-                              transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                            whileHover={{ x: 1 }}
+                            whileTap={{ scale: 0.998 }}
+                            transition={{ type: 'spring', stiffness: 420, damping: 30 }}
                             >
                               <Cat className="nav-ico" />
                               <span className="nav-label-txt">{t.name}</span>
@@ -428,9 +429,9 @@ export default function AppShell({
           type="button"
           onClick={() => go({ k: 'dashboard' })}
           title="Painel"
-          whileHover={{ scale: 1.03 }}
-          whileTap={{ scale: 0.97 }}
-          transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+          whileHover={{ scale: 1.01 }}
+          whileTap={{ scale: 0.995 }}
+          transition={{ type: 'spring', stiffness: 420, damping: 24 }}
         >
           <Brand />
         </motion.button>
@@ -451,24 +452,24 @@ export default function AppShell({
             type="button"
             onClick={() => go({ k: 'inv' })}
             whileHover={{ y: -1 }}
-            whileTap={{ scale: 0.95 }}
-            transition={{ type: 'spring', stiffness: 400, damping: 22 }}
+            whileTap={{ scale: 0.995 }}
+            transition={{ type: 'spring', stiffness: 420, damping: 22 }}
           >Sessões</motion.button>
           <motion.button
             className="topbar-link"
             type="button"
             onClick={() => go({ k: 'history' })}
             whileHover={{ y: -1 }}
-            whileTap={{ scale: 0.95 }}
-            transition={{ type: 'spring', stiffness: 400, damping: 22 }}
+            whileTap={{ scale: 0.995 }}
+            transition={{ type: 'spring', stiffness: 420, damping: 22 }}
           >Histórico</motion.button>
           <motion.button
             className="topbar-link"
             type="button"
             onClick={() => go({ k: 'plans' })}
             whileHover={{ y: -1 }}
-            whileTap={{ scale: 0.95 }}
-            transition={{ type: 'spring', stiffness: 400, damping: 22 }}
+            whileTap={{ scale: 0.995 }}
+            transition={{ type: 'spring', stiffness: 420, damping: 22 }}
           >Planos</motion.button>
         </nav>
         <details className="user-menu">
@@ -494,8 +495,8 @@ export default function AppShell({
               className="user-pop-item"
               type="button"
               onClick={onLogout}
-              whileHover={{ x: 4 }}
-              transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+              whileHover={{ x: 2 }}
+              transition={{ type: 'spring', stiffness: 420, damping: 28 }}
             >
               <Icon.logout /> Sair
             </motion.button>
@@ -516,14 +517,14 @@ export default function AppShell({
                   type="button"
                   onClick={() => go({ k: v.id } as View)}
                   data-aberta={ordem.includes(chave({ k: v.id } as View))}
-                  initial={{ opacity: 0, y: 14, scale: 0.94 }}
+                  initial={{ opacity: 0, y: 10, scale: 0.96 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   transition={{
-                    type: 'spring', stiffness: 260, damping: 22, mass: 0.5,
-                    delay: 0.05 + i * 0.022,
+                    type: 'spring', stiffness: 280, damping: 24, mass: 0.6,
+                    delay: 0.02 + i * 0.01,
                   }}
-                  whileHover={{ scale: 1.06, y: -5 }}
-                  whileTap={{ scale: 0.94 }}
+                  whileHover={{ scale: 1.03, y: -2 }}
+                  whileTap={{ scale: 0.995 }}
                 >
                   <span className="desk-ico"><v.icon /></span>
                   <span className="desk-label">{v.nome}</span>
@@ -555,11 +556,11 @@ export default function AppShell({
                         initial={{ opacity: 0, y: 14, scale: 0.94 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         transition={{
-                          type: 'spring', stiffness: 260, damping: 22, mass: 0.5,
-                          delay: 0.05 + i * 0.018,
+                          type: 'spring', stiffness: 280, damping: 24, mass: 0.6,
+                          delay: 0.02 + i * 0.01,
                         }}
-                        whileHover={{ scale: 1.06, y: -5 }}
-                        whileTap={{ scale: 0.94 }}
+                        whileHover={{ scale: 1.03, y: -2 }}
+                        whileTap={{ scale: 0.995 }}
                       >
                         <span className="desk-ico"><Cat /></span>
                         <span className="desk-label">{t.name}</span>
