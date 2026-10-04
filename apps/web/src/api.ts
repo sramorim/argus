@@ -65,7 +65,6 @@ export interface InvestigationDetail {
   investigation: Investigation;
   nodes: GraphNode[]; edges: GraphEdge[];
 }
-export interface ByokProvider { id: string; label: string; usedBy: string; doc: string; }
 
 /* ------------------------------------------------------------------ saúde */
 /** Os oito estados do `/api/health`, tal como o servidor os devolve. */
@@ -247,6 +246,8 @@ export interface ExecutarResposta {
 
 export class ApiError extends Error {
   status: number; code: string; field?: string; kind?: string; minPlan?: string;
+  /** Quantos créditos já foram usados e quantos havia (erro `limite_plano`). */
+  usados?: number; limite?: number;
   constructor(status: number, code: string, msg: string) {
     super(msg);
     this.status = status; this.code = code;
@@ -270,6 +271,7 @@ async function req<T>(url: string, init?: RequestInit): Promise<T> {
   if (!r.ok) {
     const e = new ApiError(r.status, data?.error ?? `http_${r.status}`, data?.msg ?? data?.error ?? `HTTP ${r.status}`);
     e.field = data?.field; e.kind = data?.kind; e.minPlan = data?.minPlan;
+    e.usados = data?.usados; e.limite = data?.limite;
     throw e;
   }
   return data as T;
@@ -282,6 +284,25 @@ export interface Contacto {
   autor: string;
   autorLink: string | null;
   copyright: string;
+  /**
+   * Chave Pix de recebimento. Vem do servidor (PIX_KEY) e chega aqui para ser
+   * mostrada, copiada e transformada em QR code. Não é segredo — é para o
+   * cliente pagar. Vem do servidor porque escrever um identificador de
+   * pagamento no bundle do browser é a forma mais rápida de cobrar a pessoa
+   * errada no dia em que a chave muda.
+   */
+  pix: string | null;
+}
+
+/** O estado dos créditos de uma ferramenta com quota partilhada. */
+export interface EstadoCreditos {
+  usados: number;
+  limite: number;
+  periodo: string;
+  temChavePropria: boolean;
+  esgotado: boolean;
+  checkoutUrl: string;
+  afiliadoUrl: string;
 }
 
 /**
@@ -326,7 +347,6 @@ export const api = {
   tools: (init?: RequestInit) => req<{ tools: ToolPublic[]; plan: PlanId; usage: Usage | null }>('/api/tools', init),
   tool: (id: string) => req<{ tool: ToolPublic }>(`/api/tools/${encodeURIComponent(id)}`),
   plans: () => req<{ plans: Plan[] }>('/api/plans'),
-  byokProviders: () => req<{ providers: ByokProvider[] }>('/api/byok/providers'),
 
   register: (b: { email: string; name: string; password: string }) =>
     req<{ ok: boolean; user: User }>('/api/auth/register', { method: 'POST', body: JSON.stringify(b) }),
@@ -345,11 +365,6 @@ export const api = {
   inspectFile: (b: { data?: string; url?: string; name?: string }) =>
     req<{ ok: boolean; tipo: string; bytes: number; origem: string; nome: string; contentType: string | null }>(
       '/api/arquivo/inspect', { method: 'POST', body: JSON.stringify(b) }),
-
-  keys: () => req<{ keys: { provider: string; created_at: string; meta: ByokProvider | null }[] }>('/api/keys'),
-  addKey: (provider: string, secret: string) =>
-    req<{ ok: boolean }>('/api/keys', { method: 'POST', body: JSON.stringify({ provider, secret }) }),
-  delKey: (provider: string) => req<{ ok: boolean }>(`/api/keys/${encodeURIComponent(provider)}`, { method: 'DELETE' }),
 
   investigations: () => req<{ investigations: Investigation[] }>('/api/investigations'),
   investigation: (id: string) => req<InvestigationDetail>(`/api/investigations/${encodeURIComponent(id)}`),
@@ -376,6 +391,13 @@ export const api = {
 
   /** Saúde do sistema. `detalhe` acrescenta versões, latência e serviço externo. */
   saude: (detalhe: boolean) => pedidoSaude(detalhe),
+  /** Estado dos créditos partilhados (DataLikers) da pessoa. */
+  creditos: () => req<EstadoCreditos>('/api/creditos'),
+  /** Guardar a chave da DataLikers da própria pessoa (fica cifrada em disco). */
+  guardarChaveDados: (chave: string) =>
+    req<{ ok: true }>('/api/creditos/chave', { method: 'POST', body: JSON.stringify({ chave }) }),
+  /** Voltar à chave partilhada do servidor. */
+  removerChaveDados: () => req<{ ok: true }>('/api/creditos/chave', { method: 'DELETE' }),
   /** Presence Radar: compara com o snapshot anterior (pode não existir). */
   radar: (investigacao: string) =>
     req<RespostaRadar>(`/api/intel/radar?investigacao=${encodeURIComponent(investigacao)}`),
@@ -394,10 +416,26 @@ export const api = {
     users: { id: string; email: string; name: string; plan: PlanId; is_admin: number; suspended: number; created_at: string }[];
     nUsers: number; nRuns: number; nInvs: number; hoje: number; plans: Plan[]; db: { path: string; writable: boolean };
   }>('/api/admin/estado'),
-  adminSetPlan: (id: string, plan: PlanId, resetUsage?: boolean) =>
-    req<{ ok: boolean }>(`/api/admin/user/${encodeURIComponent(id)}/plano`, { method: 'POST', body: JSON.stringify({ plan, resetUsage }) }),
+  /**
+   * Muda o plano. `planExpires: null` é o que faz um PRO **vitalício** — é a
+   * diferenca entre "paga uma vez e fica" e "paga ate uma data".
+   * O valor so e tocado quando vem no pedido.
+   */
+  adminSetPlan: (id: string, plan: PlanId, resetUsage?: boolean, planExpires?: string | null) =>
+    req<{ ok: boolean }>(`/api/admin/user/${encodeURIComponent(id)}/plano`, {
+      method: 'POST',
+      body: JSON.stringify({ plan, resetUsage, ...(planExpires !== undefined ? { planExpires } : {}) }),
+    }),
   adminSetFlags: (id: string, flags: { isAdmin?: boolean; suspended?: boolean }) =>
     req<{ ok: boolean }>(`/api/admin/user/${encodeURIComponent(id)}/flags`, { method: 'POST', body: JSON.stringify(flags) }),
+  /**
+   * Limite mensal de créditos partilhados para uma pessoa. `null` volta ao
+   * limite do plano. É aactivate à mão de uma recarga combinada ao telefone.
+   */
+  adminSetLimite: (id: string, limite: number | null) =>
+    req<{ ok: boolean; limite: number | null }>(`/api/admin/user/${encodeURIComponent(id)}/limite`, {
+      method: 'POST', body: JSON.stringify({ limite }),
+    }),
 };
 
 /**
@@ -420,7 +458,9 @@ export const CONTACTO = {
 
 /** Link de WhatsApp com a mensagem já preenchida. */
 export function pedidoPlanoLink(plan: Plan, user?: { email?: string; name?: string } | null, wa: string = CONTACTO.whatsapp): string {
-  const preco = plan.priceBRL === 0 ? 'Grátis' : `R$ ${plan.priceBRL.toFixed(2).replace('.', ',')}/mês`;
+  const preco = plan.priceBRL === 0
+    ? 'Grátis'
+    : `R$ ${plan.priceBRL.toFixed(2).replace('.', ',')}${plan.pricePeriod === 'unico' ? ' (pagamento único)' : '/mês'}`;
   const linhas = [
     `Olá! Quero ativar o plano ${plan.name} (${preco}) no ARGOS.`,
     user?.name ? `Nome: ${user.name}` : '',

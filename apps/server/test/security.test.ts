@@ -145,7 +145,7 @@ await t('bloqueia ferramentas conforme o plano', async () => {
   eq(lockState('__locked__', 'pro'), 'open');
   eq(lockState('__locked__', 'pro_max'), 'open');
   let lancou = false;
-  try { await executeTool('__locked__', {}, { userId: uid, plan: 'free', byok: {} }); }
+  try { await executeTool('__locked__', {}, { userId: uid, plan: 'free' }); }
   catch (e) { lancou = e instanceof LockedError; }
   ok(lancou, 'nao lancou LockedError');
 });
@@ -160,7 +160,7 @@ await t('quota diaria: bloqueia ao exceeded', async () => {
   }
   eq(dailyCount(u), PLANS.free.dailyRuns);
   let lancou = false;
-  try { await executeTool('__dummy__', {}, { userId: u, plan: 'free', byok: {} }); }
+  try { await executeTool('__dummy__', {}, { userId: u, plan: 'free' }); }
   catch (e) { lancou = e instanceof QuotaError && e.kind === 'daily'; }
   ok(lancou, 'nao lancou QuotaError diario');
   db.prepare('DELETE FROM usage WHERE user_id = ?').run(u);
@@ -170,7 +170,7 @@ await t('quota burst: bloqueia execucoes seguidas', async () => {
   const n = PLANS.free.burstRuns;
   let lancou = false;
   try {
-    for (let i = 0; i < n + 2; i++) await executeTool('__dummy__', {}, { userId: u, plan: 'free', byok: {} });
+    for (let i = 0; i < n + 2; i++) await executeTool('__dummy__', {}, { userId: u, plan: 'free' });
   } catch (e) { lancou = e instanceof QuotaError && e.kind === 'burst'; }
   ok(lancou, 'burst nao foi aplicado');
 });
@@ -184,7 +184,7 @@ await t('trunca resultados e DIZ que truncou', async () => {
       return { findings: Array.from({ length: 100 }, (_, i) => finding('g', `l${i}`, `v${i}`, ['local'])), log };
     },
   });
-  const r = await executeTool('__many__', {}, { userId: u, plan: 'free', byok: {} });
+  const r = await executeTool('__many__', {}, { userId: u, plan: 'free' });
   ok(r.findings.length <= PLANS.free.maxItems, `nao truncou: ${r.findings.length}`);
   ok(r.notes.some((n) => /truncad/i.test(n)), 'nao avisou que truncou');
 });

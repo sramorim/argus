@@ -35,8 +35,8 @@ import Dashboard from './Dashboard';
 import ToolPage, { MODULOS } from './ToolPage';
 import Investigations from './Investigations';
 import Plans from './Plans';
-import Keys from './Keys';
 import Account from './Account';
+import GerenciarLimites from './GerenciarLimites';
 import Admin from './Admin';
 import History from './History';
 import Health from './Health';
@@ -86,6 +86,11 @@ export default function AppShell({
 }) {
   const [drawer, setDrawer] = useState(false);
   const [fabAberto, setFabAberto] = useState(false);
+  /* Conta › Gerenciar limites. Vive aqui e não como rota própria para não
+     aparecer na barra de tarefas como se fosse mais um ecrã do produto: é uma
+     secção da Conta, acedida pelo modal de limite e pelo botão da secção
+     Assinatura. */
+  const [limitesAberto, setLimitesAberto] = useState(false);
   const wa = useContacto();
   /* Uma só decisão para todo o ecrã: se o sistema pede menos movimento, as
      molas daqui abaixo desaparecem todas. */
@@ -199,6 +204,9 @@ export default function AppShell({
     setView(v);
     abrir(v);
     setDrawer(false);
+    // Sair da Conta fecha a secção de limites: regressar sem querer a uma
+    // página de limits que ficou aberta por baixo seria confuso.
+    setLimitesAberto(false);
   }, [abrir, setView]);
   useEffect(() => {
     const k = chave(view);
@@ -275,7 +283,6 @@ export default function AppShell({
       }
       case 'inv': return (v as { id?: string }).id ? 'Sessão' : 'Sessões';
       case 'plans': return 'Planos';
-      case 'keys': return 'Chaves API';
       case 'account': return 'Conta';
       case 'admin': return 'Administração';
       case 'history': return 'Histórico';
@@ -290,12 +297,11 @@ export default function AppShell({
   const conteudo = (v: View): React.ReactNode => {
     switch (v.k) {
       case 'dashboard': return <Dashboard user={user} tools={tools} usage={usage} setView={go} />;
-      case 'nova': return <ToolPage id="graph-investigation" tools={tools} onUsage={refreshUser} comoAlvo />;
-      case 'tool': return <ToolPage id={(v as { id: string }).id} tools={tools} onUsage={refreshUser} />;
+      case 'nova': return <ToolPage id="graph-investigation" tools={tools} onUsage={refreshUser} comoAlvo onLimites={irParaLimites} />;
+      case 'tool': return <ToolPage id={(v as { id: string }).id} tools={tools} onUsage={refreshUser} onLimites={irParaLimites} />;
       case 'inv': return <Investigations view={v as { id?: string }} setView={go} />;
       case 'plans': return <Plans user={user} />;
-      case 'keys': return <Keys />;
-      case 'account': return <Account user={user} onLogout={onLogout} />;
+      case 'account': return <Account user={user} onLogout={onLogout} onLimites={irParaLimites} />;
       case 'admin': return <Admin />;
       case 'history': return <History setView={go} />;
       case 'health': return <Health />;
@@ -455,6 +461,16 @@ export default function AppShell({
     setTimeout(() => document.getElementById('busca-global')?.focus(), 60);
   };
 
+  /**
+   * Abre Conta › Gerenciar limites.
+   *
+   * É o destino do modal de limite, e o único sítio do produto onde se pede
+   * uma chave. Mantém-se a origem ({ de: 'limite' }) para que a Conta saiba
+   * que veio de ali — é isso que permite ao botão "voltar" devolver a pessoa
+   * ao sítio onde ela estava em vez de a deixar no escuro.
+   */
+  const irParaLimites = () => setLimitesAberto(true);
+
   return (
     <div className="shell">
       {/* ------------------------------------------------------- lateral / gaveta */}
@@ -480,6 +496,12 @@ export default function AppShell({
       )}
 
       <div className="col">
+        {limitesAberto && (
+          <main className="desktop desktop-limites">
+            <GerenciarLimites onVoltar={() => setLimitesAberto(false)} />
+          </main>
+        )}
+
         {/* ---------------------------------------------------------- barra superior */}
         <header className="topbar">
           <button className="icon-btn only-narrow" onClick={() => setDrawer(true)} aria-label="Abrir menu" type="button">

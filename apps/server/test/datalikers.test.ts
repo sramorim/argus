@@ -105,7 +105,7 @@ ok(t!.tags.includes('instagram') && t!.tags.includes('tiktok') && t!.tags.includ
   'etiquetas das plataformas e do provider');
 
 // ----------------------------------------------------------- execução/tool
-const CTX = { userId: 't-dl', plan: 'free' as const, byok: {} as Record<string, string> };
+const CTX = { userId: 't-dl', plan: 'free' as const };
 const semKey = await t!.run({ alvo: 'ana' }, CTX);
 const txtSem = JSON.stringify(semKey);
 ok(semKey.findings.some((f) => String(f.value).includes('DATALIKERS_API_KEY')),
@@ -196,6 +196,26 @@ ok(porUrl.findings.some((f) => String(f.value).includes('NOT_CONFIGURED')),
 ok(limpar('HTTP 401: access_key=segredo-teste inválido', 'segredo-teste')
   === 'HTTP 401: access_key=[chave] inválido',
   'erro do gateway vem redigido');
+
+// ------------------------------------------- créditos partilhados (execução)
+// O único caminho que decide entre "pede ao fornecedor" e "não pede" sem rede:
+// com a chave do servidor presente e o tecto já no chão, o pedido tem de
+// MORRER antes de sair. Se saísse, o teste passava por um 401 do gateway em
+// vez de lançar o erro de créditos — é essa a distinção que se está a medir.
+process.env.DATALIKERS_API_KEY = 'chave-de-teste-nao-vexada';
+const esgotado = await t!.run({ alvo: 'ana' }, { userId: 't-dl-esgotado', plan: 'free' })
+  .then(() => null, (e) => e);
+ok(esgotado?.name === 'CreditosEsgotadosError',
+  'sem crédito partilhado a execução é recusada, não pedida ao fornecedor', String(esgotado?.name));
+ok(esgotado?.limit === 0 && esgotado?.used === 0,
+  'o erro traz os dois números do tecto, para o ecrã poder dizer "usou X de Y"',
+  `${esgotado?.used}/${esgotado?.limit}`);
+
+// O inverso: uma chave própria não tem tecto nosso. A validação da chave é um
+// pedido ao gateway, portanto aqui não se corre nada — o que se prova é que a
+//_recusa por créditos_ não acontece, que é a única coisa que este teste sem
+// rede consegue afirmar sobre o caminho da chave própria.
+delete process.env.DATALIKERS_API_KEY;
 
 console.log(`\n${pass} passaram, ${fail} falharam`);
 process.exit(fail ? 1 : 0);

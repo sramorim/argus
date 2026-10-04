@@ -21,7 +21,7 @@ await import('../src/tools/apify.ts');
 await import('../src/tools/datalikers.ts');
 
 const BASE = process.env.AUDIT_BASE ?? 'http://127.0.0.1:8787';
-const CTX = { userId: 'audit-user', plan: 'pro_max' as const, byok: {} as Record<string, string> };
+const CTX = { userId: 'audit-user', plan: 'pro_max' as const };
 /** A auditoria corre no ambiente real: com chave exige-se resultado, sem chave recusa-se. */
 const temChaveDataLikers = !!process.env.DATALIKERS_API_KEY?.trim();
 

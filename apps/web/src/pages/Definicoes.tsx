@@ -2,13 +2,13 @@
  * Definições — só coisas que existem de facto no produto.
  *
  * Aqui não há atalhos inventados nem "preferências de servidor": cada bloco
- * aponta para um endpoint real (`/api/me`, `/api/plans`, `/api/keys`,
+ * aponta para um endpoint real (`/api/me`, `/api/plans`, `/api/creditos`,
  * `/api/contact`) ou para o que fica **neste navegador**. O que é local leva
  * a etiqueta "guardado neste navegador" — o utilizador tem de saber distinguir
  * o que o servidor sabe do que é só disposição deste aparelho.
  */
 import { useEffect, useState } from 'react';
-import { api, type Plan, type Usage, type User, PLAN_NAME, useContacto } from '../api';
+import { api, type EstadoCreditos, type Plan, type Usage, type User, PLAN_NAME, useContacto } from '../api';
 import { Icon } from '../components/Icons';
 import { Note, Skeleton, useToast } from '../components/ui';
 import { guardar, preferencias, type Preferencias } from '../prefs';
@@ -21,12 +21,12 @@ export default function Definicoes({ user, usage, setView }: {
   const toast = useToast();
   const [me, setMe] = useState<{ user: User | null; usage?: Usage } | null>(null);
   const [plans, setPlans] = useState<Plan[] | null>(null);
-  const [keys, setKeys] = useState<{ provider: string }[] | null>(null);
+  const [creditos, setCreditos] = useState<EstadoCreditos | null>(null);
   const [prefs, setPrefs] = useState<Preferencias>(() => preferencias());
 
   useEffect(() => { api.me().then(setMe).catch(() => setMe({ user: null })); }, []);
   useEffect(() => { api.plans().then((r) => setPlans(r.plans)).catch(() => setPlans([])); }, []);
-  useEffect(() => { api.keys().then((r) => setKeys(r.keys ?? [])).catch(() => setKeys([])); }, []);
+  useEffect(() => { api.creditos().then(setCreditos).catch(() => setCreditos(null)); }, []);
 
   const alterar = <K extends keyof Preferencias>(chave: K, valor: Preferencias[K]) => {
     setPrefs(guardar(chave, valor));
@@ -132,29 +132,33 @@ export default function Definicoes({ user, usage, setView }: {
         )}
       </div>
 
-      {/* ------------------------------------------------------------ chaves */}
+      {/* ------------------------------------------------- limites e créditos */}
+      {/* O BYOK saiu daqui: Shodan, GitHub e Leak-Lookup passaram a ser
+          variáveis do dono no Render, e a única chave que a pessoa pode
+          trazer (a da DataLikers) vive em Conta › Gerenciar limites. Aqui fica
+          só o resumo — e a porta para lá. */}
       <div className="card">
         <div className="card-head">
-          <span>Chaves API (BYOK)</span>
+          <span>Limites</span>
           <span className="grow" />
           <div className="card-head-actions">
-            <button className="btn btn-sm btn-quiet" type="button" onClick={() => setView({ k: 'keys' })}>
-              abrir chaves
+            <button className="btn btn-sm btn-quiet" type="button" onClick={() => setView({ k: 'account' })}>
+              gerenciar limites
             </button>
           </div>
         </div>
-        {keys === null ? (
+        {creditos === null ? (
           <Skeleton lines={2} />
-        ) : keys.length === 0 ? (
-          <p className="t-sm muted">
-            Nenhuma chave guardada. Sem chave, as ferramentas que dependem de fonte paga dizem o
-            que falta em vez de inventar resultados.
-          </p>
         ) : (
-          <div className="t-sm muted">
-            {keys.length} chave(s) guardada(s): <span className="mono">{keys.map((k) => k.provider).join(', ')}</span>.
-            Guardadas cifradas no servidor e nunca devolvidas pela API.
-          </div>
+          <p className="t-sm muted">
+            {creditos.temChavePropria ? (
+              <>A usar <b>a tua chave DataLikers</b>. Não há tecto nosso: o limite é o da tua conta lá.</>
+            ) : creditos.limite === 0 ? (
+              <>Consultas de dados não estão incluídas no teu plano.</>
+            ) : (
+              <><b>{creditos.usados}</b> de <b>{creditos.limite}</b> consultas de dados usadas em {creditos.periodo}, com a chave partilhada.</>
+            )}
+          </p>
         )}
       </div>
 

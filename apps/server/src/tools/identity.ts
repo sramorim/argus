@@ -99,10 +99,22 @@ registerTool({
       } catch { baselines.set(p.id, { status: 0, len: -1, marker: '' }); }
     });
 
+    /*
+     * `GITHUB_TOKEN` é do dono do serviço (Environment no Render), não do
+     * utilizador que pesquisa. A API pública do GitHub permite 60 pedidos por
+     * hora por endereço IP; com um token o limite sobe para 5000. Sem token a
+     * ferramenta continua a funcionar — só passa a poder esgotar o limite
+     * partilhado, e nesse caso o GitHub devolve 403 e a linha de fonte diz
+     * exatamente isso. Nunca se inventa um resultado para tapar a falha.
+     */
+    const ghToken = (process.env.GITHUB_TOKEN ?? '').trim();
+    const cabecalhos = (p: { id: string }): Record<string, string> =>
+      p.id === 'github' && ghToken ? { authorization: `Bearer ${ghToken}` } : {};
+
     const results = await Promise.all(PLATFORMS.map(async (p) => {
       const url = p.url(user);
       try {
-        const r = await safeFetch(url, { timeoutMs: 10_000, maxBytes: 900_000 });
+        const r = await safeFetch(url, { timeoutMs: 10_000, maxBytes: 900_000, headers: cabecalhos(p) });
         return { p, r };
       } catch (e) {
         return { p, r: null, err: String((e as Error).message) };
@@ -120,6 +132,11 @@ registerTool({
           try { perfil = (JSON.parse(r.body) as { html_url?: string }).html_url ?? url; } catch { /* resposta inesperada */ }
           log.ok(p.id, p.label, url, r.ms, 1);
           found[p.id] = { label: p.label, url: perfil, conf: 'confirmed', via: 'API oficial' };
+        } else if (p.id === 'github' && r.status === 403 && ghToken) {
+          // Token presente e recusado: diz-se o que é, sem esconder a linha.
+          log.empty(p.id, p.label, url, r.ms, 'GitHub recusou o token do servidor (403) — a chave pode ter expirado');
+        } else if (p.id === 'github' && r.status === 403) {
+          log.empty(p.id, p.label, url, r.ms, 'GitHub limitou os pedidos sem chave (60/hora por IP) — configure GITHUB_TOKEN no servidor');
         } else { log.empty(p.id, p.label, url, r.ms, 'perfil inexistente (HTTP ' + r.status + ')'); }
         continue;
       }

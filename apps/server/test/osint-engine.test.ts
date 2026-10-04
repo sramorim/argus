@@ -129,18 +129,18 @@ ok(t?.minPlan === 'free' && t.freeTier === true, 'gratuita no plano free (CLIs l
 ok(t?.legalGate === 'lgpd', 'gate legal LGPD');
 
 // valida antes de correr qualquer processo
-const semAlvo = await t!.run({ alvo: '' }, { userId: 'u', plan: 'free', byok: {} });
+const semAlvo = await t!.run({ alvo: '' }, { userId: 'u', plan: 'free' });
 ok(semAlvo.findings.some((f) => f.group === 'validacao'), 'alvo em falta: valida sem tocar em nenhum binário');
-const comEspaco = await t!.run({ alvo: 'exemplo.com com espaco' }, { userId: 'u', plan: 'free', byok: {} });
+const comEspaco = await t!.run({ alvo: 'exemplo.com com espaco' }, { userId: 'u', plan: 'free' });
 ok(comEspaco.findings.some((f) => f.group === 'validacao'), 'alvo com espaço: rejeitado');
 
-const incompativel = await t!.run({ alvo: 'example.com', tipo: 'dominio', providers: 'holehe' }, { userId: 'u', plan: 'free', byok: {} });
+const incompativel = await t!.run({ alvo: 'example.com', tipo: 'dominio', providers: 'holehe' }, { userId: 'u', plan: 'free' });
 ok(incompativel.findings.some((f) => f.group === 'provider' && String(f.value).startsWith('INCOMPATIBLE')),
   'provider incompatível reporta INCOMPATIBLE sem executar nada');
 ok(incompativel.log.sources.some((s) => s.id === 'p-osint-holehe' && s.status === 'skipped'),
   'fonte registada como skipped com a razão');
 
-const tipoForcado = await t!.run({ alvo: 'a@b.com', tipo: 'email', providers: 'holehe, ghunt' }, { userId: 'u', plan: 'free', byok: {} });
+const tipoForcado = await t!.run({ alvo: 'a@b.com', tipo: 'email', providers: 'holehe, ghunt' }, { userId: 'u', plan: 'free' });
 ok(tipoForcado.findings.filter((f) => f.group === 'provider').length === 2,
   'dois providers escolhidos = dois estados reportados');
 

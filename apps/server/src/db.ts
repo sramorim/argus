@@ -34,6 +34,13 @@ CREATE TABLE IF NOT EXISTS users (
   created_at TEXT NOT NULL,
   is_admin INTEGER NOT NULL DEFAULT 0
 );
+-- role e plan_expires entram por migracao (ver addColumn mais abaixo):
+--   role          'admin' | 'free' | 'pro' — escalão, com 'admin' a marcar quem
+--                 opera o serviço. Um Pro Vitalício é role 'pro' com
+--                 plan_expires NULL.
+--   plan_expires  data em que o plano acaba. NULL = vitalício (nunca expira).
+--                 O SQLite não admite CHECK numa coluna acrescentada depois, por
+--                 isso o enumerado e validado em security.ts e aqui so se grava.
 CREATE TABLE IF NOT EXISTS sessions (
   token_hash TEXT PRIMARY KEY,
   user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -119,6 +126,30 @@ CREATE INDEX IF NOT EXISTS idx_nodes_inv ON nodes(inv_id);
 CREATE INDEX IF NOT EXISTS idx_edges_inv ON edges(inv_id);
 CREATE INDEX IF NOT EXISTS idx_invs_user ON investigations(user_id, updated_at);
 CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
+
+-- Créditos monthly por utilizador e ferramenta (modelo híbrido DataLikers).
+--
+-- Uma linha por (utilizador, ferramenta):
+--   used_this_month  consultas já feitas este mês com a chave PARTILHADA
+--   limit_month      limite mensal; NULL = o do plano (dá para subir a alguém)
+--   custom_key       a chave do próprio utilizador — CIFRADA, nunca em claro
+--   periodo          'AAAA-MM' a que used_this_month se refere. Sem esta coluna
+--                    "este mês" não é representável: em dia 1 o contador tinha de
+--                    valer por uma linha que não diz que mês é.
+--
+-- A chave e guardada cifrada com a mesma cifra das chaves BYOK
+-- (AES-256-GCM derivada de ARGUS_SECRET). A coluna chama-se custom_key por
+-- ser o nome do campo, mas o que la esta dentro e ciphertext.
+CREATE TABLE IF NOT EXISTS user_quotas (
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  tool TEXT NOT NULL,
+  used_this_month INTEGER NOT NULL DEFAULT 0,
+  limit_month INTEGER,
+  custom_key TEXT,
+  periodo TEXT NOT NULL DEFAULT '',
+  updated_at TEXT NOT NULL,
+  PRIMARY KEY (user_id, tool)
+);
 `);
 
 // ---------- migrações incrementais ----------
@@ -143,6 +174,11 @@ addColumn('investigations', 'tools', 'TEXT');
 addColumn('investigations', 'plano', 'TEXT');
 addColumn('investigations', 'progresso', 'TEXT');
 addColumn('users', 'suspended', 'INTEGER NOT NULL DEFAULT 0');
+// Papel e validade do plano. `role` guarda o escalão ('admin'|'free'|'pro');
+// `plan_expires` é a data de fim, e NULL é o que distingue um Pro Vitalício de
+// um Pro com prazo.
+addColumn('users', 'role', "TEXT NOT NULL DEFAULT 'free'");
+addColumn('users', 'plan_expires', 'TEXT');
 
 // ---------- statements preparadas em cache ----------
 // `db.prepare()` reconstrói e recompila a cada chamada. Numa rota quente (quota,

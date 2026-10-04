@@ -146,10 +146,10 @@ ok(t?.fields.length === 4 && t.fields[0]?.name === 'alvo', 'quatro campos, alvo 
 ok(t?.minPlan === 'free' && t.freeTier === true, 'gratuita no plano free (sem chave não gasta nada)');
 ok(t?.legalGate === 'lgpd', 'gate legal LGPD');
 
-const semAlvo = await t!.run({ alvo: '' }, { userId: 'u', plan: 'free', byok: {} });
+const semAlvo = await t!.run({ alvo: '' }, { userId: 'u', plan: 'free' });
 ok(semAlvo.findings.some((f) => f.group === 'validacao'), 'alvo em falta: valida sem sair da cadeia');
 
-const run = await t!.run({ alvo: '@exemplo' }, { userId: 'u', plan: 'free', byok: {} });
+const run = await t!.run({ alvo: '@exemplo' }, { userId: 'u', plan: 'free' });
 const txt = JSON.stringify(run.findings) + JSON.stringify(run.log.sources) + JSON.stringify(run.notes);
 ok(run.findings.filter((f) => f.group === 'actor').length === 8, 'oito actors reportados por estado',
   String(run.findings.filter((f) => f.group === 'actor').length));
@@ -163,13 +163,13 @@ ok(!txt.includes('Bearer') && !/token=[A-Za-z0-9]/.test(txt), 'nenhuma credencia
 ok((run.notes ?? []).some((n) => n.includes('APIFY_API_TOKEN')), 'notes explicam o que falta');
 
 const soUm = await t!.run({ alvo: '@exemplo', actors: 'apify/instagram-scraper', confirmarCusto: 'sim' },
-  { userId: 'u', plan: 'free', byok: {} });
+  { userId: 'u', plan: 'free' });
 ok(soUm.findings.filter((f) => f.group === 'actor').length === 1, 'seleção por actorId: um só');
 ok(soUm.findings.filter((f) => f.group === 'actor').every((f) => String(f.value).startsWith('NOT_CONFIGURED')),
   'continua a recusar sem chave, mesmo com custo confirmado');
 
 const soTweet = await t!.run({ alvo: '@exemplo', actors: 'apidojo/tweet-scraper' },
-  { userId: 'u', plan: 'free', byok: {} });
+  { userId: 'u', plan: 'free' });
 ok((soTweet.notes ?? []).some((n) => n.includes('apidojo/tweet-scraper') && n.includes('indisponível via API')),
   'tweet-scraper: a nota de indisponibilidade via API na conta Free aparece antes de qualquer pedido');
 

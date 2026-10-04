@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { api, type Plan, type User, CONTACTO, useContacto, pedidoPlanoLink } from '../api';
 import { Icon } from '../components/Icons';
 import { Modal, Note, Skeleton, useToast } from '../components/ui';
+import PagamentoPix from '../components/PagamentoPix';
 
 export default function Plans({ user }: { user: User }) {
   const [plans, setPlans] = useState<Plan[] | null>(null);
@@ -37,9 +38,10 @@ export default function Plans({ user }: { user: User }) {
             transferência — é uma decisão de produto, não uma limitação técnica.
           </Note>
           <div className="t-sm muted" style={{ display: 'grid', gap: 6 }}>
-            <p><b>1.</b> Escolhes o plano e abres o WhatsApp com a mensagem já escrita.</p>
-            <p><b>2.</b> Confirmamos o pagamento e mudamos o plano na base de dados.</p>
-            <p><b>3.</b> Recarregas a página: o plano, as cotas e as ferramentas trancadas mudam logo.</p>
+            <p><b>1.</b> Escolhes o plano e pagas por Pix (a chave e o QR aparecem no ecrã).</p>
+            <p><b>2.</b> Envia o comprovante no WhatsApp — a mensagem já vai escrita com o teu email.</p>
+            <p><b>3.</b> Confirmamos o pagamento e ativamos o plano à mão, na nossa administração.</p>
+            <p><b>4.</b> Recarregas a página: o plano, as cotas e as ferramentas destrancam logo.</p>
           </div>
           <div>
             {wa && <a className="btn btn-quiet" href={wa.link} target="_blank" rel="noopener noreferrer">
@@ -77,21 +79,29 @@ export default function Plans({ user }: { user: User }) {
             <p className="t-sm muted">
               {ask.priceBRL === 0
                 ? 'O plano Free é o teu plano atual.'
-                : `${ask.name} — R$ ${ask.priceBRL.toFixed(2).replace('.', ',')} por mês, sem taxa de adesão.`}
+                : `${ask.name} — R$ ${ask.priceBRL.toFixed(2).replace('.', ',')}${ask.pricePeriod === 'unico' ? ' pagamento único, vitalício.' : ' por mês.'}`}
             </p>
             <ul className="plan-perks" style={{ marginTop: 12 }}>
               {ask.perks.map((k) => <li key={k}>{k}</li>)}
             </ul>
+
+            {/* O Pix entra aqui, e só aqui: dentro do pedido de ativação. Não há
+                gateway de pagamento, e a chave não está escrita no código — vem
+                do servidor (PIX_KEY). */}
+            {ask.priceBRL > 0 && wa?.pix && (
+              <PagamentoPix
+                chave={wa.pix}
+                preco={ask.priceBRL}
+                vitalicio={ask.pricePeriod === 'unico'}
+                numero={wa.whatsapp}
+                email={user.email}
+              />
+            )}
+
             <Note kind="warn">
-              A cobrança continua a ser combinada diretamente connosco. Nenhum número de cartão
-              passa por este site.
+              Nenhum cartão passa por este site. A ativação é confirmada à mão, depois de vermos
+              o comprovante.
             </Note>
-            {/* O botão abre o WhatsApp com o pedido já escrito. Nada é "registado"
-                no servidor: quem ativa o plano é a pessoa do outro lado, depois de
-                confirmar a transferência. */}
-            <p className="t-xs dim" style={{ marginTop: 12 }}>
-              Ao carregar, abrimos o WhatsApp com o pedido escrito. Fica a decisão de enviar.
-            </p>
           </>
         )}
       </Modal>
@@ -106,7 +116,7 @@ function PlanCardView({ p, current, onAsk }: { p: Plan; current: boolean; onAsk:
       <div className="plan-name">{p.name}</div>
       <div className="plan-price">
         {p.priceBRL === 0 ? 'Grátis' : `R$ ${p.priceBRL.toFixed(2).replace('.', ',')}`}
-        {p.priceBRL > 0 && <small> /mês</small>}
+        {p.priceBRL > 0 && <small>{p.pricePeriod === 'unico' ? ' vitalício' : ' /mês'}</small>}
       </div>
       <div className="plan-note">{p.highlight}</div>
       <ul className="plan-perks">

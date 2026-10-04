@@ -32,7 +32,6 @@ export interface ToolDef {
 export interface ToolCtx {
   userId: string;
   plan: PlanId;
-  byok: Record<string, string>;
 }
 
 const registry = new Map<string, ToolDef>();

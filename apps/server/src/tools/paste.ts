@@ -69,7 +69,10 @@ registerTool({
     }
 
     // Breach por BYOK — a parte que precisa de chave do utilizador.
-    const key = ctx.byok['leaklookup'];
+    // A chave do Leak-Lookup é do dono do serviço, não do utilizador que
+    // pesquisa: uma variável no ambiente do servidor. Sem ela, a parte de
+    // brechas é omitida e as de paste/código continuam a correr.
+    const key = (process.env.LEAKLOOKUP_API_KEY ?? '').trim();
     if (key) {
       const type = isEmail ? 'email_address' : 'username';
       const url = `https://leak-lookup.com/api/search?key=${encodeURIComponent(key)}&type=${type}&query=${encodeURIComponent(term)}`;

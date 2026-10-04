@@ -167,6 +167,15 @@ export const config = {
     whatsapp: CONTACTO_WHATSAPP,
     label: CONTACTO_LABEL,
   },
+  /*
+   * Chave Pix de recebimento.
+   *
+   * NÃO é um segredo: é mostrada ao cliente, copiada por ele e transformada em
+   * QR code. O que não pode é estar escrita à mão no frontend — aí qualquer
+   * corrigimento punha o cliente a pagar para a pessoa errada. Vem do ambiente
+   * e chega ao browser por `/api/contact`.
+   */
+  pix: str('PIX_KEY') ?? '',
   // A marca é "SR. Amorim" (com ponto). O nome legal da pessoa fica no
   // ARGUS_AUTHOR_LEGAL, que não é mostrado no site.
   autor: {
@@ -211,6 +220,7 @@ export function configReport(tools: number): string {
     `cookie=${config.cookie.name} secure=${config.cookie.secure} samesite=${config.cookie.sameSite} ${config.cookie.maxAgeDays}d`,
     `origens=${config.allowedOrigins.length ? config.allowedOrigins.join(', ') : 'mesma origem (sem CORS)'}`,
     `contacto=${config.contacto.label} wa.me/${config.contacto.whatsapp}`,
+    `pix=${config.pix ? 'definida' : 'EM FALTA (PIX_KEY)'}`,
     `autor=${config.autor.copyright}`,
     `rate_limit=login ${config.rateLimit.authMax} + registo ${config.rateLimit.registerMax} por ${config.rateLimit.windowMin}min`,
     `trust_proxy=${config.trustProxy}`,

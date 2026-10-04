@@ -6,7 +6,12 @@ export interface Plan {
   id: PlanId;
   name: string;
   priceBRL: number;
-  pricePeriod: 'mensal' | 'anual';
+  /**
+   * Como o preço é cobrado. `'unico'` é pagamento único: paga-se uma vez e o
+   * plano não expira — é o que a coluna `users.plan_expires = NULL` significa
+   * no banco. Não é "anual": não há renovação.
+   */
+  pricePeriod: 'mensal' | 'anual' | 'unico';
   dailyRuns: number;
   burstRuns: number;
   maxItems: number;
@@ -41,16 +46,19 @@ export const PLANS: Record<PlanId, Plan> = {
   pro: {
     id: 'pro',
     name: 'Pro',
-    priceBRL: 39.9,
-    pricePeriod: 'mensal',
+    priceBRL: 67.9,
+    // Pagamento único, vitalício. A ativação continua a ser manual, via
+    // WhatsApp, depois de confirmado o Pix.
+    pricePeriod: 'unico',
     dailyRuns: 300,
     burstRuns: 8,
     maxItems: 500,
     graphHops: 3,
     investigations: 50,
     concurrent: 3,
-    highlight: 'Para quem investiga a serio.',
+    highlight: 'Pagamento unico, vitalicio. Sem mensalidade, sem renovacao.',
     perks: [
+      'Vitalicio: paga-se uma vez',
       '300 execucoes por dia',
       '8 execucoes seguidas (burst)',
       '500 itens por resultado',

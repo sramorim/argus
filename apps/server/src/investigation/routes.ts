@@ -26,7 +26,6 @@ import {
 
 export interface DepsPlano {
   /** Chaves BYOK do utilizador, para as ferramentas que as precisam. */
-  byokFor: (userId: string) => Record<string, string>;
   /** Limitador de execuções por minuto (o mesmo das rotas de run). */
   limite: (c: any, userId: string) => Response | null;
 }
@@ -140,7 +139,7 @@ export function criarPlanoRouter(deps: DepsPlano): Hono {
       plano,
       progresso,
       inv,
-      ctx: { userId: u.userId, plan: u.plan, byok: deps.byokFor(u.userId) },
+      ctx: { userId: u.userId, plan: u.plan },
       confirmarCusto: b.confirmarCusto === true,
       reexecutar: b.reexecutar === true,
       agora: () => new Date().toISOString(),

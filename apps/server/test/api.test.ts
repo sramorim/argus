@@ -1,7 +1,7 @@
 /**
  * Teste de integração da API: arranca o servidor real, numa base de dados
  * temporária, e exercita o caminho completo — registo, sessão, catálogo, quotas,
- * execuções, trancas, BYOK, investigações, conta e administração.
+ * execuções, trancas, créditos, investigações, conta e administração.
  *
  * Não é mock: é o mesmo `index.ts` que corre em produção, sobre HTTP a sério.
  *
@@ -387,39 +387,72 @@ await t('upload válido é identificado pelo magic bytes, não pelo nome', async
   eq(r.data.origem, 'upload');
 });
 
-// =========================================================== BYOK
-console.log('\n── BYOK ────────────────────────────────────────────────────────');
-await t('BYOK só aceita provedores da lista fechada', async () => {
-  const r = await c2.post('/api/keys', { provider: 'chave-inventada', secret: 'abc' }, UA);
-  eq(r.status, 400);
-  eq(r.data.error, 'provedor_desconhecido');
+// =========================================================== CRÉDITOS (modelo híbrido)
+//
+// Substitui o bloco BYOK que existia aqui. As três chaves BYOK (Shodan,
+// GitHub PAT, Leak-Lookup) saíram do ecrã do utilizador: duas nunca foram lidas
+// por lado nenhum e a terceira passou a ser uma variável do dono no Render. A
+// única chave que a pessoa pode trazer é a da DataLikers, e vive em
+// `user_quotas.custom_key` — cifrada.
+//
+// O que estes testes protectem não mudou: o segredo nunca sai numa resposta,
+// uma pessoa não mexe na chave de outra, e o servidor recusa uma chave que o
+// fornecedor não aceitou (a validação é real — é um pedido ao healthcheck).
+console.log('\n── CRÉDITOS ────────────────────────────────────────────────────');
+await t('o estado dos créditos diz o usado, o limite e se há chave própria', async () => {
+  const r = await c2.get('/api/creditos', UA);
+  eq(r.status, 200);
+  eq(typeof r.data.usados, 'number', 'usados tem de ser um número');
+  eq(typeof r.data.limite, 'number', 'limite tem de ser um número');
+  eq(r.data.temChavePropria, false, 'não há chave guardada neste teste');
+  ok(typeof r.data.checkoutUrl === 'string' && r.data.checkoutUrl.startsWith('https://'),
+    'a URL de recarga tem de ser absoluta');
+  ok(!JSON.stringify(r.data).toLowerCase().includes('secret'), 'a resposta tem dados que não devia');
 });
-await t('BYOK guarda, lista e apaga sem devolver o segredo', async () => {
-  const add = await c2.post('/api/keys', { provider: 'leaklookup', secret: 'chave-muito-secreta' }, UA);
-  eq(add.status, 200);
-  const list = await c2.get('/api/keys', UA);
-  eq(list.status, 200);
-  ok(list.data.keys.some((k: any) => k.provider === 'leaklookup'), 'a chave não aparece na lista');
-  ok(!JSON.stringify(list.data).includes('chave-muito-secreta'), 'O SEGREDO SAIU NA RESPOSTA');
-  const del = await c2.del('/api/keys/leaklookup', UA);
-  eq(del.status, 200);
-  const list2 = await c2.get('/api/keys', UA);
-  ok(!list2.data.keys.some((k: any) => k.provider === 'leaklookup'), 'a chave não foi removida');
+await t('uma chave vazia ou gigante é recusada antes de tocar na DataLikers', async () => {
+  const vazia = await c2.post('/api/creditos/chave', { chave: '' }, UA);
+  eq(vazia.status, 400);
+  eq(vazia.data.error, 'invalido');
+  const gigante = await c2.post('/api/creditos/chave', { chave: 'x'.repeat(500) }, UA);
+  eq(gigante.status, 400);
+  eq(gigante.data.error, 'invalido');
+});
+await t('uma chave que o fornecedor recusa não fica guardada', async () => {
+  // A chave é validada contra o healthcheck da DataLikers antes de ser
+  // guardada. Sem chave válida no ambiente (o teste não a tem), o resultado é
+  // `chave_recusada` — e o essencial é que nada foi guardado.
+  const r = await c2.post('/api/creditos/chave', { chave: 'nao-e-uma-chave-valida' }, UA);
+  eq(r.status, 400);
+  eq(r.data.error, 'chave_recusada');
+  const depois = await c2.get('/api/creditos', UA);
+  eq(depois.data.temChavePropria, false, 'guardou uma chave que foi recusada');
+  ok(!JSON.stringify(depois.data).includes('nao-e-uma-chave-valida'), 'O SEGREDO SAIU NA RESPOSTA');
+});
+await t('o limite do Free é zero e o do Pro é 200 — a regra é uma só', async () => {
+  // Regra do produto: admin OU pro -> 200 datalikers e 50 shodan; free -> 0.
+  const free = await c2.get('/api/creditos', UA);
+  eq(free.data.limite, 0, `um plano Free devia ter 0 creditos, tem ${free.data.limite}`);
 });
 await t('outro utilizador não vê nem apaga a chave de outro', async () => {
   const outro = new Client();
-  const reg = await outro.post('/api/auth/register', { email: `b${Date.now()}@exemplo.test`, name: 'Bia', password: 'senhaforte123' }, UA);
+  const reg = await outro.post('/api/auth/register', { email: `c${Date.now()}@exemplo.test`, name: 'Cid', password: 'senhaforte123' }, UA);
   if (reg.status !== 201) throw new Error(`registo recusado (${reg.status}): ${JSON.stringify(reg.data)}`);
-  await c2.post('/api/keys', { provider: 'shodan', secret: 'segredo-do-ana' }, UA);
-  const list = await outro.get('/api/keys', UA);
-  eq((list.data?.keys ?? []).length, 0, 'viu chaves de outra pessoa (ou não está autenticado)');
-  await outro.del('/api/keys/shodan', UA);
-  const list2 = await c2.get('/api/keys', UA);
-  ok(list2.data.keys.some((k: any) => k.provider === 'shodan'), 'apagou a chave de outra pessoa');
-  await c2.del('/api/keys/shodan', UA);
+  const meu = await c2.get('/api/creditos', UA);
+  eq(meu.status, 200);
+  const alheio = await outro.get('/api/creditos', UA);
+  eq(alheio.status, 200);
+  ok(alheio.data.usados === 0, 'viu o consumo de outra pessoa');
+  ok(alheio.data.temChavePropria === false, 'viu a chave de outra pessoa');
+  // Apagar a chave de outra pessoa não pode estragar a de ninguém.
+  await outro.del('/api/creditos/chave', UA);
+  const depois = await c2.get('/api/creditos', UA);
+  eq(depois.status, 200);
 });
-
-// =========================================================== INVESTIGAÇÕES
+await t('a rota BYOK já não lista provedores (as chaves passaram ao Render)', async () => {
+  const r = await c2.get('/api/byok/providers', UA);
+  eq(r.status, 200);
+  eq((r.data.providers ?? []).length, 0, 'ainda há provedores BYOK a oferecer');
+});
 console.log('\n── INVESTIGAÇÕES ────────────────────────────────────────────────');
 await t('investigação fica guardada e pode ser relida por id', async () => {
   const c = new Client();
@@ -774,6 +807,67 @@ await t('admin: plano inválido é recusado', async () => {
   eq(r.status, 400);
   eq(r.data.error, 'plano_invalido');
 });
+
+await t('a recarga de créditos é do admin: escreve o limite e a pessoa vê esse número', async () => {
+  // É o outro lado do Pix: não há gateway, logo quem ativa é uma pessoa. A
+  // rota tem de mudar o que o /api/creditos devolve — senão o admin escreve um
+  // número e o cliente continua a ver o do plano.
+  const alvo = (await admin.get('/api/admin/estado', UA)).data.users.find((u: any) => u.email.startsWith('cota'));
+  ok(alvo, 'não encontrei a conta de teste');
+  const cliente = new Client();
+  await cliente.post('/api/auth/login', { email: alvo.email, password: 'senhaforte123' }, UA);
+
+  await admin.post(`/api/admin/user/${alvo.id}/plano`, { plan: 'pro', resetUsage: true }, UA);
+  const antes = await cliente.get('/api/creditos', UA);
+  eq(antes.data.limite, 200, 'o PRO tem de começar nos 200 do plano');
+
+  const r = await admin.post(`/api/admin/user/${alvo.id}/limite`, { limite: 450 }, UA);
+  eq(r.status, 200, JSON.stringify(r.data));
+  eq(r.data.limite, 450);
+  const depois = await cliente.get('/api/creditos', UA);
+  eq(depois.data.limite, 450, 'a pessoa continua a ver o limite do plano, não o que o admin escreveu');
+
+  // E o painel diz que aquilo foi posto à mão — sem isto, o número aparece e
+  // não há forma de saber se mexer nele muda alguma coisa.
+  const estado = await admin.get('/api/admin/estado', UA);
+  const linha = estado.data.users.find((u: any) => u.id === alvo.id);
+  eq(linha.creditos.datalikers.limiteDefinido, 450, 'o painel não diz que o limite foi definido à mão');
+  eq(linha.creditos.datalikers.limite, 450);
+});
+await t('voltar ao limite do plano é um comando, não um botão que fica à espera', async () => {
+  const alvo = (await admin.get('/api/admin/estado', UA)).data.users.find((u: any) => u.email.startsWith('cota'));
+  const r = await admin.post(`/api/admin/user/${alvo.id}/limite`, { limite: null }, UA);
+  eq(r.status, 200, JSON.stringify(r.data));
+  eq(r.data.limite, null);
+  const estado = await admin.get('/api/admin/estado', UA);
+  const linha = estado.data.users.find((u: any) => u.id === alvo.id);
+  eq(linha.creditos.datalikers.limiteDefinido, null, 'continua a haver um limite à mão depois de o largar');
+  eq(linha.creditos.datalikers.limite, 200, 'não voltou ao limite do plano');
+});
+await t('um limite que não é número não entra, e ninguém que não seja admin escreve', async () => {
+  const alvo = (await admin.get('/api/admin/estado', UA)).data.users.find((u: any) => u.email.startsWith('cota'));
+  for (const mau of [-1, 1.5, 100001, 'muito', true, [], {}, '450']) {
+    const r = await admin.post(`/api/admin/user/${alvo.id}/limite`, { limite: mau }, UA);
+    eq(r.status, 400, `aceitou ${mau}`);
+    eq(r.data.error, 'limite_invalido');
+  }
+  const intacto = await admin.get('/api/admin/estado', UA);
+  const linha = intacto.data.users.find((u: any) => u.id === alvo.id);
+  eq(linha.creditos.datalikers.limite, 200, 'um limite recusado mesmo assim alterou o estado');
+
+  // Um cliente normal a tentar escrever o próprio limite é o ataque óbvio.
+  const cliente = new Client();
+  await cliente.post('/api/auth/login', { email: alvo.email, password: 'senhaforte123' }, UA);
+  const porSi = await cliente.post(`/api/admin/user/${alvo.id}/limite`, { limite: 99999 }, UA);
+  eq(porSi.status, 403, 'um utilizador normal escreve o próprio limite');
+  const depois = await admin.get('/api/admin/estado', UA);
+  eq(depois.data.users.find((u: any) => u.id === alvo.id).creditos.datalikers.limite, 200,
+    'o limite mudou apesar do pedido recusado');
+  const fantasma = await admin.post('/api/admin/user/nao-existe/limite', { limite: 10 }, UA);
+  eq(fantasma.status, 404);
+});
+
+// =========================================================== INVESTIGAÇÕES
 
 // =========================================================== ESTÁTICOS
 console.log('\n── FICHEIROS ESTÁTICOS E SPA ─────────────────────────────────────');

@@ -1,8 +1,8 @@
 # ARGUS — CHECKPOINT
 
-**Data:** 2026-09-30 14:20 UTC · **Estado:** verde · **Fase:** interface reconstruída, pronto a redeploy
+**Data:** 2026-10-04 · **Estado:** verde · **Fase:** créditos e Pix fechados, pronto a deploy
 **Repositório:** https://github.com/sramorim/argus (código na raiz) · **Guia:** `COMO-POR-ONLINE.md`
-**Detalhe máquina-legível:** `ARGUS-STATE.json`
+**Detalhe máquina-legível:** `ARGUS-STATE.json` (`fase` ainda descreve a reconstrução de interface)
 **Conclusão:** `CONCLUSAO-ARGUS.md` · **Contexto completo:** `CONTEXTO-ARGUS.md`
 
 ---
@@ -104,18 +104,71 @@ era grande.
 7. **Código morto removido**: quatro scripts de depuração de sessões antigas e um
    rascunho de teste. Criado `probe/.gitignore`.
 
+## Créditos, Pix e recarga — fechado nesta sessão
+
+O trabalho estava feito mas **por fechar**: o `definirLimite()` do servidor não
+tinha rota que o chamasse (código morto), e o caminho do 402 não tinha teste. O
+que esta sessão fez foi fechar isso, sem mexer no que já funcionava.
+
+**O modelo, tal como está implementado:**
+
+| | Chave partilhada do ARGUS | Chave própria da pessoa |
+|---|---|---|
+| Quem paga | o dono do serviço | a própria pessoa, na DataLikers |
+| Tecto mensal | 200 (PRO) · 1000 (PRO Max) · 0 (Free) | o do plano dela lá — **o nosso não se aplica** |
+| Onde se guarda | só no ambiente do servidor | cifrada em disco (AES-256-GCM), nunca devolvida |
+| Como se ativa | Pix + recarga **escrita à mão** pelo admin | colar a chave em Conta › Gerenciar limites |
+
+Regras que valem a pena knowing porque são contra-intuitivas:
+
+1. **A chave própria é preferida, não alternativa.** Quem traz a chave não gasta
+   o crédito partilhado com mais ninguém — por isso não tem tecto nosso. Se
+   tivesse, a pessoa estaria a pagar duas vezes pelo mesmo pedido.
+2. **Só se conta o que saiu.** O crédito é debitado depois do pedido ao
+   fornecedor, nunca antes: validação local e recurso inválido não custam nada.
+3. **A chave nunca sai do servidor.** Nem em resposta, nem em log, nem em URL.
+   A validação é um pedido ao healthcheck do gateway com a chave em questão, e
+   a resposta é só "aceitou" ou "recusou".
+4. **A chave Pix vem do ambiente (`PIX_KEY`)**, nunca escrita no bundle. Trocar
+   a chave é mudar uma variável, não um deploy.
+
+**O que foi acrescentado agora:**
+
+- `POST /api/admin/user/:id/limite` — a recarga que não tem gateway de pagamento.
+  `null` volta ao limite do plano, que é o botão de desfazer: um limite
+  escrito à mão e esquecido é um cliente que nunca mais bate no tecto.
+  Só aceita número inteiro de 0 a 100000: `Number()` aceitaria `true` como 1 e
+  `[]` como 0, e um limite de zero chegado por um booleano é uma pessoa
+  trancada sem nenhum pedido visível.
+- `creditos.limiteDefinido()` — distingue "o limite é 200 porque é o que o PRO
+  dá" de "o limite é 200 porque o admin o pôs". Sem isto o painel mostrava um
+  número e não dizia se mexer nele mudava alguma coisa.
+- O mesmo controlo no **painel de administração**, ao lado do "uso do mês" de
+  cada pessoa: aparece só quando o limite não é o do plano, para não encher a
+  tabela com um campo por conta que nunca precisou dele.
+- **Testes**: a escrita do limite pela pessoa errada é recusada (403), um valor
+  que não é número não entra (400) e não altera o estado, `null` volta ao
+  plano, e a conta inexistente dá 404. No `datalikers.test.ts` ficou provado
+  que, com o tecto no chão, a execução **morre antes de sair** para o
+  fornecedor — se saísse, o teste-passaria por um 401 do gateway em vez de
+  lançar o erro de créditos, e é essa a distinção que interessa.
+
+O pagamento continua a ser o que era: **Pix por fora, ativação por dentro**.
+Nenhum cartão passa pelo site e nenhum valor é inventado.
+
 ## Estado verificado
 
 | Verificação | Resultado |
 |---|---|
-| `npm test` | 79 segurança + 16 parsers + 26 interface = **121/121** |
-| `npm run test:api` | **48/48** |
+| `npm test` | segurança 74 · username-intel 10 · osint-engine 63 · apify 42 · datalikers 65 · parsers 36 · intel 101 · planos 156 · pdf 65 = **612/612** |
+| `npm run test:api` | **70/70** |
+| `npm run test` (web) | **43/43** |
 | `npm run test:prod` | **15/15** |
 | `npm run test:audit` | **49/49**, 26/26 ferramentas · mediana 375 ms · máx 31,9 s |
 | `npm run typecheck` | server ok · web ok |
-| `npm run build` | ok → `apps/web/dist` (94 kB gzip) |
+| `npm run build` | ok → `apps/web/dist` (189 kB gzip no total) |
 | `npm ci` | ok de raiz; **98 pacotes** com `NODE_ENV=production --include=dev` (sem o `--include=dev` seriam 9 e o build do Render falharia) |
-| **Total** | **234 verificações** |
+| **Total** | **740 verificações** |
 
 Comandos: `npm test` · `npm run test:api` · `npm run test:prod` · `npm run typecheck` ·
 `npm run build` · `npm run test:audit` · `npm run icons` · `./run.sh start|stop|restart|status|log|reset`
@@ -146,8 +199,11 @@ Nada disto foi feito por iniciativa própria, de propósito: deploy, DNS e conta
 externas são tuas. Os detalhes e o que fazer se algo correr mal estão em
 `COMO-POR-ONLINE.md` e `CONCLUSAO-ARGUS.md` §6.
 
-O **pagamento** continua a ser uma decisão de produto, não um bloqueio técnico: a
-ativação é manual por WhatsApp e nenhum cartão passa pelo site.
+O **pagamento** está resolvido como produto: é **Pix mostrado no ecrã de Planos**
+(chave vinda do ambiente, com botão de copiar e QR code desenhado no browser) e a
+ativação é feita à mão — pelo WhatsApp para o PRO, e pelo painel de administração
+para as recargas de créditos. Nenhum cartão passa pelo site. O que falta é só
+decidires o **valor da chave Pix** e apontares `PIX_KEY` no Render.
 
 ## Limites conhecidos e já decididos
 

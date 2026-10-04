@@ -28,6 +28,7 @@ import { resolveFile, FileError, MAX_FILE_BYTES, sniff } from './net/upload.ts';
 import { saudeSistema } from './health.ts';
 import intelRoutes from './intel/routes.ts';
 import { criarPlanoRouter } from './investigation/routes.ts';
+import * as creditos from './creditos.ts';
 import { SourceLog, type Finding } from './net/provenance.ts';
 
 // importa ficheiros de ferramentas para registar no registry
@@ -70,20 +71,21 @@ function setSessionCookie(c: any, token: string, userId: string, ua: string): vo
 }
 
 
-function byokFor(userId: string): Record<string, string> {
-  const rows = q('SELECT provider, secret_enc FROM user_keys WHERE user_id = ?').all(userId) as any[];
-  const out: Record<string, string> = {};
-  for (const r of rows) { try { out[r.provider] = decryptSecret(r.secret_enc); } catch { /* chave de outra sessão de cifra */ } }
-  return out;
-}
-
-/** Provedores BYOK aceites. Uma lista fechada evita guardar lixo (e usar a
- *  chave de um serviço noutro sítio, que é o erro clássico de BYOK). */
-const BYOK_PROVIDERS: Record<string, { label: string; usedBy: string; doc: string }> = {
-  'leaklookup': { label: 'Leak-Lookup', usedBy: 'Exposição Pública', doc: 'https://leak-lookup.com/api' },
-  'github-pat': { label: 'GitHub (personal access token)', usedBy: 'GitHub OSINT', doc: 'https://github.com/settings/tokens' },
-  'shodan': { label: 'Shodan', usedBy: 'Analisador de IP', doc: 'https://account.shodan.io' },
-};
+/*
+ * Chaves de serviço: são do DONO, não do utilizador.
+ *
+ * Antes havia um ecrã BYOK onde cada utilizador colava a sua chave de Shodan,
+ * GitHub e Leak-Lookup. Duas dessas três nunca foram lidas por lado nenhum
+ * (o código que as usava ficou órfão quando o catálogo foi de 32 para 8
+ * ferramentas) — ou seja, o produto pedia um segredo e não fazia nada com ele.
+ * Shodan, GitHub e Leak-Lookup passaram a ser variáveis de ambiente no Render
+ * (`SHODAN_API_KEY`, `GITHUB_TOKEN`, `LEAKLOOKUP_API_KEY`), configuradas uma
+ * vez pelo dono.
+ *
+ * A única chave que o utilizador pode trazer é a da DataLikers, e essa vive em
+ * Definições › Avançado — fora do caminho principal, porque o caminho principal
+ * é a chave do servidor.
+ */
 
 // ---------- limitadores ----------
 // Login e registo têm contadores separados, porque são ataques diferentes.
@@ -119,8 +121,12 @@ app.post('/api/auth/register', async (c) => {
   if (pass.length > 200) return c.json({ error: 'senha_longa' }, 400);
   if (q('SELECT id FROM users WHERE email = ?').get(email)) return c.json({ error: 'email_em_uso' }, 409);
   const id = randomUUID();
-  q('INSERT INTO users(id,email,name,pass_hash,plan,created_at) VALUES(?,?,?,?,?,?)')
-    .run(id, email, name, newPasswordHash(pass), 'free', new Date().toISOString());
+  // O papel nasce com a conta: 'admin' se o email está na lista do dono
+  // (ARGUS_ADMIN_EMAILS), senão 'free'. Assim não há um passo extra — o
+  // primeiro login do dono já é admin, sem precisar de SSH.
+  const role = ADMIN_EMAILS.has(email) ? 'admin' : 'free';
+  q('INSERT INTO users(id,email,name,pass_hash,plan,created_at,role) VALUES(?,?,?,?,?,?,?)')
+    .run(id, email, name, newPasswordHash(pass), 'free', new Date().toISOString(), role);
   const token = newToken();
   setSessionCookie(c, token, id, c.req.header('user-agent') ?? '');
   return c.json({ ok: true, user: { id, email, name, plan: 'free' } }, 201);
@@ -234,6 +240,10 @@ app.get('/api/contact', (c) => c.json({
   autor: config.autor.legal,
   autorLink: config.autor.link ?? null,
   copyright: config.autor.copyright,
+  // A chave Pix é pública por natureza (é para ser copiada e paga), mas vem
+  // do servidor: escrever um UUID de pagamento no bundle do browser é a forma
+  // mais rápida de cobrar a pessoa errada quando o dono trocar de chave.
+  pix: config.pix || null,
 }));
 
 // ---------- catálogo ----------
@@ -258,8 +268,13 @@ app.get('/api/tools/:id', (c) => {
 });
 
 app.get('/api/plans', (c) => c.json({ plans: PLAN_LIST }));
-app.get('/api/byok/providers', (c) =>
-  c.json({ providers: Object.entries(BYOK_PROVIDERS).map(([id, v]) => ({ id, ...v })) }));
+/*
+ * `/api/byok/providers` mantém-se por compatibilidade e devolve uma lista
+ * vazia: já não há provedores BYOK. O ecrã de Chaves API saiu da navegação —
+ * o que o utilizador pode trazer (a chave da DataLikers) vive em
+ * Definições › Avançado, e o resto são variáveis do dono no Render.
+ */
+app.get('/api/byok/providers', (c) => c.json({ providers: [] }));
 
 // ---------- execução ----------
 app.post('/api/run/:id', async (c) => {
@@ -295,7 +310,7 @@ app.post('/api/run/:id', async (c) => {
   }
 
   try {
-    const run = await executeTool(id, input, { userId: u.userId, plan: u.plan, byok: byokFor(u.userId) });
+    const run = await executeTool(id, input, { userId: u.userId, plan: u.plan });
     return c.json({
       run,
       usage: {
@@ -305,6 +320,14 @@ app.post('/api/run/:id', async (c) => {
     });
   } catch (e: any) {
     if (e?.name === 'QuotaError') return c.json({ error: 'limite', kind: e.kind, msg: e.message }, 429);
+    // Limite do plano de créditos (não o limite diário de execuções): a
+    // resposta traz o X e o Y para o ecrã mostrar "usou X de Y".
+    if (e?.name === 'CreditosEsgotadosError') {
+      return c.json({
+        error: 'limite_plano', usados: e.used, limite: e.limit,
+        checkoutUrl: creditos.checkoutUrl(),
+      }, 402);
+    }
     if (e?.name === 'LockedError' || e instanceof LockedError) return c.json({ error: 'bloqueada', minPlan: e.minPlan }, 402);
     if (e?.name === 'FileError') return c.json({ error: 'ficheiro_invalido', msg: e.message }, 400);
     return c.json({ error: 'erro_execucao', msg: String(e?.message ?? e).slice(0, 200) }, 500);
@@ -361,30 +384,54 @@ async function readJson(c: any): Promise<Record<string, unknown>> {
   }
 }
 
-// ---------- BYOK ----------
-app.get('/api/keys', (c) => {
+// ---------- CRÉDITOS DA DATALIKERS (modelo híbrido) ----------
+/**
+ * Valida uma chave da DataLikers sem a guardar.
+ *
+ * `saude()` da camada de rede já sabe falar com `/sys/healthcheck`; o que
+ * falta é poder passar-lhe uma chave que não está no ambiente. Passa-se um
+ * `env` próprio — o mesmo caminho que a ferramenta usa para a chave própria.
+ */
+async function saudeDataLikersCom(chave: string): Promise<{ status: string; nota: string | null }> {
+  const { saude } = await import('./net/datalikers.ts');
+  return saude({ DATALIKERS_API_KEY: chave }) as unknown as { status: string; nota: string | null };
+}
+
+app.get('/api/creditos', (c) => {
   const u = requireAuth(c);
   if (u instanceof Response) return u;
-  const rows = q('SELECT provider, created_at FROM user_keys WHERE user_id = ? ORDER BY created_at').all(u.userId) as any[];
-  return c.json({ keys: rows.map((r) => ({ ...r, meta: BYOK_PROVIDERS[r.provider] ?? null })) });
+  const e = creditos.estado(u.userId, creditos.TOOL_CREDITOS, u.plan);
+  return c.json({
+    usados: e.usados, limite: e.limite, periodo: e.periodo,
+    temChavePropria: e.temChavePropria, esgotado: e.esgotado,
+    checkoutUrl: creditos.checkoutUrl(), afiliadoUrl: creditos.afiliadoUrl(),
+  });
 });
-app.post('/api/keys', async (c) => {
+/**
+ * Guardar a chave da DataLikers do próprio utilizador.
+ *
+ * É validada ANTES de ser guardada: uma chave errada guardado é uma chave
+ * guardada. A validação é um pedido ao healthcheck do gateway com a chave em
+ * questão — e a chave nunca é devolvida, nem entra na resposta, nem fica no
+ * log: só o facto de ter sido aceite.
+ */
+app.post('/api/creditos/chave', async (c) => {
   const u = requireAuth(c);
   if (u instanceof Response) return u;
   const body = await readJson(c);
-  const provider = String(body.provider ?? '').trim();
-  const secret = String(body.secret ?? '').trim();
-  if (!BYOK_PROVIDERS[provider]) return c.json({ error: 'provedor_desconhecido', msg: `Aceites: ${Object.keys(BYOK_PROVIDERS).join(', ')}` }, 400);
-  if (!secret || secret.length > 400) return c.json({ error: 'invalido' }, 400);
-  q(`INSERT INTO user_keys(id,user_id,provider,secret_enc,created_at) VALUES(?,?,?,?,?)
-    ON CONFLICT(user_id,provider) DO UPDATE SET secret_enc=excluded.secret_enc, created_at=excluded.created_at`)
-    .run(randomUUID(), u.userId, provider, encryptSecret(secret), new Date().toISOString());
+  const chave = String(body.chave ?? '').trim();
+  if (!chave || chave.length > 400) return c.json({ error: 'invalido', msg: 'Chave vazia ou demasiado longa.' }, 400);
+  const h = await saudeDataLikersCom(chave);
+  if (h.status !== 'READY') {
+    return c.json({ error: 'chave_recusada', msg: h.nota || 'A DataLikers não aceitou esta chave.' }, 400);
+  }
+  creditos.guardarChavePropria(u.userId, creditos.TOOL_CREDITOS, chave);
   return c.json({ ok: true });
 });
-app.delete('/api/keys/:provider', (c) => {
+app.delete('/api/creditos/chave', (c) => {
   const u = requireAuth(c);
   if (u instanceof Response) return u;
-  q('DELETE FROM user_keys WHERE user_id = ? AND provider = ?').run(u.userId, c.req.param('provider'));
+  creditos.apagarChavePropria(u.userId, creditos.TOOL_CREDITOS);
   return c.json({ ok: true });
 });
 
@@ -463,8 +510,30 @@ function safeJson(s: unknown): any {
 app.get('/api/admin/estado', (c) => {
   const u = requireAdmin(c);
   if (u instanceof Response) return u;
-  const users = q(`SELECT id, email, name, plan, is_admin, suspended, created_at FROM users
-    ORDER BY created_at DESC LIMIT 200`).all() as any[];
+  /*
+   * A lista traz o consumo do mês por pessoa e por ferramenta de créditos.
+   * É uma leitura por utilizador (a base é pequena e a tabela é chave
+   * primária composta), e evita que o painel mostre um número que ninguém
+   * consegue confirmar — o número que o utilizador vê é este.
+   */
+  const brutos = q(`SELECT id, email, name, plan, plan_expires, role, is_admin, suspended, created_at
+    FROM users ORDER BY created_at DESC LIMIT 200`).all() as any[];
+  const users = brutos.map((x) => {
+    const e = creditos.estado(x.id, creditos.TOOL_CREDITOS, x.plan);
+    const s = creditos.estado(x.id, creditos.TOOL_SHODAN, x.plan);
+    return {
+      ...x,
+      creditos: {
+        datalikers: {
+          usados: e.usados, limite: e.limite, temChave: e.temChavePropria,
+          // `null` = segue o plano. O painel precisa disto para saber se o
+          // númeroshown é o do plano ou um que alguém pôs à mão.
+          limiteDefinido: creditos.limiteDefinido(x.id, creditos.TOOL_CREDITOS),
+        },
+        shodan: { usados: s.usados, limite: s.limite },
+      },
+    };
+  });
   const nUsers = (q('SELECT COUNT(*) c FROM users').get() as any).c;
   const nRuns = (q('SELECT COUNT(*) c FROM runs').get() as any).c;
   const nInvs = (q('SELECT COUNT(*) c FROM investigations').get() as any).c;
@@ -478,14 +547,71 @@ app.post('/api/admin/user/:id/plano', async (c) => {
   const body = await readJson(c);
   const plan = String(body.plan ?? '');
   if (!isPlanId(plan)) return c.json({ error: 'plano_invalido' }, 400);
-  const target = q('SELECT id, plan FROM users WHERE id = ?').get(c.req.param('id')) as any;
+  const target = q('SELECT id, plan, is_admin, role FROM users WHERE id = ?').get(c.req.param('id')) as any;
   if (!target) return c.json({ error: 'nao_encontrado' }, 404);
-  q('UPDATE users SET plan = ? WHERE id = ?').run(plan, target.id);
+  /*
+   * `plan_expires` é o que separa um PRO vitalício de um PRO com prazo:
+   * NULL = nunca expira. O parâmetro só vem quando o cliente o manda; se não
+   * vier, o que já estava mantém-se (mudar de plano não apaga a validade).
+   */
+  let expires = target.plan_expires ?? null;
+  if ('planExpires' in body) {
+    const v = body.planExpires;
+    if (v === null || v === '') expires = null;
+    else {
+      const d = Date.parse(String(v));
+      if (!Number.isFinite(d)) return c.json({ error: 'validade_invalida', msg: 'Data de fim inválida.' }, 400);
+      expires = new Date(d).toISOString();
+    }
+  }
+  // O papel segue o plano, exceto para quem é admin: o admin não perde o
+  // papel por mudarem o plano da pessoa.
+  const role = target.is_admin ? 'admin' : (plan === 'free' ? 'free' : 'pro');
+  q('UPDATE users SET plan = ?, plan_expires = ?, role = ? WHERE id = ?')
+    .run(plan, expires, role, target.id);
   // Mudar de plano invalida as decisões de cota em cache (não há cache, mas
   // as sessões leem o plano a cada pedido — nada a fazer). O que se faz é
   // limpar o histórico de usos para o plano novo valer no dia corrente.
   if (body.resetUsage) q('DELETE FROM usage WHERE user_id = ?').run(target.id);
-  return c.json({ ok: true, plan });
+  return c.json({ ok: true, plan, planExpires: expires, role });
+});
+
+/**
+ * Limite mensal de créditos de uma pessoa, para este período.
+ *
+ * É a rota que faz a recarga combinada ao telefone funcionar: não há gateway
+ * de pagamento, logo quem ativa é o admin — à mão, depois de ver o comprovante.
+ * `limite: null` volta ao valor do plano, que é o estado em que ninguém deve
+ * ficar: um limite overriding esquecido é um cliente que nunca mais bate no
+ * tecto queappearalhe na fatura.
+ *
+ * Só a DataLikers: é a única ferramenta com créditos em uso. O Shodan tem
+ * quota provisionada mas nenhuma ferramenta a consome, e aceitar um limite
+ * para ela seria um botão que não faz nada.
+ */
+app.post('/api/admin/user/:id/limite', async (c) => {
+  const u = requireAdmin(c);
+  if (u instanceof Response) return u;
+  const body = await readJson(c);
+  const target = q('SELECT id FROM users WHERE id = ?').get(c.req.param('id')) as any;
+  if (!target) return c.json({ error: 'nao_encontrado' }, 404);
+
+  const bruto = body.limite;
+  if (bruto !== null && bruto !== undefined && bruto !== '') {
+    /*
+     * Só entra um número. `Number(...)` acceptaria `true` como 1 e `[]` como
+     * 0 — e um limite de zero chegado por um booleano é uma pessoa trancada
+     * sem nenhum pedido visível. O `Number.isInteger` fecha o resto (NaN,
+     * 1.5, negativos, valores absurdos).
+     */
+    if (typeof bruto !== 'number' || !Number.isInteger(bruto) || bruto < 0 || bruto > 100000) {
+      return c.json({ error: 'limite_invalido', msg: 'O limite tem de ser um inteiro de 0 a 100000, ou null para voltar ao do plano.' }, 400);
+    }
+    creditos.definirLimite(target.id, creditos.TOOL_CREDITOS, bruto);
+    return c.json({ ok: true, limite: bruto });
+  }
+  creditos.definirLimite(target.id, creditos.TOOL_CREDITOS, null);
+  return c.json({ ok: true, limite: null });
 });
 
 app.post('/api/admin/user/:id/flags', async (c) => {
@@ -553,7 +679,7 @@ app.route('/api/intel', intelRoutes);
 // ---------- plano de investigação (FASE F) ----------
 // Monte depois das rotas de investigação: os caminhos são distintos
 // (`/:id/plan` frente a `/:id`), por isso a ordem não esconde nada.
-app.route('/api/investigations', criarPlanoRouter({ byokFor, limite: limited }));
+app.route('/api/investigations', criarPlanoRouter({ limite: limited }));
 
 
 // ---------- estáticos ----------

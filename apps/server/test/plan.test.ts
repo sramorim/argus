@@ -308,7 +308,7 @@ const inv: InvAlvo = {
   id: 'inv-falsa', user_id: 'u-teste', seed: 'ana', seed_type: 'username',
   title: 'teste', created_at: AGORA, updated_at: AGORA,
 };
-const ctx = { userId: 'u-teste', plan: 'free' as PlanId, byok: {} };
+const ctx = { userId: 'u-teste', plan: 'free' as PlanId };
 
 /** Plano só com a fase Apify (uma ferramenta) e uma entrada inventada. */
 function planoApify(f: Factos): Plano {

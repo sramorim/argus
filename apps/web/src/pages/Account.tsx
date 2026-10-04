@@ -9,7 +9,13 @@ import { api, type User, type Usage, ApiError, PLAN_NAME } from '../api';
 import { Icon } from '../components/Icons';
 import { Field, Modal, Note, Skeleton, useToast } from '../components/ui';
 
-export default function Account({ user, onLogout }: { user: User; onLogout: () => void }) {
+export default function Account({
+  user, onLogout, onLimites,
+}: {
+  user: User; onLogout: () => void;
+  /** Abre a secção Gerenciar limites (créditos e chave própria). */
+  onLimites?: () => void;
+}) {
   const [usage, setUsage] = useState<Usage | null>(null);
   const [pwd, setPwd] = useState({ current: '', next: '', confirm: '' });
   const [delPwd, setDelPwd] = useState('');
@@ -59,6 +65,30 @@ export default function Account({ user, onLogout }: { user: User; onLogout: () =
           <span className="tag tag-pro">{PLAN_NAME[user.plan]}</span>
         </div>
       </header>
+
+      {/* -------- Assinatura: plano, vitalício e a porta para os limites -------- */}
+      <section className="card">
+        <div className="card-head">Assinatura</div>
+        <div className="row" style={{ gap: 10, alignItems: 'flex-start' }}>
+          <span className="tool-glyph"><Icon.crown width={20} height={20} /></span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div className="card-title">{PLAN_NAME[user.plan]}</div>
+            <div className="card-sub">
+              {user.plan === 'free'
+                ? 'Plano gratuito. Sem cartão e sem mensalidade.'
+                : 'Pagamento único, vitalício. Não expira nem renova.'}
+            </div>
+          </div>
+        </div>
+        <div className="row" style={{ marginTop: 14 }}>
+          <button className="btn btn-quiet" type="button" onClick={() => onLimites?.()}>
+            <Icon.activity width={16} height={16} /> Gerenciar limites
+          </button>
+        </div>
+        <p className="t-xs dim" style={{ marginTop: 10, lineHeight: 1.6 }}>
+          Créditos mensais de consulta de dados e a opção de usar a sua própria chave.
+        </p>
+      </section>
 
       <div className="card">
         <div className="card-head">Cota de hoje</div>

@@ -61,7 +61,17 @@ services:
       # entra como administrador logo no primeiro login — é o caminho mais
       # simples, sem precisar de entrar por SSH para mexer no banco.
       # (Pode deixar vazio e promover depois por SQL.)
+      #
+      # ATENÇÃO: o Render só pede este valor NA CRIAÇÃO do serviço. Num serviço
+      # já criado, o valor tem de de ser escrito à mão em Dashboard → Environment.
+      # O teu email não fica aqui de propósito: este ficheiro é o repositório.
       - key: ARGUS_ADMIN_EMAILS
+        sync: false
+      # Chave Pix de recebimento. NÃO é segredo — é mostrada ao cliente na tela
+      # de Planos, com botão de copiar e QR code. Vai no ambiente para nunca estar
+      # escrita à mão no bundle do browser.
+      # Criar/rodar a chave no banco do próprio (ou na PSP que usar).
+      - key: PIX_KEY
         sync: false
       # Chave da conta Apify — só o backend a lê (process.env.APIFY_API_TOKEN).
       # Sem ela a ferramenta APIFY devolve NOT_CONFIGURED e não gasta nada; com

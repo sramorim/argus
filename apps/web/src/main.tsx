@@ -30,7 +30,6 @@ const viewToHash = (v: View2): string => {
     case 'tool': return `/ferramenta/${(v as { id: string }).id}`;
     case 'inv': return '/investigacoes' + ((v as { id?: string }).id ? `/${(v as { id: string }).id}` : '');
     case 'plans': return '/planos';
-    case 'keys': return '/chaves';
     case 'account': return '/conta';
     case 'admin': return '/admin';
     case 'history': return '/historico';
@@ -49,7 +48,6 @@ const hashToView = (h: string): View2 => {
     case 'ferramenta': return arg ? { k: 'tool', id: arg } : { k: 'dashboard' };
     case 'investigacoes': return arg ? { k: 'inv', id: arg } : { k: 'inv' };
     case 'planos': return { k: 'plans' };
-    case 'chaves': return { k: 'keys' };
     case 'conta': return { k: 'account' };
     case 'admin': return { k: 'admin' };
     case 'historico': return { k: 'history' };

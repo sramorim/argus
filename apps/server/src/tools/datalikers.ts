@@ -26,6 +26,7 @@ import {
   token, limpar,
   type EndpointDL, type Plataforma, type RespostaDL,
 } from '../net/datalikers.ts';
+import * as creditos from '../creditos.ts';
 
 const NOME: Record<Plataforma, string> = { instagram: 'Instagram', tiktok: 'TikTok' };
 
@@ -138,7 +139,7 @@ registerTool({
     { name: 'recurso', label: 'Recurso', type: 'text', placeholder: 'ex: perfil · seguidores · publicacao · publicacoes · hashtag', required: false, hint: 'Vazio deriva do alvo; escolha para outro recurso. Validos em instagram: ver nota da execução.' },
   ],
 
-  async run(input) {
+  async run(input, ctx) {
     const alvoBruto = String(input.alvo ?? '').trim();
     const log = new SourceLog();
     const out: Finding[] = [];
@@ -196,7 +197,19 @@ registerTool({
     out.push(finding('alvo', 'Alvo', alvo, ['local'], { kind: 'fact', confidence: 'confirmed' }));
     out.push(finding('alvo', 'Endpoint', `${ep.rotulo} · ${ep.caminho}`, ['local'], { kind: 'fact', confidence: 'confirmed' }));
 
-    const t = token();
+    /*
+     * Modelo híbrido. A ordem importa e é deliberada:
+     *   1. há chave do próprio utilizador? usa-se essa e não há limite nosso;
+     *   2. senão a chave partilhada do servidor — o fluxo normal, o que a
+     *      maioria vê e nunca tem de pensar em chaves;
+     *   3. sem crédito partilhado, o pedido NÃO sai. O erro vai para a rota,
+     *      que o transforma no ecrã "Limite do plano atingido" com um botão.
+     */
+    const credit = creditos.chaveEfetiva(ctx.userId, creditos.TOOL_CREDITOS);
+    const t = credit.origem === 'nenhuma'
+      ? { token: null as string | null, falta: token().falta }
+      : { token: credit.env.DATALIKERS_API_KEY ?? null, falta: null };
+
     if (!t.token) {
       const nota = `${t.falta} em falta — a DataLikers do ARGUS está desligada (a chave só existe no backend e nunca é devolvida pela API)`;
       log.needsKey('dl', 'DataLikers', DOCS, `${t.falta} em falta`);
@@ -210,8 +223,29 @@ registerTool({
       return { findings: out, log, notes };
     }
 
-    const r = await pedir(ep, alvo);
+    /*
+     * Só a chave partilhada tem limite nosso. Com chave própria o consumo é da
+     * conta de quem a trouxe, e meter-lhe um tecto nosso seria cobrar duas
+     * vezes pelo mesmo pedido.
+     */
+    if (credit.origem === 'servidor') {
+      const est = creditos.estado(ctx.userId, creditos.TOOL_CREDITOS, ctx.plan);
+      if (est.esgotado) {
+        log.skipped(src(ep), ep.rotulo, `${ep.caminho}?${ep.param}=${encodeURIComponent(alvo)}`,
+          `créditos partilhados esgotados (${est.usados}/${est.limite} em ${est.periodo})`);
+        throw new creditos.CreditosEsgotadosError(est.usados, est.limite);
+      }
+    }
+
+    const r = await pedir(ep, alvo, credit.env);
+    // Contado só depois de o pedido ter saído para o fornecedor.
+    if (credit.origem === 'servidor' && r.estado !== 'NOT_CONFIGURED') {
+      creditos.consumir(ctx.userId, creditos.TOOL_CREDITOS);
+    }
+
     normalizar(r, ep, plataforma, alvo, log, out, notes, t.token);
+    notes.push(`Chave usada: ${credit.origem === 'propria' ? 'a sua conta DataLikers' : 'conta partilhada do ARGOS'}.`);
+    notes.push(`Créditos partilhados usados este mês: ${credit.origem === 'propria' ? '— (a sua chave não conta para o limite partilhado)' : `${creditos.estado(ctx.userId, creditos.TOOL_CREDITOS, ctx.plan).usados}/${creditos.estado(ctx.userId, creditos.TOOL_CREDITOS, ctx.plan).limite}`}.`);
     notes.push(`Recursos desta plataforma: ${listaRecursos(plataforma)}`);
     return { findings: out, log, notes };
   },

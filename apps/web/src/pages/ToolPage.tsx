@@ -21,6 +21,7 @@ import { motion } from 'framer-motion';
 import { api, type ToolPublic, type ToolRun, type Usage, ApiError } from '../api';
 import { Icon } from '../components/Icons';
 import { Empty, Field, Note, PlanTag, Skeleton, useToast } from '../components/ui';
+import ModalLimite from '../components/ModalLimite';
 import { GRUPOS } from '../ia';
 import ResultPanel from '../components/ResultPanel';
 import OmniDork from './OmniDork';
@@ -84,9 +85,11 @@ const VERBO: Record<string, string> = {
 };
 
 export default function ToolPage({
-  id, tools, onUsage, comoAlvo,
+  id, tools, onUsage, comoAlvo, onLimites,
 }: {
   id: string; tools: ToolPublic[]; onUsage: () => void; comoAlvo?: boolean;
+  /** Abre Conta > Gerenciar limites. E o unico caminho que o modal oferece. */
+  onLimites?: () => void;
 }) {
   const t = tools.find((x) => x.id === id);
   const [vals, setVals] = useState<Record<string, string>>({});
@@ -96,6 +99,9 @@ export default function ToolPage({
   const [err, setErr] = useState('');
   const [usage, setUsage] = useState<Usage | null>(null);
   const [over, setOver] = useState<string | null>(null);
+  /* Limite de créditos do plano. O servidor recusa o pedido e manda o Y; aqui
+     só se mostra o modal — não há contagem no cliente que possa divergir. */
+  const [limite, setLimite] = useState<{ abertos: boolean; total: number }>({ abertos: false, total: 0 });
   /* O formato do exemplo escolhido nos chips de tipo de alvo. */
   const [exemplo, setExemplo] = useState('');
   const toast = useToast();
@@ -154,6 +160,13 @@ export default function ToolPage({
     } catch (e) {
       const a = e as ApiError;
       let msg = a.message;
+      if (a.code === 'limite_plano') {
+        // Sem resultado e sem nota: o pedido nem saiu. O que se mostra é o
+        // limite, não um erro dentro de uma tabela vazia.
+        setRun(null);
+        setLimite({ abertos: true, total: Number(a.limite ?? 0) });
+        return;
+      }
       if (a.code === 'bloqueada') msg = `Esta ferramenta exige o plano ${a.minPlan === 'pro_max' ? 'Pro Max' : 'Pro'}.`;
       else if (a.code === 'limite') msg = a.message;
       else if (a.code === 'campo_obrigatorio') msg = `Falta preencher “${t.fields.find((f) => f.name === a.field)?.label ?? a.field}”.`;
@@ -341,6 +354,18 @@ export default function ToolPage({
           {run && <ResultPanel run={run} />}
         </div>
       </div>
+
+      {/* Limite do plano. O botão não pede conta externa nem chave: leva à
+          página onde a pessoa escolhe o que fazer. */}
+      <ModalLimite
+        abertos={limite.abertos}
+        limite={limite.total}
+        onFechar={() => setLimite({ abertos: false, total: 0 })}
+        onGerenciar={() => {
+          setLimite({ abertos: false, total: 0 });
+          onLimites?.();
+        }}
+      />
     </div>
   );
 }

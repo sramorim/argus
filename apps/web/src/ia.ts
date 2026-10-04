@@ -105,7 +105,6 @@ export const VISTAS = [
   { id: 'radar', nome: 'Radar de Presença', icon: Icon.eye },
   { id: 'perfil', nome: 'Perfil Unificado', icon: Icon.layers },
   { id: 'plans', nome: 'Planos', icon: Icon.crown },
-  { id: 'keys', nome: 'Chaves API', icon: Icon.key },
   { id: 'account', nome: 'Conta', icon: Icon.user },
   { id: 'definicoes', nome: 'Definições', icon: Icon.settings },
   { id: 'admin', nome: 'Administração', icon: Icon.shield },
