@@ -8,6 +8,14 @@ apps/server/data/
 *.db-wal
 *.db-shm
 
+# `data/` na RAIZ é lixo de uma execução com o diretório de trabalho errado:
+# o `ARGUS_DB` por omissão (`data/argus.db`) é resolvido a partir do cwd, e
+# correr o servidor a partir da raiz cria aqui uma segunda base de dados —
+# com caminhos aninhados absurdos. A base de dados de desenvolvimento é a de
+# `apps/server/data/`. Esta linha tem a barra inicial de propósito: só protege
+# a pasta da raiz, não a de `apps/server`.
+/data/
+
 # Build e dependências
 node_modules/
 apps/web/dist/

@@ -123,14 +123,40 @@ async function linhaCli(p: ProviderOsint, detalhe: boolean): Promise<LinhaSaude>
     configuracao: `${nomeEnv}=${caminho}` });
 }
 
-function linhaRegisto(nome: string, ficheiro: string, sites: number): LinhaSaude {
+/**
+ * Uma linha por registo de sites vendurado.
+ *
+ * A contagem é lida do ficheiro, nunca escrita à mão. Antes os números vinham
+ * como argumento e divergiam do que está nos ficheiros (a tela mostrava 695 e
+ * 2113 onde o registo tem 717 e 6206) — o estado do sistema有数 errada é pior
+ * do que o estado do sistema sem número.
+ *
+ * A conta segue a mesma forma que o `username-intel` usa para construir o
+ * índice, e diz também quantos sites o Maigret traz marcados como `disabled`
+ * (que o índice deixa de fora).
+ */
+function linhaRegisto(nome: string, provider: 'sherlock' | 'whatsmyname' | 'maigret'): LinhaSaude {
+  const ficheiro = `${provider}.json`;
   const caminho = join(import.meta.dirname, 'data', 'registries', ficheiro);
   try {
-    JSON.parse(readFileSync(caminho, 'utf8'));
+    const dados = JSON.parse(readFileSync(caminho, 'utf8')) as Record<string, any>;
+    let brutos = 0;
+    let desativados = 0;
+    if (provider === 'sherlock') {
+      brutos = Object.keys(dados).filter((k) => !k.startsWith('$')).length;
+    } else if (provider === 'whatsmyname') {
+      brutos = Array.isArray(dados.sites) ? dados.sites.length : 0;
+    } else {
+      const sites = (dados.sites ?? {}) as Record<string, { disabled?: boolean }>;
+      brutos = Object.keys(sites).length;
+      desativados = Object.values(sites).filter((s) => s?.disabled === true).length;
+    }
+    const uteis = brutos - desativados;
+    const detalhe = desativados > 0 ? ` (${uteis} utilizáveis, ${desativados} desativados)` : '';
     return linha({
       nome, modulo: 'Username Intelligence', tipo: 'registo', runtime: 'JSON local',
       cliApi: 'local', dependencias: 'nenhuma', servicoExterno: caminho,
-      status: 'READY', healthCheck: `registo lido: ${sites} sites`,
+      status: 'READY', healthCheck: `registo lido: ${brutos} sites${detalhe}`,
       configuracao: 'vendurado no repositório (ver THIRD-PARTY.md)',
     });
   } catch (e) {
@@ -138,8 +164,8 @@ function linhaRegisto(nome: string, ficheiro: string, sites: number): LinhaSaude
       nome, modulo: 'Username Intelligence', tipo: 'registo', runtime: 'JSON local',
       cliApi: 'local', dependencias: 'nenhuma', servicoExterno: caminho,
       status: 'NOT_INSTALLED', healthCheck: 'registo ilegível',
-      erro: String((e as Error).message ?? e).slice(0, 200),
-      configuracao: 'replicar o ficheiro em src/data/registries/',
+      erro: String((e as Error)?.message ?? e).slice(0, 200),
+      configuracao: `replicar o ficheiro ${ficheiro} em src/data/registries/`,
     });
   }
 }
@@ -163,9 +189,9 @@ export async function saudeSistema(opts: { detalhe?: boolean } = {}): Promise<Re
     versao: process.version, configuracao: 'gerido pelo deploy',
   }));
 
-  linhas.push(linhaRegisto('Sherlock (registo)', 'sherlock.json', 481));
-  linhas.push(linhaRegisto('WhatsMyName (registo)', 'whatsmyname.json', 695));
-  linhas.push(linhaRegisto('Maigret (registo)', 'maigret.json', 2113));
+  linhas.push(linhaRegisto('Sherlock (registo)', 'sherlock'));
+  linhas.push(linhaRegisto('WhatsMyName (registo)', 'whatsmyname'));
+  linhas.push(linhaRegisto('Maigret (registo)', 'maigret'));
 
   for (const p of PROVIDERS) linhas.push(await linhaCli(p, detalhe));
   linhas.push(await linhaCli({

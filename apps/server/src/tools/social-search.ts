@@ -119,8 +119,8 @@ registerTool({
   legalGate: 'lgpd',
   tags: ['nome', 'redes sociais', 'busca', 'instagram', 'facebook', 'tiktok', 'x', 'perfil'],
   fields: [
-    { name: 'name', label: 'Nome da pessoa', type: 'text', placeholder: 'João Silva', required: true,
-      hint: 'Entre aspas funciona melhor: "João Silva". Podes acrescentar cidade ou empresa.' },
+    { name: 'name', label: 'Nome da pessoa', type: 'text', placeholder: 'Nome Exemplo', required: true,
+      hint: 'Entre aspas funciona melhor: "Nome Exemplo". Podes acrescentar cidade ou empresa.' },
     { name: 'network', label: 'Restringir a uma rede (opcional)', type: 'text', placeholder: 'instagram', required: false,
       hint: 'instagram, facebook, tiktok, x, twitter, linkedin, youtube, threads, reddit, telegram, pinterest. Vazio = todas.' },
   ],

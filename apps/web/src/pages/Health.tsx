@@ -99,7 +99,7 @@ export default function Health() {
   return (
     <div className="page page-wide">
       <header className="card">
-        <h1 className="t-h1">System Health</h1>
+        <h1 className="t-h1">Estado do Sistema</h1>
         <p className="t-sm muted" style={{ marginTop: 6, maxWidth: '70ch' }}>
           Estado do servidor e das suas dependências, lido de <span className="mono">GET /api/health</span>.
           O que está em falta aparece com o nome exacto da variável ou do comando — este ecrã

@@ -560,7 +560,7 @@ registerTool({
   legalGate: 'lgpd',
   tags: ['username', 'osint', 'perfis', 'presenca', 'redes'],
   fields: [
-    { name: 'username', label: 'Username', type: 'text', placeholder: 'ex: torvalds', required: true, hint: 'Sem @ nem URL' },
+    { name: 'username', label: 'Username', type: 'text', placeholder: 'ex: alvo_demo', required: true, hint: 'Sem @ nem URL' },
     { name: 'modo', label: 'Modo', type: 'text', placeholder: 'QUICK | FULL | CUSTOM', required: false, hint: 'QUICK = 25 sites por registo; FULL = até 600; CUSTOM = usa os campos abaixo.' },
     { name: 'providers', label: 'Providers (CUSTOM)', type: 'text', placeholder: 'sherlock, whatsmyname, maigret, blackbird', required: false, hint: 'Por omissão, os quatro.' },
     { name: 'limite', label: 'Limite de sites (CUSTOM)', type: 'text', placeholder: 'ex: 120', required: false, hint: 'Máximo 600 sites por execução.' },

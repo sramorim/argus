@@ -48,7 +48,7 @@ registerTool({
   legalGate: 'lgpd',
   tags: ['osint', 'spiderfoot', 'photon', 'ghunt', 'holehe', 'email', 'dominio'],
   fields: [
-    { name: 'alvo', label: 'Alvo', type: 'text', placeholder: 'ex: example.com | pessoa@exemplo.com | torvalds', required: true, hint: 'Domínio, IP, email ou username — o tipo é detetado, pode forçar no campo seguinte.' },
+    { name: 'alvo', label: 'Alvo', type: 'text', placeholder: 'ex: exemplo.com | pessoa@exemplo.com | alvo_demo', required: true, hint: 'Domínio, IP, email ou username — o tipo é detetado, pode forçar no campo seguinte.' },
     { name: 'tipo', label: 'Tipo de alvo', type: 'text', placeholder: 'auto | email | dominio | ip | username', required: false, hint: 'Por omissão, deteção automática.' },
     { name: 'providers', label: 'Providers', type: 'text', placeholder: 'spiderfoot, photon, openosint, ghunt, holehe', required: false, hint: 'Por omissão, os cinco.' },
   ],

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /**
- * Gera os ícones PNG do ARGOS a partir da mesma geometria do SVG.
+ * Gera os ícones PNG do ARGOS a partir da mesma geometria e das mesmas
+ * cores do SVG.
  *
  * Porquê um script em vez de exportar de um editor: o logo tem de ser
  * reproduzível. Se amanhã o traço mudar, `node scripts/make-icons.mjs` volta a
@@ -17,12 +18,20 @@ import { PNG } from 'pngjs';
 const HERE = dirname(fileURLToPath(import.meta.url));
 const OUT = join(HERE, '..', 'apps', 'web', 'public');
 
-// Geometria em coordenadas 0..32 (a mesma do SVG).
-const SILVER = [200, 205, 212];
-const RED = [185, 28, 28];
-const RED_HI = [220, 38, 38];
-const BG = [11, 13, 16];
-const BG2 = [20, 23, 28];
+/*
+ * Cores do Design System v1.0 — as mesmas de `apps/web/src/styles.css` e do
+ * `public/logo-mark.svg`.
+ *
+ * Antes esta lista tinha uma pupila VERMELHA (185,28,28) enquanto o SVG e o
+ * componente React a pintavam a azul: o ícone que o browser mostrava na
+ * aba e no ecrã principal era um olho vermelho que não existia em lado nenhum
+ * do resto da marca. As duas cores da íris são agora as do accent.
+ */
+const SILVER = [154, 167, 189];   // --t-2
+const RED = [27, 110, 243];        // --blue-2 (accent-deep)
+const RED_HI = [46, 155, 255];     // --blue   (accent)
+const BG = [5, 7, 12];             // --bg
+const BG2 = [16, 24, 40];          // --surface-2
 
 const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
 const smooth = (e0, e1, x) => { const t = clamp((x - e0) / (e1 - e0)); return t * t * (3 - 2 * t); };
@@ -83,7 +92,7 @@ function shade(x, y) {
   const iris = 1 - smooth(0.35, 0.75, Math.abs(d - 6.2));
   col = over(col, SILVER, iris * 0.8);
 
-  // Pupila: vermelho profundo com um degradé para o canto superior
+  // Pupila: o accent, com um degradé do accent-deep para o accent
   const pt = clamp(1 - d / 3.6);
   const pr = RED[0] + (RED_HI[0] - RED[0]) * (1 - pt);
   const pg = RED[1] + (RED_HI[1] - RED[1]) * (1 - pt);
@@ -179,11 +188,13 @@ function renderCover(W = 1200, H = 630) {
       const d = Math.hypot((x - cx) / (W * 0.62), (y - H * 0.42) / (H * 0.72));
       const glow = Math.max(0, 1 - d) ** 2.2;
       const vig = 1 - 0.28 * Math.min(1, Math.hypot((x - cx) / cx, (y - H / 2) / (H / 2)) ** 2);
-      const base = 10 + 9 * glow;
+      // --bg (5,7,12) com um halo do accent por trás do símbolo: é o mesmo
+      // gradiente do hero, achatado para 1200x630.
+      const base = 5 + 14 * glow;
       const v = base * vig;
-      data[i] = Math.round(v * 1.02);
-      data[i + 1] = Math.round(v * 1.06);
-      data[i + 2] = Math.round(v * 1.15);
+      data[i] = Math.round(v * 1.0 + 10 * glow);
+      data[i + 1] = Math.round(v * 1.35 + 6 * glow);
+      data[i + 2] = Math.round(v * 2.4 + 4 * glow);
       data[i + 3] = 255;
     }
   }
@@ -202,12 +213,12 @@ function renderCover(W = 1200, H = 630) {
     }
   }
 
-  // Filete vermelho por baixo do símbolo.
+  // Filete no accent por baixo do símbolo.
   const barY = markY + markSize + 30, barH = 3, barW = 96;
   for (let y = barY; y < barY + barH; y++) {
     for (let x = cx - barW / 2; x < cx + barW / 2; x++) {
       const i = (W * y + x) << 2;
-      data[i] = 220; data[i + 1] = 38; data[i + 2] = 38;
+      data[i] = RED_HI[0]; data[i + 1] = RED_HI[1]; data[i + 2] = RED_HI[2];
     }
   }
 
@@ -234,7 +245,7 @@ function renderCover(W = 1200, H = 630) {
   for (let y = subY; y < subY + 2; y++) {
     for (let x = cx - subW / 2; x < cx + subW / 2; x++) {
       const i = (W * y + x) << 2;
-      data[i] = 58; data[i + 1] = 64; data[i + 2] = 72;
+      data[i] = SILVER[0]; data[i + 1] = SILVER[1]; data[i + 2] = SILVER[2];
     }
   }
   return png;

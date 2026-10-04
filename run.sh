@@ -18,7 +18,13 @@ stop() {
 }
 
 start() {
-  setsid --fork env PORT="${PORT:-8787}" node src/index.ts > "$LOG" 2>&1 < /dev/null
+  # `--env-file-if-exists` aponta para o `.env` da RAIZ do repositório (o
+  # servidor corre com o cwd em apps/server). Sem isto o `.env` nunca era lido
+  # em desenvolvimento: a chave da DataLikers estava escrita no ficheiro e o
+  # servidorrespondia "chave em falta". Em produção o ficheiro não existe e o
+  # Node passa por cima — o arranque de produção não muda.
+  setsid --fork env PORT="${PORT:-8787}" \
+    node --env-file-if-exists=../../.env src/index.ts > "$LOG" 2>&1 < /dev/null
   sleep 3
   pgrep -f 'src/inde[x].ts' | head -1 > "$PIDF" 2>/dev/null || true
   status

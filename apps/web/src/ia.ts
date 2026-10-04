@@ -101,9 +101,9 @@ export const VISTAS = [
   { id: 'nova', nome: 'Nova investigação', icon: Icon.target },
   { id: 'inv', nome: 'Investigações', icon: Icon.network },
   { id: 'history', nome: 'Histórico', icon: Icon.history },
-  { id: 'health', nome: 'System Health', icon: Icon.activity },
-  { id: 'radar', nome: 'Presence Radar', icon: Icon.eye },
-  { id: 'perfil', nome: 'Unified Profile', icon: Icon.layers },
+  { id: 'health', nome: 'Estado do Sistema', icon: Icon.activity },
+  { id: 'radar', nome: 'Radar de Presença', icon: Icon.eye },
+  { id: 'perfil', nome: 'Perfil Unificado', icon: Icon.layers },
   { id: 'plans', nome: 'Planos', icon: Icon.crown },
   { id: 'keys', nome: 'Chaves API', icon: Icon.key },
   { id: 'account', nome: 'Conta', icon: Icon.user },
@@ -153,10 +153,10 @@ export function buscar(ferramentas: ToolPublic[], termo: string): ToolPublic[] {
 
 /** Sugestões de atalho para o painel, por ordem de utilidade. */
 export const ATALHOS: { id: string; nome: string; exemplo: string; icon: (p: SVGProps<SVGSVGElement>) => ReactElement }[] = [
-  { id: 'graph-investigation', nome: 'Investigação completa', exemplo: 'github.com', icon: Icon.network },
-  { id: 'username-finder', nome: 'Localizar username', exemplo: 'torvalds', icon: Icon.user },
-  { id: 'social-search', nome: 'Perfis que mencionam um nome', exemplo: 'Albert Einstein', icon: Icon.globe },
-  { id: 'datalikers', nome: 'Perfil de Instagram/TikTok', exemplo: 'natgeo', icon: Icon.layers },
+  { id: 'graph-investigation', nome: 'Investigação completa', exemplo: 'alvo_demo', icon: Icon.network },
+  { id: 'username-finder', nome: 'Localizar username', exemplo: '@alvo_demo', icon: Icon.user },
+  { id: 'social-search', nome: 'Perfis que mencionam um nome', exemplo: 'Nome Exemplo', icon: Icon.globe },
+  { id: 'datalikers', nome: 'Perfil de Instagram/TikTok', exemplo: '@alvo_demo', icon: Icon.layers },
   { id: 'paste-search', nome: 'Exposição pública', exemplo: 'example.com', icon: Icon.shield },
 ];
 

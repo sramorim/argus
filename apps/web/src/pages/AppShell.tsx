@@ -8,16 +8,19 @@
  * precisa — em páginas que se substituem, comparar dois alvos obriga a andar
  * para trás a perder o que se tinha escrito.
  *
- * Três decisões que ficam da versão anterior e continuam a valer:
+ * Quatro decisões:
  *
- * 1. **A organização continua a vir do `ia.ts`.** Os ícones agrupam-se pelos
- *    mesmos grupos que a sidebar usava; nada aqui inventa ordem nem categoria.
- * 2. **O primeiro ecrã continua a ser o painel.** Quem entra quer investigar,
- *    não ler um índice: a janela do painel abre sozinha.
- * 3. **Telemóvel não é um desktop ao pequenino.** Abaixo de 1001px as janelas
- *    ocupam a área toda, a navegação é a gaveta com as camadas e a barra
- *    inferior de quatro destinos — a visibilidade disto é do CSS, nunca de uma
- *    medida do browser lida durante o render.
+ *  1. **A organização continua a vir do `ia.ts`.** A lateral, o painel, a
+ *     busca e os atalhos leem dela; nada aqui inventa ordem nem categoria.
+ *  2. **O primeiro ecrã continua a ser o painel.** Quem entra quer investigar,
+ *     não ler um índice: a janela do painel abre sozinha.
+ *  3. **A navegação nunca aparece duas vezes.** Abaixo de 1200px é a gaveta
+ *     (hamburger) mais a barra inferior de quatro destinos; a partir de
+ *     1200px a gaveta dá lugar a uma lateral fixa de 280px e a barra
+ *     inferior desaparece. É o CSS que decide o papel da lateral e é ele que
+ *     anima a gaveta — em JavaScript só fica o `drawer` aberto ou fechado.
+ *  4. **Telemóvel não é um desktop ao pequenino.** As janelas ocupam a área
+ *     toda, os alvos de toque têm 44px e a barra inferior tem 68px.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactElement } from 'react';
@@ -55,7 +58,7 @@ const TABS: { v: View; id: string; label: string; icon: (p: Record<string, unkno
   { v: { k: 'account' }, id: 'account', label: 'Conta', icon: Icon.user },
 ];
 
-const sameView = (a: View, b: View) => JSON.stringify(a) === JSON.stringify(b);
+
 
 /** Identidade de uma vista: é o que liga a rota, a janela e a barra de tarefas. */
 function chave(v: View): string {
@@ -276,9 +279,9 @@ export default function AppShell({
       case 'account': return 'Conta';
       case 'admin': return 'Administração';
       case 'history': return 'Histórico';
-      case 'health': return 'System Health';
-      case 'radar': return 'Presence Radar';
-      case 'perfil': return 'Unified Profile';
+      case 'health': return 'Estado do Sistema';
+      case 'radar': return 'Radar de Presença';
+      case 'perfil': return 'Perfil Unificado';
       case 'definicoes': return 'Definições';
       default: return 'ARGOS';
     }
@@ -307,24 +310,52 @@ export default function AppShell({
   const hora = agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
   const inicial = (user.name || user.email || '?').trim().slice(0, 1).toUpperCase();
 
+  /**
+   * A lateral: onde vive a navegação, e só uma vez.
+   *
+   * No ecrã largo é a coluna fixa; no telemóvel é a gaveta. O conteúdo é o
+   * mesmo — de propósito, para não haver duas listas de ferramentas a
+   * divergir. As vistas da aplicação vêm primeiro (são o que se usa a toda a
+   * hora) e as ferramentas vêm agrupadas pelas camadas do `ia.ts`.
+   */
   const conteudoLateral = (
     <>
       <div className="side-scroll">
+        <motion.button
+          className="btn btn-primary btn-block"
+          type="button"
+          onClick={() => go({ k: 'nova' })}
+          whileHover={{ y: -1 }}
+          whileTap={{ scale: 0.99 }}
+          transition={{ type: 'spring', stiffness: 420, damping: 24 }}
+          style={{ marginBottom: 14 }}
+        >
+          <Icon.target /> Nova investigação
+        </motion.button>
+
+        <div className="nav-title">Navegação</div>
         <div className="nav-group">
-          <motion.button
-            className="btn btn-primary btn-block"
-            type="button"
-            onClick={() => go({ k: 'nova' })}
-            whileHover={{ y: -1 }}
-            whileTap={{ scale: 0.995 }}
-            transition={{ type: 'spring', stiffness: 420, damping: 24 }}
-            style={{ marginBottom: 8 }}
-          >
-            <Icon.target /> Nova investigação
-          </motion.button>
+          {apps.filter((v) => v.id !== 'nova').map((v) => {
+            const atual = view.k === v.id;
+            return (
+              <motion.button
+                key={v.id}
+                className="nav-item"
+                type="button"
+                aria-current={atual}
+                data-view={v.id}
+                onClick={() => go({ k: v.id } as View)}
+                whileTap={{ scale: 0.99 }}
+                transition={{ type: 'spring', stiffness: 420, damping: 30 }}
+              >
+                <v.icon className="nav-ico" />
+                <span className="nav-label-txt">{v.nome}</span>
+              </motion.button>
+            );
+          })}
         </div>
 
-        <div className="nav-title" style={{ padding: '4px 6px 2px' }}>Ferramentas</div>
+        <div className="nav-title">Ferramentas</div>
         {GRUPOS.map((g) => {
           const lista = porGrupo(tools, g.id);
           if (!lista.length) return null;
@@ -369,16 +400,16 @@ export default function AppShell({
                               key={t.id}
                               className="nav-item"
                               type="button"
+                              data-tool={t.id}
                               aria-current={view.k === 'tool' && (view as { id: string }).id === t.id}
                               onClick={() => go({ k: 'tool', id: t.id })}
                               title={t.summary}
-                            whileHover={{ x: 1 }}
-                            whileTap={{ scale: 0.998 }}
-                            transition={{ type: 'spring', stiffness: 420, damping: 30 }}
+                              whileTap={{ scale: 0.99 }}
+                              transition={{ type: 'spring', stiffness: 420, damping: 30 }}
                             >
                               <Cat className="nav-ico" />
                               <span className="nav-label-txt">{t.name}</span>
-                              {t.lock === 'locked' && <Icon.lock width={12} height={12} style={{ color: 'var(--t-4)' }} />}
+                              {t.lock === 'locked' && <span className="tag tag-pro">PRO</span>}
                             </motion.button>
                           );
                         })}
@@ -406,7 +437,7 @@ export default function AppShell({
             </div>
           )}
           <button className="btn btn-sm btn-quiet btn-block" style={{ marginTop: 11 }} onClick={onLogout} type="button">
-            <Icon.logout width={14} height={14} /> Sair
+            <Icon.logout width={16} height={16} /> Sair
           </button>
         </div>
         <div className="side-legal">
@@ -417,240 +448,185 @@ export default function AppShell({
     </>
   );
 
+  /* A busca da barra superior não tem motor próprio: leva ao painel, que é
+     onde a busca real vive, e põe o cursor lá. */
+  const irParaBusca = () => {
+    go({ k: 'dashboard' });
+    setTimeout(() => document.getElementById('busca-global')?.focus(), 60);
+  };
+
   return (
     <div className="shell">
-      {/* ---------------------------------------------------------- barra superior */}
-      <header className="topbar">
-        <button className="icon-btn only-narrow" onClick={() => setDrawer(true)} aria-label="Abrir menu" type="button">
-          <Icon.menu />
-        </button>
-        <motion.button
-          className="topbar-brand"
-          type="button"
-          onClick={() => go({ k: 'dashboard' })}
-          title="Painel"
-          whileHover={{ scale: 1.01 }}
-          whileTap={{ scale: 0.995 }}
-          transition={{ type: 'spring', stiffness: 420, damping: 24 }}
-        >
-          <Brand />
-        </motion.button>
-        <div className="topbar-clock only-desk">
-          <Icon.clock />
-          <span className="topbar-data">{data}</span>
-          <span className="topbar-sep">·</span>
-          <span className="topbar-hora">{hora}</span>
+      {/* ------------------------------------------------------- lateral / gaveta */}
+      {/* Um só elemento nos dois papéis: no ecrã largo é a coluna fixa, no
+          telemóvel é a gaveta que desliza. A animação é do CSS. */}
+      <aside className="sidebar" data-open={drawer} aria-label="Navegação principal">
+        <div className="side-brand">
+          <Brand size={30} subtitle="Fontes abertas" />
         </div>
-        <span className="grow" />
-        {esgotada && <span className="tag tag-warn only-desk">cota esgotada</span>}
-        {!esgotada && usage && (
-          <span className="topbar-quota only-desk">{usage.daily - usage.today} execuções hoje</span>
-        )}
-        <nav className="topbar-links only-desk" aria-label="Atalhos">
-          <motion.button
-            className="topbar-link"
-            type="button"
-            onClick={() => go({ k: 'inv' })}
-            whileHover={{ y: -1 }}
-            whileTap={{ scale: 0.995 }}
-            transition={{ type: 'spring', stiffness: 420, damping: 22 }}
-          >Sessões</motion.button>
-          <motion.button
-            className="topbar-link"
-            type="button"
-            onClick={() => go({ k: 'history' })}
-            whileHover={{ y: -1 }}
-            whileTap={{ scale: 0.995 }}
-            transition={{ type: 'spring', stiffness: 420, damping: 22 }}
-          >Histórico</motion.button>
-          <motion.button
-            className="topbar-link"
-            type="button"
-            onClick={() => go({ k: 'plans' })}
-            whileHover={{ y: -1 }}
-            whileTap={{ scale: 0.995 }}
-            transition={{ type: 'spring', stiffness: 420, damping: 22 }}
-          >Planos</motion.button>
-        </nav>
-        <details className="user-menu">
-          <summary className="avatar" title={user.email}>{inicial}</summary>
-          <div className="user-pop">
-            <div className="user-pop-head">
-              <div className="user-pop-name">{user.name || user.email}</div>
-              <div className="user-pop-mail">{user.email}</div>
-            </div>
-            {apps.map((v) => (
-              <motion.button
-                key={v.id}
-                className="user-pop-item"
-                type="button"
-                onClick={() => go({ k: v.id } as View)}
-                whileHover={{ x: 4 }}
-                transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-              >
-                <v.icon /> {v.nome}
-              </motion.button>
-            ))}
-            <motion.button
-              className="user-pop-item"
-              type="button"
-              onClick={onLogout}
-              whileHover={{ x: 2 }}
-              transition={{ type: 'spring', stiffness: 420, damping: 28 }}
-            >
-              <Icon.logout /> Sair
-            </motion.button>
-          </div>
-        </details>
-      </header>
+        {conteudoLateral}
+      </aside>
 
-      {/* ------------------------------------------------------- área de trabalho */}
-      <main className="desktop" ref={areaRef}>
-        <div className="desk-icons">
-          <section className="desk-group">
-            <h2 className="desk-title">Aplicação</h2>
-            <div className="desk-row">
-              {apps.map((v, i) => (
+      {/* O fundo que fecha a gaveta. No ecrã largo é escondido pelo CSS — não
+          há lá nada para fechar. */}
+      {drawer && (
+        <motion.div
+          className="side-scrim"
+          onClick={() => setDrawer(false)}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.28, ease: 'easeOut' }}
+        />
+      )}
+
+      <div className="col">
+        {/* ---------------------------------------------------------- barra superior */}
+        <header className="topbar">
+          <button className="icon-btn only-narrow" onClick={() => setDrawer(true)} aria-label="Abrir menu" type="button">
+            <Icon.menu />
+          </button>
+          <motion.button
+            className="topbar-brand"
+            type="button"
+            onClick={() => go({ k: 'dashboard' })}
+            title="Painel"
+            whileTap={{ scale: 0.98 }}
+            transition={{ type: 'spring', stiffness: 420, damping: 24 }}
+          >
+            <Brand size={26} subtitle="Fontes abertas" />
+          </motion.button>
+          <button className="topbar-busca only-wide" type="button" onClick={irParaBusca}>
+            <Icon.search />
+            <span>O que queres investigar?</span>
+          </button>
+          <div className="topbar-clock only-desk">
+            <Icon.clock />
+            <span className="topbar-data">{data}</span>
+            <span className="topbar-sep">·</span>
+            <span className="topbar-hora">{hora}</span>
+          </div>
+          <span className="grow" />
+          {esgotada && <span className="tag tag-warn only-desk">cota esgotada</span>}
+          {!esgotada && usage && (
+            <span className="topbar-quota only-desk">{usage.daily - usage.today} execuções hoje</span>
+          )}
+          <nav className="topbar-links only-desk" aria-label="Atalhos">
+            <button className="topbar-link" type="button" onClick={() => go({ k: 'inv' })}>Sessões</button>
+            <button className="topbar-link" type="button" onClick={() => go({ k: 'history' })}>Histórico</button>
+            <button className="topbar-link" type="button" onClick={() => go({ k: 'plans' })}>Planos</button>
+          </nav>
+          <details className="user-menu">
+            <summary className="avatar" title={user.email}>{inicial}</summary>
+            <div className="user-pop">
+              <div className="user-pop-head">
+                <div className="user-pop-name">{user.name || user.email}</div>
+                <div className="user-pop-mail">{user.email}</div>
+              </div>
+              {apps.map((v) => (
                 <motion.button
                   key={v.id}
-                  className="desk-icon"
+                  className="user-pop-item"
                   type="button"
                   onClick={() => go({ k: v.id } as View)}
-                  data-aberta={ordem.includes(chave({ k: v.id } as View))}
-                  initial={{ opacity: 0, y: 10, scale: 0.96 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  transition={{
-                    type: 'spring', stiffness: 280, damping: 24, mass: 0.6,
-                    delay: 0.02 + i * 0.01,
-                  }}
-                  whileHover={{ scale: 1.03, y: -2 }}
-                  whileTap={{ scale: 0.995 }}
+                  whileTap={{ scale: 0.99 }}
+                  transition={{ type: 'spring', stiffness: 400, damping: 30 }}
                 >
-                  <span className="desk-ico"><v.icon /></span>
-                  <span className="desk-label">{v.nome}</span>
+                  <v.icon /> {v.nome}
                 </motion.button>
               ))}
-            </div>
-          </section>
-
-          {GRUPOS.map((g) => {
-            const lista = porGrupo(tools, g.id);
-            if (!lista.length) return null;
-            const Ico = g.icon;
-            return (
-              <section className="desk-group" key={g.id}>
-                <h2 className="desk-title"><Ico /> {g.nome}</h2>
-                <div className="desk-row">
-                  {lista.map((t, i) => {
-                    const Cat = CATEGORY_ICON[t.category] ?? Icon.grid;
-                    const k = chave({ k: 'tool', id: t.id });
-                    return (
-                      <motion.button
-                        key={t.id}
-                        className="desk-icon"
-                        type="button"
-                        title={t.summary}
-                        data-tool={t.id}
-                        data-aberta={ordem.includes(k)}
-                        onClick={() => go({ k: 'tool', id: t.id })}
-                        initial={{ opacity: 0, y: 14, scale: 0.94 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        transition={{
-                          type: 'spring', stiffness: 280, damping: 24, mass: 0.6,
-                          delay: 0.02 + i * 0.01,
-                        }}
-                        whileHover={{ scale: 1.03, y: -2 }}
-                        whileTap={{ scale: 0.995 }}
-                      >
-                        <span className="desk-ico"><Cat /></span>
-                        <span className="desk-label">{t.name}</span>
-                      </motion.button>
-                    );
-                  })}
-                </div>
-              </section>
-            );
-          })}
-        </div>
-
-        <AnimatePresence>
-          {ordem.length === 0 && (
-            <motion.div
-              className="desk-hint"
-              key="dica"
-              initial={{ opacity: 0, y: 22, scale: 0.97 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -10, scale: 0.97 }}
-              transition={{ type: 'spring', stiffness: 140, damping: 18, delay: 0.35 }}
-            >
-              <Icon.target />
-              <p className="t-sm">Escolhe um ícone para abrir uma ferramenta. Várias podem ficar abertas ao mesmo tempo.</p>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        <AnimatePresence>
-          {ordem.map((k, i) => {
-            const j = abertas[k];
-            if (!j) return null;
-            return (
-              <Janela
-                key={k}
-                titulo={tituloDe(j.vista)}
-                icone={iconeDe(j.vista)}
-                geom={j.geom}
-                espaco={espaco}
-                z={20 + i}
-                ativa={ativa === k}
-                max={j.max}
-                min={j.min}
-                onFocar={() => focar(k)}
-                onFechar={() => fechar(k)}
-                onMin={() => alternarMin(k)}
-                onMax={() => alternarMax(k)}
-                onGeom={(g) => porGeom(k, g)}
+              <motion.button
+                className="user-pop-item"
+                type="button"
+                onClick={onLogout}
+                whileTap={{ scale: 0.99 }}
+                transition={{ type: 'spring', stiffness: 420, damping: 28 }}
               >
-                {conteudo(j.vista)}
-              </Janela>
-            );
-          })}
-        </AnimatePresence>
-      </main>
+                <Icon.logout /> Sair
+              </motion.button>
+            </div>
+          </details>
+        </header>
 
-      {/* ------------------------------------------------------------- barra de tarefas */}
-      <footer className="taskbar only-desk">
-        <div className="task-list">
-          <AnimatePresence initial={false} mode="popLayout">
-            {ordem.map((k) => {
+        {/* ------------------------------------------------------- área de trabalho */}
+        <main className="desktop" ref={areaRef}>
+          <AnimatePresence>
+            {ordem.length === 0 && (
+              <motion.div
+                className="desk-hint"
+                key="dica"
+                initial={{ opacity: 0, y: 22, scale: 0.97 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -10, scale: 0.97 }}
+                transition={{ type: 'spring', stiffness: 140, damping: 18, delay: 0.35 }}
+              >
+                <Icon.target />
+                <p className="t-sm">Escolhe uma ferramenta na lateral para a abrir. Várias podem ficar abertas ao mesmo tempo.</p>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <AnimatePresence>
+            {ordem.map((k, i) => {
               const j = abertas[k];
               if (!j) return null;
-              const Ico = iconeDe(j.vista);
               return (
-                <motion.button
+                <Janela
                   key={k}
-                  className="task-item"
-                  type="button"
-                  layout
-                  data-ativa={ativa === k && !j.min ? 'true' : 'false'}
-                  onClick={() => focar(k)}
-                  title={tituloDe(j.vista)}
-                  initial={{ opacity: 0, scale: 0.7, y: 14 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.7, y: 14 }}
-                  whileHover={{ scale: 1.06, y: -3 }}
-                  whileTap={{ scale: 0.94 }}
-                  transition={{ type: 'spring', stiffness: 420, damping: 30 }}
+                  titulo={tituloDe(j.vista)}
+                  icone={iconeDe(j.vista)}
+                  geom={j.geom}
+                  espaco={espaco}
+                  z={20 + i}
+                  ativa={ativa === k}
+                  max={j.max}
+                  min={j.min}
+                  onFocar={() => focar(k)}
+                  onFechar={() => fechar(k)}
+                  onMin={() => alternarMin(k)}
+                  onMax={() => alternarMax(k)}
+                  onGeom={(g) => porGeom(k, g)}
                 >
-                  <Ico /> <span className="task-name">{tituloDe(j.vista)}</span>
-                </motion.button>
+                  {conteudo(j.vista)}
+                </Janela>
               );
             })}
           </AnimatePresence>
-        </div>
-        <span className="grow" />
-        {usage && <span className="task-quota">{usage.today}/{usage.daily}</span>}
-        <span className="task-copy">{wa?.copyright ?? '© 2026 SR. Amorim'} · Todos os direitos reservados.</span>
-      </footer>
+        </main>
+
+        {/* --------------------------------------------------------- barra de tarefas */}
+        <footer className="taskbar only-desk">
+          <div className="task-list">
+            <AnimatePresence initial={false} mode="popLayout">
+              {ordem.map((k) => {
+                const j = abertas[k];
+                if (!j) return null;
+                const Ico = iconeDe(j.vista);
+                return (
+                  <motion.button
+                    key={k}
+                    className="task-item"
+                    type="button"
+                    layout
+                    data-ativa={ativa === k && !j.min ? 'true' : 'false'}
+                    onClick={() => focar(k)}
+                    title={tituloDe(j.vista)}
+                    initial={{ opacity: 0, scale: 0.7, y: 14 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.7, y: 14 }}
+                    whileTap={{ scale: 0.94 }}
+                    transition={{ type: 'spring', stiffness: 420, damping: 30 }}
+                  >
+                    <Ico /> <span className="task-name">{tituloDe(j.vista)}</span>
+                  </motion.button>
+                );
+              })}
+            </AnimatePresence>
+          </div>
+          <span className="grow" />
+          {usage && <span className="task-quota">{usage.today}/{usage.daily}</span>}
+          <span className="task-copy">{wa?.copyright ?? '© 2026 SR. Amorim'} · Todos os direitos reservados.</span>
+        </footer>
+      </div>
 
       {/* ------------------------------------------------------------ canal de contacto */}
       <div className="dock only-desk" aria-label="Contacto">
@@ -662,8 +638,8 @@ export default function AppShell({
             rel="noopener noreferrer"
             title={wa.label}
             aria-label={wa.label}
-            whileHover={{ scale: 1.16, y: -6 }}
-            whileTap={{ scale: 0.9 }}
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.92 }}
             transition={{ type: 'spring', stiffness: 420, damping: 18 }}
           >
             <Icon.phone />
@@ -676,50 +652,16 @@ export default function AppShell({
           rel="noopener noreferrer"
           title="Código-fonte"
           aria-label="Código-fonte"
-          whileHover={{ scale: 1.16, y: -6 }}
-          whileTap={{ scale: 0.9 }}
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.92 }}
           transition={{ type: 'spring', stiffness: 420, damping: 18 }}
         >
           <Icon.code />
         </motion.a>
       </div>
 
-      {/* -------------------------------------------------------------- gaveta (estreito) */}
-      {/* A gaveta nascia instantânea. Sem `AnimatePresence` o `data-open`
-          desligava a transform do CSS no mesmo frame e o slide nunca via-se. */}
-      <AnimatePresence>
-        {drawer && (
-          <motion.aside
-            key="gaveta"
-            className="sidebar"
-            data-open={drawer}
-            initial={suave ? { opacity: 0 } : { x: '-100%', opacity: 0.4 }}
-            animate={{ x: 0, opacity: 1 }}
-            exit={suave ? { opacity: 0 } : { x: '-100%', opacity: 0.4 }}
-            transition={suave
-              ? { duration: 0 }
-              : { type: 'spring', stiffness: 240, damping: 28, mass: 0.8 }}
-          >
-            <Brand />
-            {conteudoLateral}
-          </motion.aside>
-        )}
-      </AnimatePresence>
-      <AnimatePresence>
-        {drawer && (
-          <motion.div
-            key="scrim"
-            className="side-scrim"
-            onClick={() => setDrawer(false)}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.22, ease: 'easeOut' }}
-          />
-        )}
-      </AnimatePresence>
-
-      <nav className="tabbar" aria-label="Navegação principal">
+      {/* ---------------------------------------------------------- barra inferior */}
+      <nav className="tabbar" aria-label="Destinos">
         {TABS.map((t) => (
           <motion.button
             key={t.id}
@@ -727,13 +669,12 @@ export default function AppShell({
             type="button"
             aria-current={view.k === t.v.k}
             onClick={() => go(t.v)}
-            whileHover={{ y: -3 }}
-            whileTap={{ scale: 0.92 }}
+            whileTap={{ scale: 0.94 }}
             transition={{ type: 'spring', stiffness: 420, damping: 22 }}
           >
             <motion.span
               className="tab-ico"
-              animate={{ scale: view.k === t.v.k ? 1.12 : 1, rotate: view.k === t.v.k ? -4 : 0 }}
+              animate={{ scale: view.k === t.v.k ? 1.1 : 1 }}
               transition={{ type: 'spring', stiffness: 400, damping: 18 }}
             >
               <t.icon />
@@ -772,8 +713,7 @@ export default function AppShell({
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 8, scale: 0.8 }}
                     transition={{ type: 'spring', stiffness: 400, damping: 28, delay: i * 0.03 }}
-                    whileHover={{ scale: 1.07, x: -3 }}
-                    whileTap={{ scale: 0.94 }}
+                    whileTap={{ scale: 0.96 }}
                   >
                     {a.icon({})}
                     <span>{a.nome}</span>
@@ -791,7 +731,6 @@ export default function AppShell({
           aria-expanded={fabAberto}
           onClick={() => setFabAberto((a) => !a)}
           animate={{ rotate: fabAberto ? 135 : 0 }}
-          whileHover={{ scale: 1.08 }}
           whileTap={{ scale: 0.92 }}
           transition={{ type: 'spring', stiffness: 340, damping: 24 }}
         >
@@ -802,18 +741,6 @@ export default function AppShell({
         </motion.button>
       </div>
     </div>
-  );
-}
-
-function NavItem({ v, view, onGo, icon: Ico, label }: {
-  v: View; view: View; onGo: (v: View) => void;
-  icon: (p: Record<string, unknown>) => ReactElement; label: string;
-}) {
-  return (
-    <button className="nav-item" type="button" aria-current={sameView(v, view)} onClick={() => onGo(v)}>
-      <Ico className="nav-ico" />
-      <span className="nav-label-txt">{label}</span>
-    </button>
   );
 }
 

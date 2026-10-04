@@ -10,7 +10,7 @@
 import { useEffect, useState } from 'react';
 import { api, type Plan, type ToolPublic, useContacto } from '../api';
 import { Icon } from '../components/Icons';
-import { Mark, PlanTag, Skeleton } from '../components/ui';
+import { Brand, PlanTag, Skeleton } from '../components/ui';
 import { GRUPOS, porGrupo } from '../ia';
 
 export function Landing({ onStart, tools }: { onStart: () => void; tools: ToolPublic[] }) {
@@ -43,12 +43,8 @@ export function Landing({ onStart, tools }: { onStart: () => void; tools: ToolPu
   return (
     <>
       <header className="topbar-landing" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '15px 0' }}>
-        <Mark size={30} />
-        <div>
-          <div style={{ fontSize: 13, fontWeight: 720, letterSpacing: '.2em' }}>ARGOS</div>
-          <div className="t-xs dim" style={{ letterSpacing: '.13em', textTransform: 'uppercase', fontSize: 9.5 }}>Fontes abertas</div>
-        </div>
-        <span style={{ flex: 1 }} />
+        <Brand size={30} subtitle="Fontes abertas" className="brand-plain" />
+        <span className="grow" />
         {wa && (
           <a className="btn btn-quiet btn-sm" href={wa.link} target="_blank" rel="noopener noreferrer">
             falar connosco

@@ -195,7 +195,7 @@ test('a visibilidade por largura é feita em CSS, não com window.innerWidth no 
   const css = readFileSync(join(SRC, 'styles.css'), 'utf8');
   assert.match(css, /\.only-narrow\s*\{\s*display:\s*none/, '.only-narrow escondida por omissão');
   assert.match(
-    css, /@media \(max-width: 1000px\)\s*\{[\s\S]*?\.only-narrow\s*\{\s*display:\s*grid/,
+    css, /@media \(max-width: 1199px\)\s*\{[\s\S]*?\.only-narrow\s*\{\s*display:\s*grid/,
     '.only-narrow tem de aparecer no media query dos ecrãs estreitos',
   );
 });
@@ -346,30 +346,56 @@ test('a app monta a sidebar com camadas expansíveis e marca a atual', () => {
 });
 
 /**
- * O espaço de trabalho: a área de trabalho, as janelas e a barra de tarefas.
+ * A navegação: uma só, e completa.
  *
- * Estes testes existem porque a navegação deixou de ser "uma página de cada
- * vez": agora abrem-se várias janelas e é a barra de tarefas que diz o que está
- * aberto. O que se verifica é o que se pede ao utilizador — todos os ícones lá
- * estão, um clique abre, o × fecha, minimizar esconde e a barra restaura.
+ * Antes havia uma grelha de ícones no fundo do "ecrã de trabalho" *e* a
+ * gaveta — duas listas que podiam divergir. Agora há uma: a lateral. O teste
+ * verifica o que se pede ao utilizador — que cada ferramenta e cada aplicação
+ * esteja alcançável, e que esteja **uma vez só**.
  */
-test('a área de trabalho tem um ícone por ferramenta e por aplicação', () => {
+test('a lateral lista cada ferramenta e cada aplicação, uma vez só', () => {
   const { tools, t } = montaApp();
-  const html = t.html();
+  H.clica(t, '[aria-label="Abrir menu"]');
+  abreCamadas(t);
+  const lateral = /<aside[^>]*class="sidebar"[\s\S]*?<\/aside>/.exec(t.html())?.[0] ?? '';
+  assert.ok(lateral, 'a lateral não está no DOM');
 
-  // Uma secção por grupo, com o nome que o `ia.ts` declara.
+  // Uma camada por grupo, com o nome que o `ia.ts` declara.
   for (const g of H.GRUPOS) {
-    assert.ok(html.includes(g.nome), `falta no desktop a secção "${g.nome}"`);
+    assert.ok(lateral.includes(g.nome), `falta na lateral a camada "${g.nome}"`);
   }
 
-  // As ferramentas aparecem com o seu id — é isso que liga o ícone à janela.
+  // Cada ferramenta aparece com o seu id — é isso que liga o item à janela.
   for (const f of tools) {
-    assert.ok(html.includes(`data-tool="${f.id}"`), `falta o ícone de ${f.id}`);
+    assert.ok(lateral.includes(`data-tool="${f.id}"`), `falta na lateral a ferramenta ${f.id}`);
   }
-  const nIcones = (html.match(/class="desk-icon"/g) ?? []).length;
-  const nApps = H.VISTAS.filter((v: any) => v.id !== 'admin').length;   // utilizador comum
-  assert.equal(nIcones, tools.length + nApps,
-    `${nIcones} ícones: deviam ser ${tools.length} ferramentas + ${nApps} aplicações`);
+  // E cada aplicação da navegação. Ficam de fora duas, por razões diferentes:
+  // a administração (só o dono a vê) e "nova investigação", que na lateral é o
+  // botão grande do topo — não um item de lista. As duas continuam alcançáveis.
+  const visiveis = H.VISTAS.filter((v: any) => v.id !== 'admin' && v.id !== 'nova');
+  assert.ok(lateral.includes('Nova investigação'),
+    'a lateral perdeu a acção principal (o botão de nova investigação)');
+  for (const v of visiveis) {
+    assert.ok(lateral.includes(`data-view="${v.id}"`), `falta na lateral a vista ${v.id}`);
+  }
+
+  // Uma vez só: nem uma ferramenta em duas camadas, nem duas listas.
+  const ids = [...lateral.matchAll(/data-tool="([^"]+)"/g)].map((m) => m[1]);
+  assert.equal(new Set(ids).size, ids.length, 'a mesma ferramenta aparece duas vezes na lateral');
+  const nDesk = (t.html().match(/class="desk-icon"/g) ?? []).length;
+  assert.equal(nDesk, 0, 'a grelha de ícones do fundo ainda existe: são duas navegações');
+  t.desmontar();
+});
+
+/** A lateral tem de trazer as vistas da aplicação, não só as ferramentas. */
+test('a lateral tem uma secção de navegação com as vistas da aplicação', () => {
+  const { t } = montaApp();
+  H.clica(t, '[aria-label="Abrir menu"]');
+  const lateral = /<aside[^>]*class="sidebar"[\s\S]*?<\/aside>/.exec(t.html())?.[0] ?? '';
+  assert.match(lateral, /Navegação/i, 'a lateral não diz o que é a secção de navegação');
+  for (const id of ['dashboard', 'inv', 'history']) {
+    assert.ok(lateral.includes(`data-view="${id}"`), `falta a vista ${id} na lateral`);
+  }
   t.desmontar();
 });
 
@@ -382,7 +408,11 @@ test('a área de trabalho tem um ícone por ferramenta e por aplicação', () =>
  * lá para o utilizador.
  */
 async function ate(condicao: () => boolean, o: string) {
-  const fim = Date.now() + 3000;
+  /* 8 segundos, não 3. A animação de saída da janela é uma mola do framer, e
+     no `linkedom` cada quadro é um `setTimeout(0)` — num Android com o
+     aparelho ocupado isso leva segundos, não milissegundos. Não é afrouxar a
+     asserção: se a janela não fechar, o `assert.fail` continua a disparar. */
+  const fim = Date.now() + 8000;
   while (Date.now() < fim) {
     if (condicao()) return;
     await new Promise((r) => setTimeout(r, 20));
@@ -396,7 +426,10 @@ test('um clique num ícone abre a janela, e o × a fecha e a tira da barra de ta
   assert.equal(t.caixa.querySelectorAll('.janela').length, 1, 'o painel devia estar aberto de inicio');
   assert.equal(t.caixa.querySelectorAll('.task-item').length, 1, 'a barra de tarefas devia mostrar a janela do painel');
 
-  H.clica(t, '.desk-icon[data-tool="username-finder"]');
+  H.clica(t, '[aria-label="Abrir menu"]');
+  // A camada da identidade começa fechada: abrir é parte do caminho.
+  H.clica(t, '.layer-head[aria-expanded="false"]');
+  H.clica(t, '.sidebar [data-tool="username-finder"]');
   const nomes = [...t.caixa.querySelectorAll('.win-name')].map((n) => n.textContent);
   assert.equal(t.caixa.querySelectorAll('.janela').length, 2, 'a ferramenta devia abrir sem fechar o painel');
   assert.ok(nomes.includes('Localizador de Username'), `janelas abertas: ${nomes.join(' | ')}`);
@@ -470,28 +503,207 @@ test('o rodapé leva a marca e o copyright', () => {
   t.desmontar();
 });
 
-test('a paleta é azul profissional — sem verde de Matrix nem vermelho de gamer', () => {
+/**
+ * Abre todas as camadas da lateral.
+ *
+ * As ferramentas só estão no DOM quando a sua camada está aberta — é o
+ * comportamento real (a gaveta não é uma parede de texto) e por isso o
+ * teste tem de abrir as camadas como o utilizador abre.
+ */
+function abreCamadas(t: { caixa: Element; html: () => string }) {
+  for (let guarda = 0; guarda < 12; guarda++) {
+    const fechada = [...t.caixa.querySelectorAll('.layer-head')]
+      .find((b) => b.getAttribute('aria-expanded') === 'false');
+    if (!fechada) break;
+    H.clica(t, '.layer-head[aria-expanded="false"]');
+  }
+}
+
+/** O CSS sem os comentários: é o que o navegador aplica. */
+const semComentarios = (css: string): string => css.replace(/\/\*[\s\S]*?\*\//g, '');
+
+test('a paleta é a do Design System — azul profesional, sem verde Matrix', () => {
   const css = readFileSync(join(SRC, 'styles.css'), 'utf8');
   // Lê o valor pelo nome do token, sem depender do alinhamento de espaços.
   const token = (nome: string) => new RegExp(nome + '\\s*:\\s*(#[0-9A-Fa-f]{3,8})').exec(css)?.[1];
+  // Os valores são os da ficha (Design System v1.0). O que este teste protege
+  // não é a moda: é que o accent continue a ser azul e a continue a ser o
+  // mesmo em toda a aplicação.
   const esperado: Record<string, string> = {
-    '--bg': '#0a0a0f',
-    '--surface': '#0D1B2A',
-    '--surface-2': '#102338',
-    '--line': '#1E334A',
-    '--blue': '#3b82f6',
-    '--blue-2': '#1d4ed8',
-    '--blue-3': '#60a5fa',
-    '--t-1': '#e4e4e7',
-    '--t-3': '#71717a',
-    '--erro': '#ef4444',
-    '--ok': '#10b981',
+    '--bg': '#05070C',
+    '--bg-2': '#030509',
+    '--surface': '#0A0F1C',
+    '--surface-2': '#101828',
+    '--surface-3': '#16213A',
+    '--line': '#1B2540',
+    '--line-strong': '#2B3B63',
+    '--blue': '#2E9BFF',
+    '--blue-2': '#1B6EF3',
+    '--t-1': '#FFFFFF',
+    '--t-2': '#9AA7BD',
+    '--t-3': '#5F6B84',
+    '--erro': '#F0524F',
+    '--ok': '#2FD27D',
+    '--aviso': '#F5A623',
   };
   for (const [nome, valor] of Object.entries(esperado)) {
     assert.equal(token(nome), valor, `${nome} devia ser ${valor}, obtive ${token(nome)}`);
   }
   // E não pode haver verde Matrix como cor de interface.
   assert.ok(!/#00FF00|#0F0\b|green/i.test(css), 'há verde na interface');
+});
+
+/**
+ * O Design System v1.0 em forma de teste: tokens, medidas e制御.
+ *
+ * A ficha é um documento; isto é o que garante que o código a cumpriu. Cada
+ * afirmação aqui é uma linha da ficha — se a ficha mudar, este teste muda com
+ * ela, e se o código divergir da ficha falha em vez de divergir em silêncio.
+ */
+test('o Design System está implementado: gradientes, medidas e micro-label', () => {
+  // Sem comentários: o ficheiro tem blocos comentados a explicar o que fazer
+  // com as fontes, e um teste não deve ler como código o que está desligado.
+  const css = semComentarios(readFileSync(join(SRC, 'styles.css'), 'utf8'));
+
+  // CTA e hero são os gradientes exactos da ficha.
+  assert.match(css, /--grad-cta:\s*linear-gradient\(135deg,\s*#1B6EF3 0%,\s*#2E9BFF 100%\)/,
+    'o gradiente do CTA não é o da ficha');
+  assert.match(css, /--grad-hero:\s*radial-gradient\(120% 90% at 80% 10%,\s*#122B52 0%,\s*#05070C 60%\)/,
+    'o gradiente do hero não é o da ficha');
+
+  // Medidas: alvo de toque 44, botão e campo 52, cartão 20 de raio, 68 de barra.
+  assert.match(css, /--h-touch:\s*44px/, 'o alvo de toque mínimo não é 44px');
+  assert.match(css, /--h-btn:\s*52px/, 'o botão primário não tem 52px');
+  assert.match(css, /--h-input:\s*52px/, 'o campo não tem 52px');
+  assert.match(css, /--r-xl:\s*20px/, 'o raio do cartão não é 20px');
+  assert.match(css, /--tabbar-h:\s*68px/, 'a barra inferior não tem 68px');
+  assert.match(css, /--sidebar-w:\s*280px/, 'a lateral fixa não tem 280px');
+  assert.match(css, /--maxw:\s*1200px/, 'o conteúdo não está limitado a 1200px');
+
+  // E as medidas existem onde têm de valer: cartão, botão primário e campo.
+  assert.match(css, /\.btn-primary\s*\{[\s\S]*?min-height:\s*var\(--h-btn\)/, 'o primário não usa a medida do sistema');
+  assert.match(css, /\.input,[\s\S]*?min-height:\s*var\(--h-input\)/, 'o campo não usa a medida do sistema');
+  assert.match(css, /\.card\s*\{[\s\S]*?border-radius:\s*var\(--r-xl\)/, 'o cartão não usa o raio do sistema');
+  assert.match(css, /\.icon-btn\s*\{[\s\S]*?width:\s*44px/, 'o botão de ícone não tem 44px de alvo');
+
+  // Micro-label: caixa alta, mono, tracking largo.
+  assert.match(css, /\.micro\s*\{[\s\S]*?text-transform:\s*uppercase/, 'a micro-label não é caixa alta');
+  assert.match(css, /\.micro\s*\{[\s\S]*?font-family:\s*var\(--mono\)/, 'a micro-label não é mono');
+
+  // Tipografia: as três famílias da ficha primeiro, com fallback do sistema —
+  // nenhuma fonte é pedida por URL, logo nada bloqueia o desenho.
+  assert.match(css, /--font-display:[^;]*'Sora'/, 'o display não pede Sora');
+  assert.match(css, /--font:[^;]*'Inter'/, 'o corpo não pede Inter');
+  assert.match(css, /--mono:[^;]*'JetBrains Mono'/, 'o mono não pede JetBrains Mono');
+  assert.ok(!/@font-face\s*\{\s*font-family:\s*'Sora'/.test(css),
+    'há um @font-face activo a pedir um ficheiro que o projeto não serve');
+});
+
+test('a navegação é uma só: gaveta no telemóvel, lateral fixa no desktop', () => {
+  const css = semComentarios(readFileSync(join(SRC, 'styles.css'), 'utf8'));
+
+  // Gaveta: a largura da ficha e o fundo que a fecha.
+  assert.match(css, /--drawer-w:\s*min\(320px, 84vw\)/, 'a gaveta não tem min(320px, 84vw)');
+  assert.match(css, /\.side-scrim\s*\{[^}]*background:\s*rgba\(0,0,0,\.6\)/, 'o fundo da gaveta não é rgba(0,0,0,.6)');
+  assert.match(css, /\.sidebar\s*\{[\s\S]*?transition:\s*transform 280ms/, 'a gaveta não entra em 280ms');
+
+  // Itens da navegação com 48px de alto, como pede a ficha.
+  assert.match(css, /\.nav-item\s*\{[\s\S]*?min-height:\s*48px/, 'os itens do menu não têm 48px');
+  // Item activo: accent-soft por baixo, accent no texto.
+  assert.match(css, /\.nav-item\[aria-current='true'\]\s*\{[\s\S]*?background:\s*var\(--blue-dim\)/,
+    'o item activo não usa o accent-soft');
+  assert.match(css, /\.nav-item\[aria-current='true'\]\s*\{[\s\S]*?color:\s*var\(--blue\)/,
+    'o item activo não usa o accent');
+
+  // As três faixas: gaveta abaixo de 1200, lateral fixa a partir de 1200, e
+  // a barra inferior some no desktop (nunca as duas navegações de uma vez).
+  assert.match(css, /@media \(max-width: 1199px\)\s*\{[\s\S]*?\.tabbar\s*\{/,
+    'a barra inferior não existe abaixo de 1200px');
+  assert.match(css, /@media \(min-width: 1200px\)\s*\{[\s\S]*?\.sidebar\s*\{\s*display:\s*flex/,
+    'a lateral fixa não aparece a partir de 1200px');
+  assert.match(css, /@media \(min-width: 1200px\)\s*\{[\s\S]*?\.side-scrim\s*\{\s*display:\s*none/,
+    'o fundo da gaveta continua visível no desktop');
+  assert.match(css, /@media \(min-width: 1200px\)\s*\{[\s\S]*?\.tabbar\s*\{\s*display:\s*none/,
+    'a barra inferior continua no desktop: são duas navegações ao mesmo tempo');
+
+  // E o JavaScript não decide nada disto: nada de media query em JS.
+  const shell = readFileSync(join(SRC, 'pages', 'AppShell.tsx'), 'utf8');
+  assert.ok(!/matchMedia/.test(shell), 'o shell decidiu a largura em JavaScript em vez de a deixar ao CSS');
+});
+
+test('a marca é ARGOS em todo o lado e não há ARGUS nenhum', () => {
+  const ficheiros = [
+    join(SRC, 'components', 'ui.tsx'),
+    join(SRC, 'ia.ts'),
+    join(SRC, 'api.ts'),
+    join(SRC, 'styles.css'),
+    join(WEB, 'index.html'),
+    join(WEB, 'public', 'site.webmanifest'),
+    join(WEB, 'public', 'logo.svg'),
+    join(WEB, 'public', 'logo-mark.svg'),
+    join(WEB, 'public', 'favicon.svg'),
+  ];
+  for (const f of ficheiros) {
+    const src = readFileSync(f, 'utf8');
+    assert.ok(!/ARGUS/.test(src), `${f} ainda diz ARGUS: a marca tem de ser uma só`);
+  }
+  // E a assinatura é a da ficha: ARGOS por cima, FONTES ABERTAS por baixo.
+  const ui = readFileSync(join(SRC, 'components', 'ui.tsx'), 'utf8');
+  assert.match(ui, /brand-name">ARGOS</, 'o wordmark não é ARGOS');
+  const manifest = JSON.parse(readFileSync(join(WEB, 'public', 'site.webmanifest'), 'utf8'));
+  assert.match(manifest.short_name, /ARGOS/, 'o nome curto do manifesto não é ARGOS');
+  assert.match(readFileSync(join(WEB, 'index.html'), 'utf8'), /<title>ARGOS/, 'o título da página não é ARGOS');
+});
+
+test('nenhum username real é usado como exemplo', () => {
+  // Os exemplos que o utilizador vê não podem ser o handle de uma pessoa real.
+  // Percorre o frontend inteiro e os textos de exemplo que o servidor manda
+  // para os campos das ferramentas.
+  const fontes: string[] = [];
+  const anda = (dir: string) => {
+    for (const e of readdirSync(dir, { withFileTypes: true })) {
+      const p = join(dir, e.name);
+      if (e.isDirectory()) anda(p);
+      else if (/\.(tsx|ts)$/.test(e.name)) fontes.push(p);
+    }
+  };
+  anda(SRC);
+  for (const f of fontes) {
+    const src = readFileSync(f, 'utf8');
+    // Handle que aparece como exemplo: `@alvo` ou a palavra depois de `ex:`/`exemplo`.
+    for (const m of src.matchAll(/(?:exemplo|placeholder)[^'\n]{0,40}'([A-Za-z0-9_.-]{3,})'/g)) {
+      const v = m[1];
+      const proibido = ['torvalds', 'natgeo', 'albertoeinstein', 'albert_einstein'];
+      assert.ok(!proibido.includes(v.toLowerCase()), `${f} usa "${v}" como exemplo de demonstração`);
+    }
+  }
+  // E os atalhos do painel, que são o exemplo mais visível de todos.
+  const ia = readFileSync(join(SRC, 'ia.ts'), 'utf8');
+  for (const proibido of ['torvalds', 'natgeo', 'Albert Einstein']) {
+    assert.ok(!ia.includes(proibido), `ia.ts usa "${proibido}" como exemplo`);
+  }
+  // Os exemplos que ficam são genéricos, e isso é verificado por presença:
+  // nenhum handle de exemplo é um nome que exista.
+  assert.match(ia, /alvo_demo/, 'os atalhos deixaram de ter exemplos genéricos');
+});
+
+test('o painel mostra as fontes reais e o estado real — nunca um ONLINE fixo', () => {
+  const dash = readFileSync(join(SRC, 'pages', 'Dashboard.tsx'), 'utf8');
+  // As fontes vêm de /api/health: o que se vê no painel é o que o servidor
+  // respondeu, não uma lista escrita à mão.
+  assert.match(dash, /api\.saude\(/, 'o painel não lê o estado do sistema');
+  assert.match(dash, /rel\.providers/, 'o painel não lê as linhas de /api/health');
+  assert.match(dash, /rel\.estadoGeral/, 'o selo de estado não vem do estado geral do servidor');
+  // Os quatro estados da ficha, com cor E palavra — nunca só cor.
+  for (const rotulo of ['ONLINE', 'LIMITADO', 'NÃO CONFIGURADO', 'ERRO']) {
+    assert.ok(dash.includes(`'${rotulo}'`) || dash.includes(rotulo), `falta o estado ${rotulo}`);
+  }
+  // E não há ecrã de notificações: o sistema não tem notificações, e inventar
+  // um ecrã com elas seria inventar a funcionalidade.
+  const shell = readFileSync(join(SRC, 'pages', 'AppShell.tsx'), 'utf8');
+  assert.ok(!/notifica/i.test(shell), 'a navegação abriu um serviço de notificações que o sistema não tem');
+  const main = readFileSync(join(SRC, 'main.tsx'), 'utf8');
+  assert.ok(!/notifica/i.test(main), 'main.tsx criou uma rota de notificações que o sistema não tem');
 });
 
 test('o pedido de plano é um canal de contacto real, não um "pedido registado" falso', () => {

@@ -77,7 +77,7 @@ export default function Radar({ setView }: { setView: (v: View) => void }) {
   return (
     <div className="page page-wide">
       <header className="card">
-        <h1 className="t-h1">Presence Radar</h1>
+        <h1 className="t-h1">Radar de Presença</h1>
         <p className="t-sm muted" style={{ marginTop: 6, maxWidth: '70ch' }}>
           Compara a presença pública observada agora com o snapshot anterior guardado pelo ARGOS
           para a mesma investigação. Cada observação guarda o estado atual — a comparação só

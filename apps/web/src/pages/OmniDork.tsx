@@ -22,9 +22,10 @@
  *    Isto não é uma lista de exploits a meio caminho: são consultas sobre
  *    material que já é público.
  *
- * Identidade: preto #09090b, grelha fina, mono, e neon #22c55e para tudo o
- * que é accionável. O azul da aplicação não entra aqui dentro — as classes
- * são todas prefixadas `od-` e os tokens vivem no `.od-root`, para o módulo
+ * Identidade: é uma consola, não uma página do produto — grelha fina, mono e
+ * o acento da aplicação reservado a tudo o que é accionável ou é operador de
+ * consulta. As classes são todas prefixadas `od-` e os tokens `--od-*` são
+ * aliases dos tokens da paleta, para o módulo falar a mesma língua visual sem
  * poder ser retirado sem deixar rasto no resto da interface.
  */
 import { useMemo, useState } from 'react';
@@ -35,18 +36,18 @@ import { useToast } from '../components/ui';
 // ------------------------------------------------------------------ opções
 
 const TIPOS = [
-  { id: 'all', label: 'All Content' },
-  { id: 'video', label: 'Videos' },
-  { id: 'document', label: 'Documents' },
-  { id: 'audio', label: 'Audio' },
-  { id: 'software', label: 'Software' },
-  { id: 'image', label: 'Images' },
-  { id: 'archive', label: 'Archives' },
+  { id: 'all', label: 'Todo o conteúdo' },
+  { id: 'video', label: 'Vídeos' },
+  { id: 'document', label: 'Documentos' },
+  { id: 'audio', label: 'Áudio' },
+  { id: 'software', label: 'Programas' },
+  { id: 'image', label: 'Imagens' },
+  { id: 'archive', label: 'Arquivos compactados' },
 ] as const;
 type Tipo = (typeof TIPOS)[number]['id'];
 
 const EXTENSOES = [
-  { id: 'any', label: 'Any Format' },
+  { id: 'any', label: 'Qualquer formato' },
   { id: 'pdf', label: 'PDF' },
   { id: 'doc', label: 'DOC' },
   { id: 'mp4', label: 'MP4' },
@@ -98,22 +99,22 @@ interface Dork {
 }
 
 const CATEGORIAS: { id: 'all' | Categoria; label: string }[] = [
-  { id: 'all', label: 'All Categories' },
-  { id: 'recon', label: 'Reconnaissance' },
-  { id: 'files', label: 'Sensitive Files' },
-  { id: 'intel', label: 'Intelligence' },
+  { id: 'all', label: 'Todas as categorias' },
+  { id: 'recon', label: 'Reconhecimento' },
+  { id: 'files', label: 'Ficheiros sensíveis' },
+  { id: 'intel', label: 'Inteligência' },
 ];
 
 const FASES: { id: Fase; label: string }[] = [
   { id: '1', label: '1: Recon' },
-  { id: '2', label: '2: Files' },
+  { id: '2', label: '2: Ficheiros' },
   { id: '5', label: '5: Intel' },
 ];
 
 const ROTULO_CATEGORIA: Record<Categoria, string> = {
-  recon: 'Reconnaissance', files: 'Sensitive Files', intel: 'Intelligence',
+  recon: 'Reconhecimento', files: 'Ficheiros sensíveis', intel: 'Inteligência',
 };
-const ROTULO_FASE: Record<Fase, string> = { '1': '1: Recon', '2': '2: Files', '5': '5: Intel' };
+const ROTULO_FASE: Record<Fase, string> = { '1': '1: Recon', '2': '2: Ficheiros', '5': '5: Intel' };
 
 /**
  * Doze consultas, três categorias, três fases. Não há aqui SQL Injection, XSS,
@@ -122,42 +123,42 @@ const ROTULO_FASE: Record<Fase, string> = { '1': '1: Recon', '2': '2: Files', '5
  * parte mais perigosa e a menos honesta deste módulo.
  */
 const DORKS: Dork[] = [
-  { id: 'r1', nome: 'Indexed pages', categoria: 'recon', fase: '1',
-    modelo: 'site:{alvo}', porque: 'Everything the engine has indexed under the domain.' },
-  { id: 'r2', nome: 'Login and admin surfaces', categoria: 'recon', fase: '1',
+  { id: 'r1', nome: 'Páginas indexadas', categoria: 'recon', fase: '1',
+    modelo: 'site:{alvo}', porque: 'Tudo o que o motor tem indexado nesse domínio.' },
+  { id: 'r2', nome: 'Páginas de entrada e administração', categoria: 'recon', fase: '1',
     modelo: 'site:{alvo} inurl:(admin OR login OR painel OR signin)',
-    porque: 'Entry points that are already published, not attempts to break in.' },
-  { id: 'r3', nome: 'Parameterised URLs', categoria: 'recon', fase: '1',
+    porque: 'Pontos de entrada que já estão publicados — não são tentativas de invadir.' },
+  { id: 'r3', nome: 'URLs com parâmetros', categoria: 'recon', fase: '1',
     modelo: 'site:{alvo} inurl:(id= OR q= OR url= OR redirect)',
-    porque: 'Shows how the target structures its public routes.' },
-  { id: 'r4', nome: 'External mentions', categoria: 'recon', fase: '1',
-    modelo: '"{alvo}" -site:{alvo}', porque: 'What others publish about the target.' },
+    porque: 'Mostra como o alvo organiza as rotas públicas.' },
+  { id: 'r4', nome: 'Menções externas', categoria: 'recon', fase: '1',
+    modelo: '"{alvo}" -site:{alvo}', porque: 'O que os outros publicam sobre o alvo.' },
 
-  { id: 'f1', nome: 'Directory listing', categoria: 'files', fase: '2',
+  { id: 'f1', nome: 'Listagem de diretório', categoria: 'files', fase: '2',
     modelo: 'intitle:"index of" site:{alvo}',
-    porque: 'Open directory indexes the operator forgot to close.' },
-  { id: 'f2', nome: 'Configuration files', categoria: 'files', fase: '2',
+    porque: 'Índices de diretório abertos que o operador esqueceu de fechar.' },
+  { id: 'f2', nome: 'Ficheiros de configuração', categoria: 'files', fase: '2',
     modelo: 'site:{alvo} filetype:(env OR conf OR ini OR yaml)',
-    porque: 'Config files that the engine already has on record.' },
-  { id: 'f3', nome: 'Backups and dumps', categoria: 'files', fase: '2',
+    porque: 'Ficheiros de configuração que o motor já tem registados.' },
+  { id: 'f3', nome: 'Backups e dumps', categoria: 'files', fase: '2',
     modelo: 'site:{alvo} filetype:(bak OR old OR sql OR gz)',
-    porque: 'Old copies are the usual way a "removed" file stays public.' },
-  { id: 'f4', nome: 'Spreadsheets and exports', categoria: 'files', fase: '2',
+    porque: 'Cópias antigas são o modo habitual de um ficheiro "removido" continuar público.' },
+  { id: 'f4', nome: 'Folhas de cálculo e exportações', categoria: 'files', fase: '2',
     modelo: 'site:{alvo} filetype:(xls OR xlsx OR csv)',
-    porque: 'Tabular data is published far more often than intended.' },
+    porque: 'Dados em tabela são publicados muito mais vezes do que se pretendia.' },
 
-  { id: 'i1', nome: 'Public documents naming the target', categoria: 'intel', fase: '5',
+  { id: 'i1', nome: 'Documentos públicos que citam o alvo', categoria: 'intel', fase: '5',
     modelo: '"{alvo}" filetype:pdf',
-    porque: 'Reports, decks and filings that are public by definition.' },
-  { id: 'i2', nome: 'Professional profiles', categoria: 'intel', fase: '5',
+    porque: 'Relatórios, apresentações e peças processuais que são públicos por natureza.' },
+  { id: 'i2', nome: 'Perfis profissionais', categoria: 'intel', fase: '5',
     modelo: 'site:linkedin.com/in "{alvo}"',
-    porque: 'Self-published professional identity.' },
-  { id: 'i3', nome: 'Contact details in public pages', categoria: 'intel', fase: '5',
+    porque: 'Identidade profissional publicada pela própria pessoa.' },
+  { id: 'i3', nome: 'Contactos em páginas públicas', categoria: 'intel', fase: '5',
     modelo: '"{alvo}" (intext:contato OR intext:email OR intext:telefone)',
-    porque: 'Contact data the subject chose to publish.' },
-  { id: 'i4', nome: 'Mentions in code hosts', categoria: 'intel', fase: '5',
+    porque: 'Dados de contacto que a pessoa decidiu publicar.' },
+  { id: 'i4', nome: 'Menções em repositórios de código', categoria: 'intel', fase: '5',
     modelo: '"{alvo}" (site:github.com OR site:gitlab.com OR site:bitbucket.org)',
-    porque: 'Names and handles that leak into repositories.' },
+    porque: 'Nomes e identificadores que escapam para dentro de repositórios.' },
 ];
 
 // ------------------------------------------------------------------ utilitários
@@ -270,33 +271,33 @@ export default function OmniDork() {
     <div className="od-root">
       {/* ---------------------------------------------------------- cabeçalho */}
       <header className="od-head">
-        <div className="od-kicker">OSINT QUERY MODULE</div>
+        <div className="od-kicker">MÓDULO DE CONSULTAS OSINT</div>
         <h1 className="od-title">OmniDork Builder</h1>
         <p className="od-lead">
-          Compose the query, read it as it is built, then hand it to the search
-          engine. The request is made by your browser, on the engine&apos;s own
-          site — nothing is sent to ARGOS and nothing is billed.
+          Compõe a consulta, lê-la enquanto é montada e entrega-a ao motor de
+          busca. O pedido é feito pelo teu navegador, no site do próprio motor —
+          nada é enviado ao ARGOS e nada é cobrado.
         </p>
         <div className="od-tags">
-          <span className="od-tag">client-side</span>
-          <span className="od-tag">zero server cost</span>
-          <span className="od-tag">public sources only</span>
+          <span className="od-tag">no navegador</span>
+          <span className="od-tag">custo zero no servidor</span>
+          <span className="od-tag">só fontes públicas</span>
         </div>
       </header>
 
       {/* ------------------------------------------------------------ construtor */}
-      <section className="od-panel" aria-label="Builder">
+      <section className="od-panel" aria-label="Construtor">
         <div className="od-panel-head">
-          <span>Builder</span>
+          <span>Construtor</span>
           <span className="od-grow" />
           <span className="od-badge">{motorActual.label}</span>
         </div>
 
         <div className="od-field">
-          <label className="od-label" htmlFor="od-keywords">Search Keywords</label>
+          <label className="od-label" htmlFor="od-keywords">Palavras a procurar</label>
           <input
             id="od-keywords" className="od-input" type="text" value={keywords}
-            placeholder="target name, domain or handle…" autoComplete="off"
+            placeholder="nome, domínio ou identificador…" autoComplete="off"
             spellCheck={false} autoCapitalize="none" autoCorrect="off"
             onChange={(e) => setKeywords(e.target.value)}
           />
@@ -304,14 +305,14 @@ export default function OmniDork() {
 
         <div className="od-row">
           <div className="od-field">
-            <label className="od-label" htmlFor="od-tipo">Content Type</label>
+            <label className="od-label" htmlFor="od-tipo">Tipo de conteúdo</label>
             <select id="od-tipo" className="od-input od-select" value={tipo} disabled={extManda}
               onChange={(e) => setTipo(e.target.value as Tipo)}>
               {TIPOS.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}
             </select>
           </div>
           <div className="od-field">
-            <label className="od-label" htmlFor="od-motor">Search Engine</label>
+            <label className="od-label" htmlFor="od-motor">Motor de busca</label>
             <select id="od-motor" className="od-input od-select" value={motor}
               onChange={(e) => setMotor(e.target.value as Motor)}>
               {MOTORES.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
@@ -321,7 +322,7 @@ export default function OmniDork() {
 
         <label className="od-check" htmlFor="od-download">
           <input id="od-download" type="checkbox" checked={download} onChange={(e) => setDownload(e.target.checked)} />
-          <span>Focus on Download Pages</span>
+          <span>Focar em páginas de download</span>
         </label>
 
         {/* ------------------------------------------ opções avançadas */}
@@ -332,7 +333,7 @@ export default function OmniDork() {
             onClick={() => setAvancado((a) => !a)}
           >
             <Icon.chevronDown className={`od-caret${avancado ? ' od-caret-open' : ''}`} />
-            <span>Advanced Options</span>
+            <span>Opções avançadas</span>
             <span className="od-grow" />
             {extManda && <span className="od-badge">filetype:{ext}</span>}
           </button>
@@ -341,14 +342,14 @@ export default function OmniDork() {
             <div className="od-adv-corpo" id="od-adv-corpo">
               <div className="od-row">
                 <div className="od-field">
-                  <label className="od-label" htmlFor="od-ext">File Extension</label>
+                  <label className="od-label" htmlFor="od-ext">Extensão do ficheiro</label>
                   <select id="od-ext" className="od-input od-select" value={ext}
                     onChange={(e) => setExt(e.target.value as Extensao)}>
                     {EXTENSOES.map((x) => <option key={x.id} value={x.id}>{x.label}</option>)}
                   </select>
                 </div>
                 <div className="od-field">
-                  <label className="od-label" htmlFor="od-site">Target Website</label>
+                  <label className="od-label" htmlFor="od-site">Site a visar</label>
                   <input
                     id="od-site" className="od-input" type="text" value={site}
                     placeholder="example.com" autoComplete="off" spellCheck={false}
@@ -418,7 +419,7 @@ export default function OmniDork() {
                 </motion.button>
               </div>
               {!podePesquisar && (
-                <p className="od-note">Nothing to search yet — the query box above is empty.</p>
+                <p className="od-note">Ainda não há nada para procurar — a caixa acima está vazia.</p>
               )}
             </div>
           )}
@@ -426,17 +427,17 @@ export default function OmniDork() {
       </section>
 
       {/* ---------------------------------------------------------------- feed */}
-      <section className="od-panel od-feed" aria-label="Filters">
+      <section className="od-panel od-feed" aria-label="Filtros">
         <div className="od-panel-head">
-          <span>Filters</span>
+          <span>Filtros</span>
           <span className="od-grow" />
           <span className="od-badge">{lista.length} dorks</span>
         </div>
 
         <div className="od-filters">
           <div className="od-filter">
-            <span className="od-label">Category</span>
-            <div className="od-chips" role="group" aria-label="Category">
+            <span className="od-label">Categoria</span>
+            <div className="od-chips" role="group" aria-label="Categoria">
               {CATEGORIAS.map((c) => (
                 <button
                   key={c.id} className="od-chip" type="button"
@@ -450,13 +451,13 @@ export default function OmniDork() {
           </div>
 
           <div className="od-filter">
-            <span className="od-label">Phase</span>
-            <div className="od-chips" role="group" aria-label="Phase">
+            <span className="od-label">Fase</span>
+            <div className="od-chips" role="group" aria-label="Fase">
               {FASES.map((f) => (
                 <button
                   key={f.id} className="od-chip" type="button"
                   aria-pressed={fase === f.id}
-                  title="Click again to show every phase"
+                  title="Toca outra vez para ver todas as fases"
                   onClick={() => setFase((atual) => (atual === f.id ? null : f.id))}
                 >
                   {f.label}
@@ -501,16 +502,16 @@ export default function OmniDork() {
 
           {lista.length === 0 && (
             <div className="od-empty">
-              <b>No dork in this combination.</b>
-              <span>Clear the phase, or switch back to All Categories.</span>
+              <b>Nenhuma consulta nesta combinação.</b>
+              <span>Limpa a fase, ou volta a Todas as categorias.</span>
             </div>
           )}
         </div>
       </section>
 
       <p className="od-foot">
-        Queries are opened directly on {motorActual.label} in a new tab. ARGOS
-        neither sees nor stores what you search for here.
+        As consultas são abertas diretamente no {motorActual.label}, num separador
+        novo. O ARGOS não vê nem guarda o que procuras aqui.
       </p>
     </div>
   );

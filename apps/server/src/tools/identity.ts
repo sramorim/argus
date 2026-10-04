@@ -80,7 +80,7 @@ registerTool({
   freeTier: true,
   legalGate: 'lgpd',
   tags: ['username', 'redes', 'perfis', 'identidade'],
-  fields: [{ name: 'username', label: 'Username', type: 'text', placeholder: 'ex: torvalds', required: true, hint: 'Sem @ nem URL' }],
+  fields: [{ name: 'username', label: 'Username', type: 'text', placeholder: 'ex: alvo_demo', required: true, hint: 'Sem @ nem URL' }],
   async run(input) {
     const user = String(input.username ?? '').trim().replace(/^@/, '');
     const log = new SourceLog();

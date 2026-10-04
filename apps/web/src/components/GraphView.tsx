@@ -1,24 +1,33 @@
 /**
  * Grafo interativo em SVG.
  *
- * Três decisões que o tornam utilizável no telemóvel:
+ * Quatro decisões que o tornam utilizável no telemóvel:
  *  - **eventos de ponteiro** (não só rato): arrastar com o dedo funciona igual;
  *  - **dois dedos fazem zoom** em vez de a página fazer scroll por cima;
  *  - **"ajustar" automático**: o grafo é desenhado no tamanho do contentor, com
  *    o nó central no meio e os saltos em anéis — não há coordenadas fixas que
- *    saiam do ecrã num telemóvel.
+ *    saiam do ecrã num telemóvel;
+ *  - **o detalhe do nó é uma folha de fundo**, não um painel flutuante: com o
+ *    dedoTap, um cartão no meio do ecrã tapa o grafo que se está a ler.
+ *
+ * A espessura e a opacidade de cada ligação saem da confiança que o servidor
+ * pôs na aresta (`confidence`). Nada aqui é decorativo: mudar a confiança muda
+ * o que se vê.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Graph, GraphNode } from '../api';
 import { CONF_LABEL, CONF_HINT } from '../api';
 import { Icon } from './Icons';
 
+/* As cores dos nós saem da paleta do Design System: o accent para o alvo, uma
+   rampa de azuis e neutros para o resto, e o âmbar do estado de aviso para
+   carteira e conta. Nenhuma cor nova foi inventada. */
 const NODE_COLOR: Record<string, string> = {
-  seed: '#1677FF', pessoa: '#E6EBF1', username: '#E6EBF1', conta: '#D9A441',
-  email: '#8FA9C4', telefone: '#B9A5D9', dominio: '#7FA8C9', ip: '#6F8DA8',
-  servico: '#8A94A1', empresa: '#C8CDD4', socio: '#A7B0BC', endereco: '#9AA1AB',
-  wallet: '#D9A441', portfolio: '#8FA9C4', cve: '#1677FF', pacote: '#B9A5D9',
-  breach: '#1677FF', documento: '#8A94A1', hashtag: '#C7B48C',
+  seed: '#2E9BFF', pessoa: '#FFFFFF', username: '#FFFFFF', conta: '#F5A623',
+  email: '#9BD4FF', telefone: '#B9A5D9', dominio: '#6FC0FF', ip: '#5F6B84',
+  servico: '#7A879F', empresa: '#9AA7BD', socio: '#8C97AB', endereco: '#8492A8',
+  wallet: '#F5A623', portfolio: '#6FC0FF', cve: '#2E9BFF', pacote: '#B9A5D9',
+  breach: '#2E9BFF', documento: '#7A879F', hashtag: '#C7B48C',
 };
 const TYPE_LABEL: Record<string, string> = {
   pessoa: 'pessoa', username: 'username', conta: 'conta', email: 'email', telefone: 'telefone',
@@ -61,6 +70,10 @@ export default function GraphView({ graph }: { graph: Graph; onPick?: (n: GraphN
   const pos = useMemo(() => layout(graph.nodes), [graph.nodes]);
   const [sel, setSel] = useState<GraphNode | null>(null);
   const [view, setView] = useState({ x: 0, y: 0, k: 1 });
+  /* Busca real sobre os nós que existem: filtra por valor, e o primeiro
+     resultado é trazido para o ecrã. Não há resultados inventados — o que
+     não está no grafo não aparece. */
+  const [termo, setTermo] = useState('');
   const wrapRef = useRef<HTMLDivElement>(null);
 
   // Estado de ponteiro (rato OU dedo) e pinça de zoom.
@@ -68,7 +81,14 @@ export default function GraphView({ graph }: { graph: Graph; onPick?: (n: GraphN
   const pinch = useRef<Map<number, { x: number; y: number }>>(new Map());
   const pinchStart = useRef<{ d: number; k: number } | null>(null);
 
-  useEffect(() => { setSel(null); setView({ x: 0, y: 0, k: 1 }); }, [graph]);
+  useEffect(() => { setSel(null); setView({ x: 0, y: 0, k: 1 }); setTermo(''); }, [graph]);
+
+  const filtrados = useMemo(() => {
+    const n = termo.trim().toLowerCase();
+    if (!n) return null;
+    const achados = graph.nodes.filter((x) => x.value.toLowerCase().includes(n));
+    return new Set(achados.map((x) => x.id));
+  }, [termo, graph.nodes]);
 
   const onDown = (e: React.PointerEvent<SVGSVGElement>) => {
     (e.target as Element).setPointerCapture?.(e.pointerId);
@@ -144,28 +164,43 @@ export default function GraphView({ graph }: { graph: Graph; onPick?: (n: GraphN
           {graph.edges.map((e, i) => {
             const a = pos.get(e.from), b = pos.get(e.to);
             if (!a || !b) return null;
-            return <line key={i} className={`gedge c-${e.confidence}`} x1={a.x} y1={a.y} x2={b.x} y2={b.y} />;
+            // Com a busca activa, as ligações que não chegam a um nó
+            // encontrado esbatem: vê-se o sub-grafo do que se procura.
+            const apagada = filtrados
+              ? !(filtrados.has(e.from) || filtrados.has(e.to))
+              : false;
+            return (
+              <line
+                key={i}
+                className={`gedge c-${e.confidence}`}
+                x1={a.x} y1={a.y} x2={b.x} y2={b.y}
+                opacity={apagada ? 0.12 : undefined}
+              />
+            );
           })}
           {graph.nodes.map((n) => {
             const p = pos.get(n.id);
             if (!p) return null;
             const isSeed = n.hop === 0;
             const r = isSeed ? R + 4 : R;
-            const color = NODE_COLOR[n.type] ?? '#8A94A1';
+            const color = NODE_COLOR[n.type] ?? '#5F6B84';
             const active = sel?.id === n.id;
+            const achado = filtrados?.has(n.id) ?? true;
             return (
               <g
                 key={n.id} className="gnode"
                 onPointerUp={(e) => { if (e.pointerType !== 'touch' || !drag.current) { e.stopPropagation(); setSel(n); } }}
-                style={{ cursor: 'pointer' }}
+                style={{ cursor: 'pointer', opacity: achado ? 1 : 0.22 }}
               >
-                {active && <circle cx={p.x} cy={p.y} r={r + 6} fill="none" stroke={color} strokeWidth={1.4} opacity={0.55} />}
+                {active && <circle cx={p.x} cy={p.y} r={r + 7} fill="none" stroke={color} strokeWidth={1.6} opacity={0.6} />}
+                {/* Alvo de toque: o raio real é pequeno, o alvo tem 44px. */}
+                <circle cx={p.x} cy={p.y} r={22} fill="transparent" />
                 <circle
-                  cx={p.x} cy={p.y} r={r} fill={color} opacity={isSeed ? 1 : 0.85}
-                  stroke={active ? '#fff' : 'transparent'} strokeWidth={1.6}
+                  cx={p.x} cy={p.y} r={r} fill={color} opacity={isSeed ? 1 : 0.88}
+                  stroke={active ? '#fff' : achado ? 'transparent' : color} strokeWidth={active ? 2 : 1}
                 />
                 {n.hop >= 1 && (
-                  <text x={p.x} y={p.y + r + 11} fontSize="9.5" fill="#9AA1AB" textAnchor="middle">
+                  <text x={p.x} y={p.y + r + 12} fontSize="10" fill="#9AA7BD" textAnchor="middle">
                     {n.value.length > 28 ? `${n.value.slice(0, 27)}…` : n.value}
                   </text>
                 )}
@@ -181,6 +216,25 @@ export default function GraphView({ graph }: { graph: Graph; onPick?: (n: GraphN
         <button onClick={reset} title="Repor" aria-label="Repor vista" type="button"><Icon.target /></button>
       </div>
 
+      <div className="g-busca">
+        <div className="search">
+          <Icon.search />
+          <input
+            type="search"
+            value={termo}
+            placeholder="Procurar no grafo"
+            aria-label="Procurar um nó no grafo"
+            enterKeyHint="search"
+            onChange={(e) => setTermo(e.target.value)}
+          />
+          {termo && (
+            <button className="search-clear" onClick={() => setTermo('')} aria-label="limpar pesquisa" type="button">
+              <Icon.close width={15} height={15} />
+            </button>
+          )}
+        </div>
+      </div>
+
       <div className="g-panel g-stats">
         <span><b>{graph.nodes.length}</b> nós</span>
         <span><b>{graph.edges.length}</b> ligações</span>
@@ -190,7 +244,7 @@ export default function GraphView({ graph }: { graph: Graph; onPick?: (n: GraphN
       <div className="g-panel g-legend">
         {types.map(([t, c]) => (
           <div className="l" key={t}>
-            <span className="conf-dot" style={{ background: NODE_COLOR[t] ?? '#8A94A1', marginTop: 0 }} />
+            <span className="conf-dot" style={{ background: NODE_COLOR[t] ?? '#5F6B84', marginTop: 0 }} />
             {TYPE_LABEL[t] ?? t} <span className="dim num">{c}</span>
           </div>
         ))}
@@ -199,22 +253,14 @@ export default function GraphView({ graph }: { graph: Graph; onPick?: (n: GraphN
       <div className="g-panel g-hint">arrastar · dois dedos: zoom · toque num nó</div>
 
       {sel && (
-        <div
-          className="g-panel"
-          style={{
-            top: 52, left: 10, width: 268, maxWidth: 'calc(100% - 20px)',
-            padding: '11px 12px', background: 'var(--g-1)', zIndex: 5,
-          }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8, marginBottom: 6 }}>
-            <strong className="t-xs" style={{ letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--t-4)' }}>
-              {TYPE_LABEL[sel.type] ?? sel.type}
-            </strong>
-            <button onClick={() => setSel(null)} aria-label="Fechar detalhe" type="button" style={{ color: 'var(--t-4)' }}>
-              <Icon.close width={14} height={14} />
+        <div className="g-folha" role="dialog" aria-label={`Nó ${TYPE_LABEL[sel.type] ?? sel.type}`}>
+          <div className="g-folha-top">
+            <span className="micro">{TYPE_LABEL[sel.type] ?? sel.type}</span>
+            <button className="icon-btn" onClick={() => setSel(null)} aria-label="Fechar detalhe" type="button">
+              <Icon.close width={16} height={16} />
             </button>
           </div>
-          <div className="mono" style={{ overflowWrap: 'anywhere', marginBottom: 7, color: 'var(--t-1)', fontSize: 12.5 }}>{sel.value}</div>
+          <div className="mono" style={{ overflowWrap: 'anywhere', marginBottom: 9, color: 'var(--t-1)', fontSize: 13.5 }}>{sel.value}</div>
           <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
             <span className="tag" title={CONF_HINT[sel.confidence]}>{CONF_LABEL[sel.confidence]}</span>
             <span className="tag">salto {sel.hop}</span>
@@ -222,7 +268,7 @@ export default function GraphView({ graph }: { graph: Graph; onPick?: (n: GraphN
               <span className="tag">via {(sel.attrs as { via?: string }).via}</span>
             )}
           </div>
-          {sel.sourceIds.length > 0 && <div className="src-ref" style={{ marginTop: 7 }}>fontes: {sel.sourceIds.join(', ')}</div>}
+          {sel.sourceIds.length > 0 && <div className="src-ref" style={{ marginTop: 8 }}>fontes: {sel.sourceIds.join(', ')}</div>}
         </div>
       )}
     </div>

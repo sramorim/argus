@@ -136,7 +136,7 @@ export default function LoadingScreen({
                 className="boot-anel"
                 style={{
                   width: 132 * escala, height: 132 * escala,
-                  borderColor: `rgba(96,165,250,${0.14 + i * 0.07})`,
+                  borderColor: `rgba(46,155,255,${0.16 + i * 0.09})`,
                 }}
                 animate={{ scale: [1, 1.045, 1], opacity: [1, 0.72, 1] }}
                 transition={{

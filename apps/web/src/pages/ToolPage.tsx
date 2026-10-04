@@ -53,6 +53,28 @@ const INPUT_MODE: Record<string, string> = {
 };
 const AUTOCOMPLETE: Record<string, string> = { email: 'email', url: 'url', text: 'off' };
 
+/**
+ * Os tipos de alvo que o detector do servidor reconhece.
+ *
+ * Esta lista não é uma invenção da interface: é a transcrição das expressões
+ * regulares de `detectSeedType()` (`apps/server/src/tools/graph.ts`). O
+ * servidor é que decide o tipo — o ecrã só mostra o que o servidor aceita, e
+ * o exemplo é genérico (`alvo_demo`, `exemplo.com`) para não meter o nome de
+ * uma pessoa real como demonstração.
+ */
+const TIPOS_ALVO: { tipo: string; exemplo: string; icone: (p: SVGProps<SVGSVGElement>) => ReactElement }[] = [
+  { tipo: 'username', exemplo: 'alvo_demo', icone: Icon.user },
+  { tipo: 'domínio', exemplo: 'exemplo.com', icone: Icon.globe },
+  { tipo: 'e-mail', exemplo: 'pessoa@exemplo.com', icone: Icon.mail },
+  { tipo: 'telefone', exemplo: '+55 11 99999-9999', icone: Icon.phone },
+  { tipo: 'IP', exemplo: '8.8.8.8', icone: Icon.server },
+  { tipo: 'URL', exemplo: 'https://exemplo.com/pagina', icone: Icon.link },
+  { tipo: 'carteira', exemplo: 'bc1qexemplo', icone: Icon.coins },
+  { tipo: 'CVE', exemplo: 'CVE-2021-44228', icone: Icon.shield },
+  { tipo: 'empresa (CNPJ)', exemplo: '12.345.678/0001-90', icone: Icon.building },
+  { tipo: 'CEP', exemplo: '01310-100', icone: Icon.target },
+];
+
 /** Etiqueta do campo, para o texto de "quando usar" não ficar genérico. */
 const VERBO: Record<string, string> = {
   Analisar: 'Analisar', Verificar: 'Verificar', Auditar: 'Auditar',
@@ -74,11 +96,14 @@ export default function ToolPage({
   const [err, setErr] = useState('');
   const [usage, setUsage] = useState<Usage | null>(null);
   const [over, setOver] = useState<string | null>(null);
+  /* O formato do exemplo escolhido nos chips de tipo de alvo. */
+  const [exemplo, setExemplo] = useState('');
   const toast = useToast();
   const resRef = useRef<HTMLDivElement>(null);
+  const campoRef = useRef<HTMLInputElement>(null);
   const busyFor = useRef<string | null>(null);
 
-  useEffect(() => { setVals({}); setFiles({}); setRun(null); setErr(''); }, [id]);
+  useEffect(() => { setVals({}); setFiles({}); setRun(null); setErr(''); setExemplo(''); }, [id]);
   useEffect(() => { if (busy) resRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, [busy]);
 
   /* Módulos independentes: existem mesmo sem estarem no catálogo, por isso
@@ -120,6 +145,7 @@ export default function ToolPage({
   const go = async () => {
     if (busyFor.current) return;
     setErr(''); setBusy(true); busyFor.current = t.id;
+    setExemplo('');
     try {
       const r = await api.run(t.id, vals);
       setRun(r.run);
@@ -185,8 +211,34 @@ export default function ToolPage({
               <div className="card-head">{t.fields.length > 1 ? 'Alvo' : 'Alvo a analisar'}</div>
               {err && <div style={{ marginBottom: 13 }}><Note kind="err">{err}</Note></div>}
 
+              {comoAlvo && t.fields.length === 1 && (
+                <>
+                  <p className="t-sm muted" style={{ marginBottom: 10, lineHeight: 1.6 }}>
+                    O tipo é detectado pelo servidor. Escolhe um para ver o formato, ou escreve
+                    directamente — tanto faz a ordem.
+                  </p>
+                  <div className="chip-row" style={{ marginBottom: 16 }}>
+                    {TIPOS_ALVO.map((t2) => (
+                      <button
+                        key={t2.tipo}
+                        className="chip"
+                        type="button"
+                        onClick={() => {
+                          setVals((v) => ({ ...v, [primeiro.name]: '' }));
+                          setExemplo(`${t2.exemplo}  ·  ${t2.tipo}`);
+                          campoRef.current?.focus();
+                        }}
+                      >
+                        <t2.icone width={15} height={15} />
+                        {t2.tipo}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+
               {t.fields.map((f) => (
-                <Field key={f.name} label={f.label} hint={f.hint} required={f.required}>
+                <Field key={f.name} label={f.label} hint={f.hint ?? (exemplo || undefined)} required={f.required}>
                   {f.type === 'file' ? (
                     <>
                       <label className="drop" data-over={over === f.name}>
@@ -217,6 +269,7 @@ export default function ToolPage({
                   ) : (
                     <input
                       className="input"
+                      ref={f === primeiro ? campoRef : undefined}
                       value={vals[f.name] ?? ''}
                       inputMode={INPUT_MODE[f.type] as 'text'}
                       autoCapitalize="none" autoCorrect="off" spellCheck={false}
@@ -230,15 +283,17 @@ export default function ToolPage({
                 </Field>
               ))}
 
-          <motion.button
-            className="btn btn-primary btn-lg btn-block" type="button"
-            onClick={go} disabled={busy || semEspaco}
-            whileHover={{ y: -1 }}
-            whileTap={{ scale: 0.995 }}
-            transition={{ type: 'spring', stiffness: 420, damping: 24 }}
-          >
-            {busy ? <><span className="spin" /> a analisar…</> : <><Icon.target /> {verbo}</>}
-          </motion.button>
+              <div className="cta-sticky">
+                <motion.button
+                  className="btn btn-primary btn-block" type="button"
+                  onClick={go} disabled={busy || semEspaco}
+                  whileHover={{ y: -1 }}
+                  whileTap={{ scale: 0.99 }}
+                  transition={{ type: 'spring', stiffness: 420, damping: 24 }}
+                >
+                  {busy ? <><span className="spin" /> a analisar…</> : <><Icon.target /> {verbo}</>}
+                </motion.button>
+              </div>
 
               {semEspaco && (
                 <div style={{ marginTop: 12 }}>

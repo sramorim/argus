@@ -404,7 +404,7 @@ export const api = {
  * Canal de contacto.
  *
  * O número **não é a fonte da verdade**: vem do servidor, de
- * `/api/contact`, que o lê de `ARGUS_CONTACTO_WHATSAPP`. Estava escrito aqui
+ * `/api/contact`, que o lê de `ARGOS_CONTACTO_WHATSAPP`. Estava escrito aqui
  * e estava errado (faltava o 9 do celular brasileiro), e para corrigir um número
  * de telefone não devia ser preciso tocar em código nem reconstruir o frontend.
  * Mudar o número passa a ser uma variável de ambiente e um reinício.

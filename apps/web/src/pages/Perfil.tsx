@@ -62,7 +62,7 @@ export default function Perfil({ setView }: { setView: (v: View) => void }) {
   return (
     <div className="page page-wide">
       <header className="card">
-        <h1 className="t-h1">Unified Profile</h1>
+        <h1 className="t-h1">Perfil Unificado</h1>
         <p className="t-sm muted" style={{ marginTop: 6, maxWidth: '70ch' }}>
           Uma só leitura sobre o alvo: contas, identificadores, correlações, resoluções, lacunas,
           evidências, linha do tempo e atividade — tudo com proveniência e faixa de confiança,

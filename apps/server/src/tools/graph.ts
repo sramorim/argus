@@ -237,7 +237,7 @@ registerTool({
       out.push(finding('investigacao', 'Alvo não reconhecido', seed || '(vazio)', [], { kind: 'inference', confidence: 'confirmed' }));
       out.push(finding('investigacao', 'O que o ARGUS reconhece',
         ['domínio (exemplo.com)', 'endereço IP (8.8.8.8)', 'URL (https://exemplo.com/x)', 'email (a@b.com)',
-          'username (torvalds)', 'telefone (+5511999999999)', 'carteira Bitcoin (1A1z… ou bc1…)',
+          'username (alvo_demo)', 'telefone (+5511999999999)', 'carteira Bitcoin (1A1z… ou bc1…)',
           'CVE (CVE-2021-44228)', 'CNPJ (11.222.333/0001-81)', 'CEP (01310-100)'],
         [], { kind: 'fact', confidence: 'confirmed' }));
       return { findings: out, log };

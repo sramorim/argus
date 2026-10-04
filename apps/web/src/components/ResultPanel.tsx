@@ -166,7 +166,7 @@ export default function ResultPanel({ run }: { run: ToolRun }) {
     const blob = new Blob([JSON.stringify(run, null, 2)], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = `argus-${run.toolId}-${run.at.replace(/[:.]/g, '-')}.json`;
+    a.download = `argos-${run.toolId}-${run.at.replace(/[:.]/g, '-')}.json`;
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   };
