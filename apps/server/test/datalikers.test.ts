@@ -10,6 +10,7 @@
  */
 import { getTool, allTools, lockState } from '../src/registry.ts';
 import '../src/tools/datalikers.ts';
+import '../src/tools/domain-infra.ts';
 import { TOOL_LOCKS } from '../src/plans.ts';
 import {
   API, ENDPOINTS, PLATAFORMAS, endpoint, listaRecursos, limpar, pedir, recursos,

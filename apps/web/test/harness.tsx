@@ -89,7 +89,7 @@ export const porGrupo = ia.porGrupo;
 
 /**
  * Rede falsa com o catálogo real, para os testes de UI montarem a app sem
- * servidor. As 8 ferramentas e os 6 grupos vêm do próprio código: se a
+ * servidor. As 9 ferramentas e os 7 grupos vêm do próprio código: se a
  * arquitectura de informação mudar, os testes mudam com ela.
  */
 export function stubApi(so: Record<string, unknown> = {}) {
@@ -102,6 +102,7 @@ export function stubApi(so: Record<string, unknown> = {}) {
     ['osint-engine', 'OSINT Engine', 'osint', 'free', 'SpiderFoot, Photon, OpenOSINT, GHunt e Holehe isolados.'],
     ['apify', 'APIFY', 'apify', 'free', 'Actors do Apify (Instagram, TikTok, Facebook, X).'],
     ['paste-search', 'Exposição Pública', 'exposicao', 'pro', 'Busca em sites de paste.'],
+    ['domain-infra', 'Infraestrutura de Domínio', 'infraestrutura', 'free', 'RDAP, DNS público e CT de um domínio.'],
   ] as const;
 
   const tools = ferramentas.map(([id, name, category, minPlan, summary]) => ({

@@ -136,4 +136,5 @@ export const TOOL_LOCKS: Record<string, LockedTool['minPlan']> = {
   'paste-search': 'pro',       // pesquisa web real (Bing RSS)
   'social-search': 'pro',      // 13 pedidos de pesquisa web em paralelo (Bing RSS)
   'datalikers': 'pro',         // Cache API da DataLikers: cada pedido desconta do saldo da conta
+  'domain-infra': 'free',      // RDAP + DNS público + CT: fontes abertas, sem chave, custo zero
 };

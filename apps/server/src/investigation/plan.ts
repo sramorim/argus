@@ -202,6 +202,7 @@ interface DefFerramenta {
 const POR_FASE: Record<FaseNome, DefFerramenta[]> = {
   Discovery: [
     { id: 'username-finder', tipos: ['username'], input: (s) => ({ username: s }), quik: true },
+    { id: 'domain-infra', tipos: ['dominio'], input: (s) => ({ domain: s }), quik: true },
   ],
   OSINT: [
     { id: 'osint-engine', tipos: ['username', 'email', 'dominio', 'ip'], input: (s) => ({ alvo: s }) },

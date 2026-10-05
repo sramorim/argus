@@ -19,6 +19,7 @@ await import('../src/tools/social-search.ts');
 await import('../src/tools/osint-engine.ts');
 await import('../src/tools/apify.ts');
 await import('../src/tools/datalikers.ts');
+await import('../src/tools/domain-infra.ts');
 
 const BASE = process.env.AUDIT_BASE ?? 'http://127.0.0.1:8787';
 const CTX = { userId: 'audit-user', plan: 'pro_max' as const };

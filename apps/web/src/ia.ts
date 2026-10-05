@@ -7,7 +7,7 @@
  * sempre a fonte de "a ferramenta está no site mas não aparece no menu".
  *
  * Regra do projeto: **só entra o que existe e funciona.** Nada é listado por
- * parecer completo. Os grupos abaixo contêm as 8 ferramentas registadas no
+ * parecer completo. Os grupos abaixo contêm as 9 ferramentas registadas no
  * servidor (Social Intelligence), e nenhuma outra — o catálogo real vem da API
  * e o teste `test/ui.test.mts` falha se um grupo prometer uma ferramenta que
  * não existe.
@@ -78,6 +78,13 @@ export const GRUPOS: Grupo[] = [
     // Engine separada do núcleo: sem APIFY_API_TOKEN devolve NOT_CONFIGURED e
     // não gasta nada; correr um actor custa dinheiro, por isso pede confirmação.
     ferramentas: ['apify'],
+  },
+  {
+    id: 'infraestrutura',
+    nome: 'Domínio e Infraestrutura',
+    resumo: 'O que o registo e a rede dizem: RDAP, DNS público e certificados em CT.',
+    icon: Icon.activity,
+    ferramentas: ['domain-infra'],
   },
   {
     id: 'exposicao',
@@ -157,6 +164,7 @@ export const ATALHOS: { id: string; nome: string; exemplo: string; icon: (p: SVG
   { id: 'social-search', nome: 'Perfis que mencionam um nome', exemplo: 'Nome Exemplo', icon: Icon.globe },
   { id: 'datalikers', nome: 'Perfil de Instagram/TikTok', exemplo: '@alvo_demo', icon: Icon.layers },
   { id: 'paste-search', nome: 'Exposição pública', exemplo: 'example.com', icon: Icon.shield },
+  { id: 'domain-infra', nome: 'Infraestrutura de domínio', exemplo: 'exemplo.com', icon: Icon.activity },
 ];
 
 /** Rótulo do plano, para mostrar o estado real sem inventar. */

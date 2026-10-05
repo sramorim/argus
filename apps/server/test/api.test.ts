@@ -141,7 +141,7 @@ await t('health responde 200 e diz quantas ferramentas existem', async () => {
   const r = await new Client().get('/api/health');
   eq(r.status, 200);
   eq(r.data.ok, true);
-  eq(r.data.tools, 8, 'o catálogo é o conjunto Social Intelligence');
+  eq(r.data.tools, 9, 'o catálogo é o conjunto Social Intelligence + domínio');
   eq(r.data.db.writable, true, 'o disco tem de aceitar escrita');
 });
 await t('health estendido: por provider, com os campos do spec e estados honestos', async () => {
@@ -268,7 +268,7 @@ console.log('\n── CATÁLOGO E TRANCAS ────────────�
 await t('catálogo público devolve todas as ferramentas com estado de tranca', async () => {
   const r = await new Client().get('/api/tools', UA);
   eq(r.status, 200);
-  eq(r.data.tools.length, 8, `catálogo inesperado: ${r.data.tools.length} ferramentas`);
+  eq(r.data.tools.length, 9, `catálogo inesperado: ${r.data.tools.length} ferramentas`);
   const graves = r.data.tools.filter((x: any) => x.lock === 'locked');
   const abertos = r.data.tools.filter((x: any) => x.lock === 'open');
   ok(graves.length > 0 && abertos.length > 0, 'faltam ferramentas de um dos lados');

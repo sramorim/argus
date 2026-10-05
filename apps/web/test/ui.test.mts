@@ -244,7 +244,7 @@ test('as categorias de ferramenta têm todas ícone e nome próprios', () => {
 test('a navegação é por grupos, e cada ferramenta está exactamente num', () => {
   const tools = H.stubApi();
 
-  // 1. As 8 ferramentas do catálogo estão todas em algum grupo.
+  // 1. As 9 ferramentas do catálogo estão todas em algum grupo.
   const porId = new Map(tools.map((t) => [t.id, t]));
   const faltam = H.GRUPOS.flatMap((g) => g.ferramentas).filter((id) => !porId.has(id));
   assert.equal(faltam.join(', '), '', 'ferramentas em grupos que não existem no catálogo: ' + faltam.join(', '));

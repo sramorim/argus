@@ -35,6 +35,7 @@ import '../src/tools/social-search.ts';
 import '../src/tools/osint-engine.ts';
 import '../src/tools/apify.ts';
 import '../src/tools/datalikers.ts';
+import '../src/tools/domain-infra.ts';
 
 let pass = 0, fail = 0;
 function ok(cond: boolean, msg: string, extra = '') {
@@ -414,7 +415,7 @@ for (const [id, v] of Object.entries(ETAPAS)) {
   ok(faseDe(id) === v.fase, `etapa ${id} na fase certa`);
 }
 ok(todos(pFull).every((id) => faseDe(id) !== null), 'toda a ferramenta do plano tem fase');
-eq(CATALOGO.length, 8, 'o catálogo real é o que está registado');
+eq(CATALOGO.length, 9, 'o catálogo real é o que está registado');
 ok(Object.keys(PLANS).length === 3, 'três planos');
 
 console.log(`\n${pass} passaram, ${fail} falharam`);

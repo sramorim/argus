@@ -190,7 +190,7 @@ await t('health diz que o disco tem escrita (é o que separa "arrancou" de "serv
   const j = (await r.json()) as any;
   ok(j.db.writable, 'o health check diz que o disco não tem escrita');
   ok(j.db.path === db, `caminho inesperado: ${j.db.path}`);
-  ok(j.tools === 8, `catálogo inesperado: ${j.tools} ferramentas`);
+  ok(j.tools === 9, `catálogo inesperado: ${j.tools} ferramentas`);
   ok(j.env === 'production', `env=${j.env}`);
   function eq200(v: number) { ok(v === 200, `status ${v}`); }
 });
