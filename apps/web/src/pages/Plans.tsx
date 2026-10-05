@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { api, type Plan, type User, CONTACTO, useContacto, pedidoPlanoLink } from '../api';
+import { api, type Contacto, type Plan, type User, CONTACTO, useContacto, pedidoPlanoLink, precoTexto, periodoCurto } from '../api';
 import { Icon } from '../components/Icons';
 import { Modal, Note, Skeleton, useToast } from '../components/ui';
 import PagamentoPix from '../components/PagamentoPix';
@@ -22,13 +22,18 @@ export default function Plans({ user }: { user: User }) {
         </p>
       </header>
 
-      {plans === null ? <Skeleton lines={6} /> : (
-        <div className="plan-grid">
-          {plans.map((p) => (
-            <PlanCardView key={p.id} p={p} current={user.plan === p.id} onAsk={() => setAsk(p)} />
-          ))}
-        </div>
-      )}
+{plans === null ? <Skeleton lines={6} /> : (
+          <div className="plan-grid">
+            {plans.map((p) => (
+              <PlanCardView
+                key={p.id} p={p} current={user.plan === p.id}
+                onAsk={() => setAsk(p)}
+                pix={p.id === 'pro' ? wa : null}
+                email={user.email}
+              />
+            ))}
+          </div>
+        )}
 
       <div className="card" style={{ marginTop: 16 }}>
         <div className="card-head">Como funciona a ativação</div>
@@ -79,7 +84,7 @@ export default function Plans({ user }: { user: User }) {
             <p className="t-sm muted">
               {ask.priceBRL === 0
                 ? 'O plano Free é o teu plano atual.'
-                : `${ask.name} — R$ ${ask.priceBRL.toFixed(2).replace('.', ',')}${ask.pricePeriod === 'unico' ? ' pagamento único, vitalício.' : ' por mês.'}`}
+                : `${ask.name} — ${precoTexto(ask)}.`}
             </p>
             <ul className="plan-perks" style={{ marginTop: 12 }}>
               {ask.perks.map((k) => <li key={k}>{k}</li>)}
@@ -109,14 +114,23 @@ export default function Plans({ user }: { user: User }) {
   );
 }
 
-function PlanCardView({ p, current, onAsk }: { p: Plan; current: boolean; onAsk: () => void }) {
+function PlanCardView({
+  p, current, onAsk, pix, email,
+}: {
+  p: Plan;
+  current: boolean;
+  onAsk: () => void;
+  /** Só o Pro tem Pix no cartão — ver o comentário dentro. */
+  pix: Contacto | null;
+  email: string;
+}) {
   return (
     <div className="plan-card" data-current={current}>
       {current && <span className="plan-badge">ATUAL</span>}
       <div className="plan-name">{p.name}</div>
       <div className="plan-price">
         {p.priceBRL === 0 ? 'Grátis' : `R$ ${p.priceBRL.toFixed(2).replace('.', ',')}`}
-        {p.priceBRL > 0 && <small>{p.pricePeriod === 'unico' ? ' vitalício' : ' /mês'}</small>}
+        {p.priceBRL > 0 && <small>{periodoCurto(p)}</small>}
       </div>
       <div className="plan-note">{p.highlight}</div>
       <ul className="plan-perks">
@@ -128,6 +142,29 @@ function PlanCardView({ p, current, onAsk }: { p: Plan; current: boolean; onAsk:
       </button>
       {!current && p.priceBRL === 0 && (
         <p className="t-xs dim" style={{ marginTop: 8, textAlign: 'center' }}>a downgrade também é feita à mão</p>
+      )}
+
+      {/*
+       * A chave Pix fica no cartão, e não só dentro do modal de "ativar".
+       *
+       * A pessoa que decide se paga é a que tem a chave à frente; pedir-lhe
+       * que abra um modal para a ver é um passo a mais entre a decisão e o
+       * pagamento. O bloco é o mesmo componente do modal — mesmo QR, mesma
+       * mensagem, uma implementação só.
+       *
+       * Só no Pro: é o plano que se vende por Pix. O Pro Max (R$ 79,90/mês)
+       * continua a ser combinado por WhatsApp, e fingir que tem checkout é
+       * pior do que não ter.
+       */}
+      {!current && pix?.pix && (
+        <PagamentoPix
+          chave={pix.pix}
+          preco={p.priceBRL}
+          vitalicio={p.pricePeriod === 'unico'}
+          numero={pix.whatsapp}
+          email={email}
+          compacto
+        />
       )}
     </div>
   );

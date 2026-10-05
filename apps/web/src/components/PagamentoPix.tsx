@@ -20,13 +20,15 @@ import { Icon } from './Icons';
 import { useToast } from './ui';
 
 export default function PagamentoPix({
-  chave, preco, vitalicio, numero, email,
+  chave, preco, vitalicio, numero, email, compacto = false,
 }: {
   chave: string;
   preco: number;
   vitalicio: boolean;
   numero: string;
   email: string;
+  /** Versão para o cartão de planos: a mesma coisa, com menos ar. */
+  compacto?: boolean;
 }) {
   const toast = useToast();
   const [copiado, setCopiado] = useState(false);
@@ -51,7 +53,7 @@ export default function PagamentoPix({
   /* O comprovante vai escrito: o que a pessoa teve de dizer para pedir o
      plano (qual plano, que valor) e o que o dono precisa para saber a quem
      ativar (o email com que a pessoa entrou). */
-  const texto = `Olá! Paguei o plano PRO Argos (${precoTxt}, ${periodo}). Meu email no Argos é: ${email}`;
+  const texto = `Olá! Paguei o plano PRO Argos (R$${preco.toFixed(2).replace('.', ',')}). Meu email no Argos é: ${email}`;
   const waLink = `https://wa.me/${numero}?text=${encodeURIComponent(texto)}`;
 
   const copiar = async () => {
@@ -69,10 +71,10 @@ export default function PagamentoPix({
   };
 
   return (
-    <div className="pix">
+    <div className={`pix${compacto ? ' pix-compacto' : ''}`}>
       <div className="pix-head">
-        <span className="micro">Chave Pix</span>
-        <span className="tag">{vitalicio ? 'pagamento único' : 'mensal'}</span>
+        <span className="micro">Chave Pix:</span>
+        <span className="tag">{vitalicio ? `pagamento único · ${precoTxt}` : `${precoTxt} ${periodo}`}</span>
       </div>
 
       <div className="pix-linha">

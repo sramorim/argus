@@ -456,13 +456,39 @@ export const CONTACTO = {
   label: 'WhatsApp (47) 99787-6098',
 } as const;
 
+/**
+ * O preço de um plano, por extenso, em pt-BR.
+ *
+ * Existe porque o preço aparecia escrito de três maneiras diferentes em três
+ * ecrãs — e o do Pro passou a ser pagamento único enquanto dois sítios ainda
+ * diziam "/mês". Um plano vitalício anunciado como mensal é a forma mais rápida
+ * de criar uma reclamação. Quem escreve preço escreve por aqui.
+ *
+ * `pricePeriod` chega como `string` do servidor, e um período que não seja
+ * nenhum dos três conhecidos **não é inventado**: o preço aparece sem sufixo,
+ * que é a única forma honesta de mostrar um valor cujo período ninguém sabe.
+ */
+export function precoTexto(plan: { priceBRL: number; pricePeriod: string }): string {
+  if (plan.priceBRL === 0) return 'Grátis';
+  const v = `R$ ${plan.priceBRL.toFixed(2).replace('.', ',')}`;
+  if (plan.pricePeriod === 'unico') return `${v} pagamento único vitalício`;
+  if (plan.pricePeriod === 'anual') return `${v} por ano`;
+  if (plan.pricePeriod === 'mensal') return `${v} por mês`;
+  return v;
+}
+
+/** O mesmo preço, para a linha onde o valor é grande e o período é pequeno. */
+export function periodoCurto(plan: { pricePeriod: string }): string {
+  if (plan.pricePeriod === 'unico') return ' vitalício';
+  if (plan.pricePeriod === 'anual') return ' /ano';
+  if (plan.pricePeriod === 'mensal') return ' /mês';
+  return '';
+}
+
 /** Link de WhatsApp com a mensagem já preenchida. */
 export function pedidoPlanoLink(plan: Plan, user?: { email?: string; name?: string } | null, wa: string = CONTACTO.whatsapp): string {
-  const preco = plan.priceBRL === 0
-    ? 'Grátis'
-    : `R$ ${plan.priceBRL.toFixed(2).replace('.', ',')}${plan.pricePeriod === 'unico' ? ' (pagamento único)' : '/mês'}`;
   const linhas = [
-    `Olá! Quero ativar o plano ${plan.name} (${preco}) no ARGOS.`,
+    `Olá! Quero ativar o plano ${plan.name} (${precoTexto(plan)}) no ARGOS.`,
     user?.name ? `Nome: ${user.name}` : '',
     user?.email ? `Conta no ARGOS: ${user.email}` : '',
   ].filter(Boolean);

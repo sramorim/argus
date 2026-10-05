@@ -2142,6 +2142,16 @@ html[data-zebra='sim'] .tbl tbody tr:nth-child(even) td { background: var(--surf
 }
 .pix-qr-caixa svg { width: 100%; height: 100%; display: block; }
 
+/* A mesma coisa dentro do cartão de planos: o cartão é estreito, o QR não
+   pode empurrar a coluna, e o texto de "a ativação é à mão" já está no ecrã. */
+.pix-compacto {
+  gap: var(--s-2); margin-top: var(--s-3); padding: var(--s-3);
+  border-radius: var(--r-lg);
+}
+.pix-compacto .pix-chave { flex: 1 1 100%; font-size: 11.5px; padding: 9px 11px; }
+.pix-compacto .pix-qr-caixa { width: 150px; height: 150px; }
+.pix-compacto > .t-xs:last-child { display: none; }
+
 /* =============================================================
    MODAL DE LIMITE DO PLANO
    Uma coisa a dizer e uma acção a oferecer. O número do limite

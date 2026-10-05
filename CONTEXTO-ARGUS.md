@@ -52,7 +52,7 @@ Estas são as decisões do dono do projeto e **não devem ser violadas**:
 | Plano | Preço | Execuções/dia | Burst/min | Paralelas | Itens/resultado | Saltos no grafo | Investigações guardadas |
 |---|---|---|---|---|---|---|---|
 | **Free** | R$ 0 | 15 | 3 | 1 | 25 | 1 | 3 |
-| **Pro** | R$ 39,90 | 300 | 8 | 3 | 500 | 3 | 50 |
+| **Pro** | R$ 67,90 (pagamento único vitalício) | 300 | 8 | 3 | 500 | 3 | 50 |
 | **Pro Max** | R$ 79,90 | 1500 | 20 | 6 | 2000 | 5 | 500 |
 
 **21 ferramentas são Free, 5 são Pro, nenhuma exige Pro Max.** As trancas estão em

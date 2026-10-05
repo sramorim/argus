@@ -8,7 +8,7 @@
  * 26 ferramentas · 0 dados inventados · 100% com origem declarada.
  */
 import { useEffect, useState } from 'react';
-import { api, type Plan, type ToolPublic, useContacto } from '../api';
+import { api, type Plan, type ToolPublic, useContacto, periodoCurto } from '../api';
 import { Icon } from '../components/Icons';
 import { Brand, PlanTag, Skeleton } from '../components/ui';
 import { GRUPOS, porGrupo } from '../ia';
@@ -138,7 +138,7 @@ export function Landing({ onStart, tools }: { onStart: () => void; tools: ToolPu
                 <div className="plan-name">{p.name}</div>
                 <div className="plan-price">
                   {p.priceBRL === 0 ? 'Grátis' : `R$ ${p.priceBRL.toFixed(2).replace('.', ',')}`}
-                  {p.priceBRL > 0 && <small> /mês</small>}
+                  {p.priceBRL > 0 && <small>{periodoCurto(p)}</small>}
                 </div>
                 <div className="plan-note">{p.highlight}</div>
                 <ul className="plan-perks">

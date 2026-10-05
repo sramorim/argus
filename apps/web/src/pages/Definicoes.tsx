@@ -8,7 +8,7 @@
  * o que o servidor sabe do que é só disposição deste aparelho.
  */
 import { useEffect, useState } from 'react';
-import { api, type EstadoCreditos, type Plan, type Usage, type User, PLAN_NAME, useContacto } from '../api';
+import { api, type EstadoCreditos, type Plan, type Usage, type User, PLAN_NAME, precoTexto, useContacto } from '../api';
 import { Icon } from '../components/Icons';
 import { Note, Skeleton, useToast } from '../components/ui';
 import { guardar, preferencias, type Preferencias } from '../prefs';
@@ -111,7 +111,7 @@ export default function Definicoes({ user, usage, setView }: {
           <>
             <div className="t-h2">{plano.name}</div>
             <div className="t-sm dim" style={{ marginBottom: 12 }}>
-              {plano.priceBRL === 0 ? 'Grátis' : `R$ ${plano.priceBRL.toFixed(2).replace('.', ',')} por mês`} · {plano.highlight}
+              {precoTexto(plano)} · {plano.highlight}
             </div>
             <dl className="kv">
               <dt>execuções/dia</dt>

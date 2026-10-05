@@ -80,9 +80,10 @@ Dentro da plataforma, o utilizador consegue:
 9. **Compor dorks** no browser com o OmniDork Builder e exportá-las para o motor de
    busca escolhido (sem custo de servidor, sem consulta a sair do ARGUS).
 
-**Monetização actual.** Três planos — Free (R$ 0), Pro (R$ 39,90/mês) e Pro Max
-(R$ 79,90/mês). **Não existe gateway de pagamento**: a ativação é manual, o botão de
-plano abre o WhatsApp com o pedido já escrito.
+**Monetização actual.** Três planos — Free (R$ 0), Pro (R$ 67,90 **pagamento único
+vitalício**) e Pro Max (R$ 79,90/mês). **Não existe gateway de pagamento**: a
+chave Pix e o QR aparecem no cartão do Pro, o botão abre o WhatsApp com o pedido já
+escrito e a ativação é confirmada à mão.
 
 ---
 
@@ -752,7 +753,7 @@ Módulo independente: OmniDork Builder (só browser).
 | Plano | Preço | Execuções/dia | Burst/min | Paralelas | Itens/resultado | Saltos | Investigações |
 |---|---|---|---|---|---|---|---|
 | Free | R$ 0 | 15 | 3 | 1 | 25 | 1 | 3 |
-| Pro | R$ 39,90 | 300 | 8 | 3 | 500 | 3 | 50 |
+| Pro | R$ 67,90 (único) | 300 | 8 | 3 | 500 | 3 | 50 |
 | Pro Max | R$ 79,90 | 1500 | 20 | 6 | 2000 | 5 | 500 |
 
 ### Fases da investigação (8)
