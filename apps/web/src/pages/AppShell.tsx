@@ -47,7 +47,10 @@ import Definicoes from './Definicoes';
 export type View =
   | { k: 'dashboard' } | { k: 'nova' }
   | { k: 'tool'; id: string } | { k: 'inv' } | { k: 'inv'; id: string }
-  | { k: 'plans' } | { k: 'keys' } | { k: 'account' } | { k: 'admin' } | { k: 'history' }
+  /* Sem 'keys': o ecrã de Chaves API saiu — a única chave que a pessoa traz é a
+     da DataLikers, e vive em Conta › Gerenciar limites. O vestígio ficava aqui
+     como um destino que nada conseguia abrir. */
+  | { k: 'plans' } | { k: 'account' } | { k: 'admin' } | { k: 'history' }
   | { k: 'health' } | { k: 'radar' } | { k: 'perfil' } | { k: 'definicoes' };
 
 /** Os 4 destinos da barra inferior. Escolha: o que se usa a toda a hora. */
