@@ -130,6 +130,14 @@ export default function ToolPage({
   }
 
   const locked = t.lock === 'locked';
+  /*
+   * Uma ferramenta de um campo só corre numa fila: o input grande e o botão
+   * de acção lado a lado, como quem escreve e carrega. É só apresentação —
+   * os mesmos valores, o mesmo `go()`, o mesmo Enter. Com dois ou mais
+   * campos (ou ficheiro) mantém-se o formulário empilhado: pôr o botão ao
+   * lado do segundo campo seria dizer que só ele importa.
+   */
+  const unico = !locked && t.fields.length === 1 && t.fields[0].type !== 'file';
   const grupo = GRUPOS.find((g) => g.ferramentas.includes(t.id));
   const restantes = usage ? Math.max(0, usage.daily - usage.today) : null;
   const semEspaco = restantes !== null && restantes === 0;
@@ -200,7 +208,7 @@ export default function ToolPage({
           </header>
 
           {locked ? (
-            <div className="card" style={{ textAlign: 'center' }}>
+            <div className="card upsell">
               <div className="empty-ico" style={{ margin: '0 auto 12px' }}><Icon.lock /></div>
               <h2 className="t-h3">Precisa de um plano superior</h2>
               <p className="t-sm muted" style={{ margin: '9px 0 16px', lineHeight: 1.64 }}>
@@ -250,7 +258,7 @@ export default function ToolPage({
                 </>
               )}
 
-              {t.fields.map((f) => (
+              {t.fields.filter((f) => !(unico && f === primeiro)).map((f) => (
                 <Field key={f.name} label={f.label} hint={f.hint ?? (exemplo || undefined)} required={f.required}>
                   {f.type === 'file' ? (
                     <>
@@ -296,6 +304,32 @@ export default function ToolPage({
                 </Field>
               ))}
 
+              {unico ? (
+                <div className="tool-run-row">
+                  <input
+                    className="input tool-run-input"
+                    ref={campoRef}
+                    aria-label={primeiro.label}
+                    value={vals[primeiro.name] ?? ''}
+                    inputMode={INPUT_MODE[primeiro.type] as 'text'}
+                    autoCapitalize="none" autoCorrect="off" spellCheck={false}
+                    autoComplete={AUTOCOMPLETE[primeiro.type] ?? 'off'}
+                    enterKeyHint="go"
+                    placeholder={primeiro.placeholder ?? primeiro.label}
+                    onChange={(e) => setVals((v) => ({ ...v, [primeiro.name]: e.target.value }))}
+                    onKeyDown={(e) => { if (e.key === 'Enter' && !busy && !semEspaco) { e.preventDefault(); go(); } }}
+                  />
+                  <motion.button
+                    className="btn btn-primary tool-run-btn" type="button"
+                    onClick={go} disabled={busy || semEspaco}
+                    whileHover={{ y: -1 }}
+                    whileTap={{ scale: 0.99 }}
+                    transition={{ type: 'spring', stiffness: 420, damping: 24 }}
+                  >
+                    {busy ? <><span className="spin" /> a analisar…</> : <><Icon.target /> {verbo}</>}
+                  </motion.button>
+                </div>
+              ) : (
               <div className="cta-sticky">
                 <motion.button
                   className="btn btn-primary btn-block" type="button"
@@ -307,6 +341,7 @@ export default function ToolPage({
                   {busy ? <><span className="spin" /> a analisar…</> : <><Icon.target /> {verbo}</>}
                 </motion.button>
               </div>
+              )}
 
               {semEspaco && (
                 <div style={{ marginTop: 12 }}>

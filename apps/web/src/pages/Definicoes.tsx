@@ -46,9 +46,18 @@ export default function Definicoes({ user, usage, setView }: {
           apresentação ficam no navegador e estão marcadas como tais.
         </p>
       </header>
+      {/* Abas por âncora: saltam para os blocos, não escondem nada. São links,
+          não estado — não há nada para sincronizar nem para partir. */}
+      <nav className="tabs" aria-label="Secções das definições">
+        <a className="tab" href="#def-conta">Conta</a>
+        <a className="tab" href="#def-plano">Plano</a>
+        <a className="tab" href="#def-limites">Limites</a>
+        <a className="tab" href="#def-contacto">Contacto</a>
+        <a className="tab" href="#def-prefs">Apresentação</a>
+      </nav>
 
       {/* ------------------------------------------------------------- conta */}
-      <div className="card">
+      <div className="card" id="def-conta">
         <div className="card-head">
           <span>Conta</span>
           <span className="grow" />
@@ -89,7 +98,7 @@ export default function Definicoes({ user, usage, setView }: {
       </div>
 
       {/* ------------------------------------------------------------- plano */}
-      <div className="card">
+      <div className="card" id="def-plano">
         <div className="card-head">
           <span>Plano</span>
           <span className="grow" />
@@ -137,7 +146,7 @@ export default function Definicoes({ user, usage, setView }: {
           variáveis do dono no Render, e a única chave que a pessoa pode
           trazer (a da DataLikers) vive em Conta › Gerenciar limites. Aqui fica
           só o resumo — e a porta para lá. */}
-      <div className="card">
+      <div className="card" id="def-limites">
         <div className="card-head">
           <span>Limites</span>
           <span className="grow" />
@@ -163,7 +172,7 @@ export default function Definicoes({ user, usage, setView }: {
       </div>
 
       {/* ---------------------------------------------------------- contacto */}
-      <div className="card">
+      <div className="card" id="def-contacto">
         <div className="card-head">Contacto do autor</div>
         <p className="t-sm muted" style={{ marginBottom: 12 }}>
           O número vem do servidor (<span className="mono">GET /api/contact</span>), não está
@@ -196,7 +205,7 @@ export default function Definicoes({ user, usage, setView }: {
       </div>
 
       {/* ----------------------------------------------------- preferências */}
-      <div className="card">
+      <div className="card" id="def-prefs">
         <div className="card-head">Preferências de apresentação</div>
         <Note kind="info">
           Estas opções ficam em <span className="mono">localStorage</span> <b>neste navegador</b>:

@@ -441,6 +441,13 @@ function GloboRede() {
 }
 
 function CardFerramenta({ t, setView }: { t: ToolPublic; setView: (v: View) => void }) {
+  /*
+   * O selo PRO não é decoração: é o `lock` que o servidor devolveu. Só há
+   * dois estados — aberta (ícone azul) ou trancada (selo PRO) — porque são
+   * os únicos que os dados sustentam. Não há selo NOVO nem DEMO: nada no
+   * catálogo diz o que é novo ou o que é demonstração, e um selo inventado
+   * é uma promessa inventada.
+   */
   return (
     <button
       className="tool-card"
@@ -448,6 +455,7 @@ function CardFerramenta({ t, setView }: { t: ToolPublic; setView: (v: View) => v
       data-locked={t.lock === 'locked'}
       onClick={() => setView({ k: 'tool', id: t.id })}
     >
+      {t.lock === 'locked' && <span className="tag tag-pro tool-badge">PRO</span>}
       <div className="tool-top">
         <span className="tool-glyph">
           <Icon.network />

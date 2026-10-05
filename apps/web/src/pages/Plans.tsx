@@ -1,16 +1,21 @@
 import { useEffect, useState } from 'react';
-import { api, type Contacto, type Plan, type User, CONTACTO, useContacto, pedidoPlanoLink, precoTexto, periodoCurto } from '../api';
+import { api, type Contacto, type Plan, type ToolPublic, type User, CONTACTO, useContacto, pedidoPlanoLink, precoTexto, periodoCurto } from '../api';
 import { Icon } from '../components/Icons';
 import { Modal, Note, Skeleton, useToast } from '../components/ui';
 import PagamentoPix from '../components/PagamentoPix';
 
 export default function Plans({ user }: { user: User }) {
   const [plans, setPlans] = useState<Plan[] | null>(null);
+  /* Só para a tabela comparativa: que ferramentas cada plano abre. É a mesma
+     lista do painel, com o `minPlan` que o servidor devolve — nada aqui é
+     escrito à mão. */
+  const [tools, setTools] = useState<ToolPublic[] | null>(null);
   const [ask, setAsk] = useState<Plan | null>(null);
   const toast = useToast();
   const wa = useContacto();
 
   useEffect(() => { api.plans().then((r) => setPlans(r.plans)).catch(() => setPlans([])); }, []);
+  useEffect(() => { api.tools().then((r) => setTools(r.tools)).catch(() => setTools([])); }, []);
 
   return (
     <div className="page">
@@ -32,6 +37,43 @@ export default function Plans({ user }: { user: User }) {
                 email={user.email}
               />
             ))}
+          </div>
+        )}
+
+        {/*
+         * Tabela comparativa: ferramenta a ferramenta, o que cada plano abre.
+         * O ✓ do Free acende quando `minPlan` é `free`; o do Pro quando o plano
+         * Pro chega lá (`free` ou `pro`). O Pro Max não tem coluna: tudo o que
+         * o Pro abre, ele abre — uma terceira coluna de ✓ repetidos não diz
+         * nada a ninguém.
+         */}
+        {tools !== null && tools.length > 0 && (
+          <div className="card tabela-card">
+            <div className="card-head">Ferramenta · Free · Pro</div>
+            <div className="tbl-wrap">
+              <table className="tbl tabela-planos">
+                <thead>
+                  <tr><th scope="col">Ferramenta</th><th scope="col">Free</th><th scope="col">Pro</th></tr>
+                </thead>
+                <tbody>
+                  {tools.map((t) => (
+                    <tr key={t.id}>
+                      <td data-l="ferramenta">{t.name}</td>
+                      <td data-l="free">
+                        {t.minPlan === 'free'
+                          ? <span className="check-ok"><Icon.check width={18} height={18} /></span>
+                          : <span className="check-nao" aria-label="não incluído">—</span>}
+                      </td>
+                      <td data-l="pro">
+                        {t.minPlan !== 'pro_max'
+                          ? <span className="check-ok"><Icon.check width={18} height={18} /></span>
+                          : <span className="check-nao" aria-label="não incluído">—</span>}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
 
@@ -136,9 +178,9 @@ function PlanCardView({
       <ul className="plan-perks">
         {p.perks.map((k) => <li key={k}>{k}</li>)}
       </ul>
-      <button className={`btn btn-block ${!current && p.priceBRL > 0 ? 'btn-primary' : 'btn-quiet'}`}
+      <button className={`btn btn-block btn-continuar ${!current && p.priceBRL > 0 ? 'btn-primary' : 'btn-quiet'}`}
         type="button" onClick={onAsk} disabled={current}>
-        {current ? 'plano atual' : p.priceBRL === 0 ? 'voltar ao Free' : 'ativar este plano'}
+        {current ? 'plano atual' : p.priceBRL === 0 ? 'voltar ao Free' : 'Continuar'}
       </button>
       {!current && p.priceBRL === 0 && (
         <p className="t-xs dim" style={{ marginTop: 8, textAlign: 'center' }}>a downgrade também é feita à mão</p>
