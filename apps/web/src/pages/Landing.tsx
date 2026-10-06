@@ -1,189 +1,187 @@
 /**
- * Landing pública.
- *
- * A ordem responde a quem chega do telemóvel, sem contexto e sem paciência:
- * o que é isto → porque é diferente → o que entrega → quanto custa → como entro.
- *
- * Três tipos de número, e a diferença entre eles é o produto inteiro:
- * 26 ferramentas · 0 dados inventados · 100% com origem declarada.
+ * Landing pública — visual estilo "app showcase" (fundo escuro com brilho +
+ * mockup de telemóvel), identidade ARGOS, conteúdo ARGOS.
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 import { api, type Plan, type ToolPublic, useContacto, periodoCurto } from '../api';
-import { Icon } from '../components/Icons';
 import { Brand, PlanTag, Skeleton } from '../components/ui';
 import { GRUPOS, porGrupo } from '../ia';
+
+const VERDE = '#1fd67a';
+const FUNDO = '#04120b';
+
+const glow: CSSProperties = {
+  background: `radial-gradient(90% 55% at 50% 0%, rgba(31,214,122,.22) 0%, rgba(4,18,11,0) 70%), ${FUNDO}`,
+};
+
+const kicker: CSSProperties = {
+  fontSize: 11, letterSpacing: 2, textTransform: 'uppercase', color: VERDE, fontWeight: 700,
+};
+
+const titulo: CSSProperties = { color: '#fff', fontSize: 34, lineHeight: 1.1, margin: '8px 0 0', fontWeight: 800 };
+
+function Phone() {
+  return (
+    <div style={{
+      width: 250, borderRadius: 36, padding: 10, margin: '0 auto',
+      background: '#0b0f0d', border: '2px solid #c9a86a',
+      boxShadow: '0 30px 80px rgba(0,0,0,.6), 0 0 60px rgba(31,214,122,.15)',
+    }}>
+      <div style={{ background: '#101613', borderRadius: 28, overflow: 'hidden' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '12px 14px 6px', color: '#fff', fontSize: 12, fontWeight: 700 }}>
+          <span style={{ width: 22, height: 22, borderRadius: '50%', background: VERDE, display: 'grid', placeItems: 'center', color: '#04120b', fontSize: 12 }}>◉</span>
+          ARGOS
+          <span style={{ marginLeft: 'auto', fontSize: 10, color: VERDE, background: 'rgba(31,214,122,.12)', padding: '2px 8px', borderRadius: 20 }}>● ONLINE</span>
+        </div>
+        <div style={{ padding: '8px 14px', color: '#9fb3a8', fontSize: 10 }}>PAINEL DE ANÁLISE</div>
+        <div style={{ margin: '0 12px', background: '#0a0f0c', border: '1px solid #1e2b24', borderRadius: 12, padding: 12 }}>
+          <div style={{ color: '#7d8f86', fontSize: 10 }}>@perfil_alvo</div>
+          <div style={{ color: '#fff', fontSize: 22, fontWeight: 800 }}>87<span style={{ fontSize: 12, color: '#7d8f86' }}>/100 presença</span></div>
+          <div style={{ height: 6, borderRadius: 4, background: '#1c2620', marginTop: 8 }}>
+            <div style={{ width: '87%', height: '100%', borderRadius: 4, background: VERDE }} />
+          </div>
+          <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
+            <span style={{ flex: 1, textAlign: 'center', fontSize: 10, color: '#04120b', background: VERDE, borderRadius: 8, padding: '6px 0', fontWeight: 800 }}>ANALISAR</span>
+            <span style={{ flex: 1, textAlign: 'center', fontSize: 10, color: '#fff', background: '#1c2620', borderRadius: 8, padding: '6px 0' }}>RELATÓRIO</span>
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: 8, padding: 12 }}>
+          {[['2.4M', 'alcance'], ['4.8%', 'engajam.'], ['132', 'posts']].map(([v, l]) => (
+            <div key={l} style={{ flex: 1, background: '#0a0f0c', border: '1px solid #1e2b24', borderRadius: 10, padding: 8, textAlign: 'center' }}>
+              <div style={{ color: '#fff', fontWeight: 800, fontSize: 13 }}>{v}</div>
+              <div style={{ color: '#7d8f86', fontSize: 9 }}>{l}</div>
+            </div>
+          ))}
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-around', padding: '10px 0 14px', color: '#5d6f65', fontSize: 14 }}>
+          <span style={{ color: VERDE }}>◉</span><span>◎</span><span>◎</span><span>◎</span>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export function Landing({ onStart, tools }: { onStart: () => void; tools: ToolPublic[] }) {
   const [plans, setPlans] = useState<Plan[] | null>(null);
   const wa = useContacto();
   useEffect(() => { api.plans().then((r) => setPlans(r.plans)).catch(() => setPlans([])); }, []);
 
-  const livres = tools.filter((t) => t.lock === 'open').length;
   const emDestaque = GRUPOS.map((g) => ({ g, lista: porGrupo(tools, g.id) })).filter((x) => x.lista.length);
 
-  const capacidades = [
+  const secoes: { kicker: string; titulo: string; sub: string; corpo: ReactNode }[] = [
     {
-      i: Icon.network, t: 'Um alvo, tudo ligado',
-      d: 'Começa por um username, um domínio, um telefone. O ARGOS escolhe as ferramentas certas, cruza o que encontra e mostra as relações num grafo.',
+      kicker: 'Ferramentas', titulo: 'Cada rede, uma análise.',
+      sub: `${tools.length} ferramentas reais, organizadas pelo que queres fazer.`,
+      corpo: (
+        <div style={{ display: 'grid', gap: 10, marginTop: 18 }}>
+          {emDestaque.slice(0, 4).map(({ g, lista }) => {
+            const Ico = g.icon;
+            return (
+              <div key={g.id} style={{ background: '#0a0f0c', border: '1px solid #1e2b24', borderLeft: `3px solid ${VERDE}`, borderRadius: 12, padding: 14, display: 'flex', gap: 12, alignItems: 'center' }}>
+                <span style={{ color: VERDE }}><Ico /></span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ color: '#fff', fontWeight: 700, fontSize: 14 }}>{g.nome}</div>
+                  <div style={{ color: '#7d8f86', fontSize: 12 }}>{lista.length} ferramentas · {lista.slice(0, 3).map((t) => t.name).join(' · ')}</div>
+                </div>
+                {lista[0] && (lista[0].lock === 'locked' ? <PlanTag minPlan={lista[0].minPlan} /> : <span className="tag tag-free">GRÁTIS</span>)}
+              </div>
+            );
+          })}
+        </div>
+      ),
     },
     {
-      i: Icon.database, t: 'Proveniência em tudo',
-      d: 'Cada achado diz de que fonte veio, quando e com que grau de confiança. Fonte que falhou aparece como falhou — nunca escondida atrás de um resultado parcial.',
-    },
-    {
-      i: Icon.shield, t: 'Só fontes públicas e reais',
-      d: 'RDAP, DNS-over-HTTPS, Certificate Transparency, NVD, OSV, BrasilAPI, abuse.ch, GitHub. Cada uma foi testada com alvos reais antes de entrar no catálogo.',
-    },
-    {
-      i: Icon.phone, t: 'Feito para o telemóvel',
-      d: 'Pesquisar, investigar e ler resultados com o polegar. A mesma arquitectura serve o desktop, sem duas interfaces para manter.',
+      kicker: 'Como funciona', titulo: 'Do @perfil ao relatório.',
+      sub: 'Três passos, sempre com proveniência.',
+      corpo: (
+        <div style={{ display: 'grid', gap: 10, marginTop: 18 }}>
+          {[['1 · BUSCAR', 'Digite o @usuário, domínio ou alvo.'], ['2 · ANALISAR', 'O ARGOS cruza Instagram, TikTok e mais.'], ['3 · RELATÓRIO', 'Resultado com fonte, data e confiança.']].map(([t, d]) => (
+            <div key={t} style={{ background: '#0a0f0c', border: '1px solid #1e2b24', borderRadius: 12, padding: 14 }}>
+              <div style={{ color: VERDE, fontWeight: 800, fontSize: 12 }}>{t}</div>
+              <div style={{ color: '#d7e2dc', fontSize: 13, marginTop: 4 }}>{d}</div>
+            </div>
+          ))}
+        </div>
+      ),
     },
   ];
 
   return (
-    <>
-      <header className="topbar-landing" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '15px 0' }}>
-        <Brand size={30} subtitle="Fontes abertas" className="brand-plain" />
-        <span className="grow" />
-        {wa && (
-          <a className="btn btn-quiet btn-sm" href={wa.link} target="_blank" rel="noopener noreferrer">
-            falar connosco
-          </a>
-        )}
-      </header>
+    <div style={{ margin: '0 -16px', ...glow }}>
+      <div style={{ maxWidth: 1000, margin: '0 auto', padding: '0 16px 64px' }}>
+        <header style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '15px 0' }}>
+          <Brand size={30} subtitle="Análise de presença" className="brand-plain" />
+          <span className="grow" />
+          {wa && <a className="btn btn-quiet btn-sm" href={wa.link} target="_blank" rel="noopener noreferrer">falar connosco</a>}
+        </header>
 
-      {/* ---------------- herói ---------------- */}
-      <section className="hero">
-        <span className="hero-kicker">Inteligência de fontes abertas</span>
-        <h1 className="t-display" style={{ marginTop: 'var(--s-4)' }}>
-          Investigue o que é <span className="blue">público</span>,<br />com a proveniência à vista.
-        </h1>
-        <p className="lead">
-          O ARGOS cruza fontes abertas reais para responder a perguntas sobre domínios, IPs,
-          perfis, empresas, carteiras e vulnerabilidades. Cada resultado diz <b>de onde veio</b>,
-          quando e com que grau de confiança. Não há mock, não há resultado plausível inventado,
-          e não há fonte que responda 200 e finja que tem dados.
-        </p>
-        <div className="hero-cta">
-          <button className="btn btn-primary btn-lg" type="button" onClick={onStart}>criar conta grátis</button>
-          <button className="btn btn-lg" type="button" onClick={() => document.getElementById('planos')?.scrollIntoView({ behavior: 'smooth' })}>
-            ver planos
-          </button>
-        </div>
-        <div className="hero-stats">
-          <div><div className="v">{tools.length || '—'}</div><div className="l">ferramentas</div></div>
-          <div><div className="v">{livres || '—'}</div><div className="l">gratuitas no Free</div></div>
-          <div><div className="v">0</div><div className="l">dados inventados</div></div>
-          <div><div className="v">100%</div><div className="l">com origem declarada</div></div>
-        </div>
-      </section>
-
-      {/* ---------------- capacidades ---------------- */}
-      <section className="section">
-        <h2 className="t-h2">O que o ARGOS faz</h2>
-        <p className="muted t-sm">Quatro capacidades. Todas com fontes reais por trás.</p>
-        <div className="feat-grid" style={{ marginTop: 'var(--s-4)' }}>
-          {capacidades.map((c) => (
-            <div className="feat" key={c.t}>
-              <div className="feat-ico"><c.i /></div>
-              <h4>{c.t}</h4>
-              <p>{c.d}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ---------------- ferramentas por objetivo ---------------- */}
-      <section className="section">
-        <h2 className="t-h2">Ferramentas</h2>
-        <p className="muted t-sm">
-          {tools.length} registadas, organizadas pelo que queres fazer. Só entram as que
-          funcionam — cada uma foi testada contra alvos reais antes de estar aqui.
-        </p>
-        <div className="grid grid-2" style={{ marginTop: 'var(--s-4)' }}>
-          {emDestaque.map(({ g, lista }) => {
-            const Ico = g.icon;
-            return (
-              <article className="card" key={g.id}>
-                <div className="layer-card-head">
-                  <span className="layer-card-ico"><Ico /></span>
-                  <div style={{ minWidth: 0, flex: 1 }}>
-                    <div className="card-title">{g.nome}</div>
-                    <div className="card-sub">{g.resumo}</div>
-                  </div>
-                  <span className="layer-card-n">{lista.length}</span>
-                </div>
-                <div className="layer-list">
-                  {lista.map((t) => (
-                    <div className="nav-item" key={t.id} style={{ cursor: 'default' }}>
-                      <span className="nav-label-txt">{t.name}</span>
-                      {t.lock === 'locked' ? <PlanTag minPlan={t.minPlan} /> : <span className="tag tag-free">GRÁTIS</span>}
-                    </div>
-                  ))}
-                </div>
-              </article>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* ---------------- planos ---------------- */}
-      <section className="section" id="planos">
-        <h2 className="t-h2">Planos</h2>
-        <p className="muted t-sm">O Free não expira e não pede cartão. Paga-se quando precisas de mais volume.</p>
-        {plans === null ? <Skeleton lines={4} /> : (
-          <div className="plan-grid" style={{ marginTop: 'var(--s-4)' }}>
-            {plans.map((p) => (
-              <div className="plan-card" key={p.id}>
-                <div className="plan-name">{p.name}</div>
-                <div className="plan-price">
-                  {p.priceBRL === 0 ? 'Grátis' : `R$ ${p.priceBRL.toFixed(2).replace('.', ',')}`}
-                  {p.priceBRL > 0 && <small>{periodoCurto(p)}</small>}
-                </div>
-                <div className="plan-note">{p.highlight}</div>
-                <ul className="plan-perks">
-                  {p.perks.map((k) => <li key={k}>{k}</li>)}
-                </ul>
-                <button className="btn btn-block btn-quiet" type="button" onClick={onStart}>
-                  {p.priceBRL === 0 ? 'começar grátis' : 'escolher plano'}
-                </button>
-              </div>
+        {/* HERO */}
+        <section style={{ textAlign: 'center', padding: '36px 0 10px' }}>
+          <div style={kicker}>Painel de análise</div>
+          <h1 style={{ ...titulo, fontSize: 38 }}>Descubra a presença<br />de qualquer perfil.</h1>
+          <p style={{ color: '#9fb3a8', maxWidth: '46ch', margin: '14px auto 0', fontSize: 15, lineHeight: 1.6 }}>
+            O ARGOS analisa perfis no Instagram, TikTok e mais — métricas, atividade e
+            proveniência de cada dado. Sem dados inventados.
+          </p>
+          <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginTop: 20, flexWrap: 'wrap' }}>
+            <button className="btn btn-primary btn-lg" type="button" onClick={onStart} style={{ background: VERDE, borderColor: VERDE, color: '#04120b', fontWeight: 800 }}>criar conta grátis</button>
+            <button className="btn btn-lg" type="button" onClick={() => document.getElementById('planos')?.scrollIntoView({ behavior: 'smooth' })}>ver planos</button>
+          </div>
+          <div style={{ display: 'flex', gap: 22, justifyContent: 'center', marginTop: 22 }}>
+            {[['9', 'ferramentas'], ['0', 'dados inventados'], ['100%', 'com proveniência']].map(([v, l]) => (
+              <div key={l}><div style={{ color: '#fff', fontWeight: 800, fontSize: 20 }}>{v}</div><div style={{ color: '#7d8f86', fontSize: 11 }}>{l}</div></div>
             ))}
           </div>
-        )}
-      </section>
+        </section>
 
-      {/* ---------------- honestidade ---------------- */}
-      <section className="section">
-        <h2 className="t-h2">Perguntas honestas</h2>
-        <div className="feat-grid" style={{ marginTop: 'var(--s-4)' }}>
-          <Faq q="Isto é legal?" a="O ARGOS só consulta fontes públicas: registos RDAP, DNS, logs de transparência de certificados, bases de vulnerabilidades, registos de empresas e perfis públicos. Não faz varredura ativa, não compra dados e não acede a sistemas de ninguém. O uso responsável continua a ser responsabilidade de quem o usa — há um aviso em cada ferramenta com dados pessoais." />
-          <Faq q="Os dados são inventados?" a="Não. O que vem de uma fonte vem com o nome, o endereço e o estado dessa fonte. O que é cálculo local (parse de EXIF, pHash, validação de número) é rotulado como tal. E o que não coube numa resposta aparece como 'precisa de chave' ou 'erro' — nunca preenchido com algo plausível." />
-          <Faq q="Guardam o que eu pesquiso?" a="Guardamos a sua conta e o histórico das suas execuções, para conseguir mostrar-lhe o resultado outra vez. Os alvos que pesquisa não vão para uma base de dados de vigilância — só para o seu histórico, que pode apagar quando quiser." />
-          <Faq q="Como pago o Pro?" a={`A ativação é feita à mão, depois de confirmada a transferência — não há gateway de pagamento, e nenhum cartão passa por este site. Escolhes o plano, o ARGOS abre o WhatsApp com o pedido já escrito (${wa?.label ?? 'WhatsApp'}) e combinamos daí para a frente.`} />
-        </div>
-      </section>
+        <div style={{ padding: '26px 0' }}><Phone /></div>
 
-      <footer className="foot">
-        <div className="stack" style={{ gap: 5 }}>
-          <span className="foot-brand">SR. AMORIM</span>
-          <span>Criado e desenvolvido por SR. Amorim.</span>
-          <span>{wa?.copyright ?? '© 2026 SR. Amorim'} · Todos os direitos reservados.</span>
-        </div>
-        <div className="foot-links">
-          {wa && <a href={wa.link} target="_blank" rel="noopener noreferrer">WhatsApp</a>}
-          <a href="https://github.com/sramorim/argus" target="_blank" rel="noopener noreferrer">Código</a>
-        </div>
-      </footer>
-    </>
-  );
-}
+        {secoes.map((s) => (
+          <section key={s.kicker} style={{ padding: '30px 0 6px' }}>
+            <div style={kicker}>{s.kicker}</div>
+            <h2 style={titulo}>{s.titulo}</h2>
+            <p style={{ color: '#7d8f86', fontSize: 13, marginTop: 6 }}>{s.sub}</p>
+            {s.corpo}
+          </section>
+        ))}
 
-function Faq({ q, a }: { q: string; a: string }) {
-  return (
-    <div className="feat">
-      <h4>{q}</h4>
-      <p>{a}</p>
+        {/* PLANOS */}
+        <section id="planos" style={{ padding: '30px 0 6px' }}>
+          <div style={kicker}>Planos</div>
+          <h2 style={titulo}>Comece grátis.</h2>
+          <p style={{ color: '#7d8f86', fontSize: 13, marginTop: 6 }}>O Free não expira e não pede cartão.</p>
+          {plans === null ? <Skeleton lines={4} /> : (
+            <div className="plan-grid" style={{ marginTop: 18 }}>
+              {plans.map((p) => (
+                <div className="plan-card" key={p.id}>
+                  <div className="plan-name">{p.name}</div>
+                  <div className="plan-price">
+                    {p.priceBRL === 0 ? 'Grátis' : `R$ ${p.priceBRL.toFixed(2).replace('.', ',')}`}
+                    {p.priceBRL > 0 && <small>{periodoCurto(p)}</small>}
+                  </div>
+                  <div className="plan-note">{p.highlight}</div>
+                  <ul className="plan-perks">{p.perks.map((k) => <li key={k}>{k}</li>)}</ul>
+                  <button className="btn btn-block btn-quiet" type="button" onClick={onStart}>
+                    {p.priceBRL === 0 ? 'começar grátis' : 'escolher plano'}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <footer className="foot">
+          <div className="stack" style={{ gap: 5 }}>
+            <span className="foot-brand">SR. AMORIM</span>
+            <span>Criado e desenvolvido por SR. Amorim.</span>
+            <span>{wa?.copyright ?? '© 2026 SR. Amorim'} · Todos os direitos reservados.</span>
+          </div>
+          <div className="foot-links">
+            {wa && <a href={wa.link} target="_blank" rel="noopener noreferrer">WhatsApp</a>}
+            <a href="https://github.com/sramorim/argus" target="_blank" rel="noopener noreferrer">Código</a>
+          </div>
+        </footer>
+      </div>
     </div>
   );
 }
