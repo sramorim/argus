@@ -13,19 +13,22 @@ import { api, type Plan, type ToolPublic, useContacto, periodoCurto } from '../a
 import { PlanTag, Skeleton } from '../components/ui';
 import { GRUPOS } from '../ia';
 
-/* Paleta extraída da referência: preto + prata + vermelho. */
-const TINTA = '#EDEDEF';
-const APAGADO = '#9A9AA0';
-const FUNDO = '#0A0A0B';
-const CARTAO = '#101013';
-const BORDA = '#26262B';
-const VERMELHO = '#E02020';
-const VERMELHO_CLARO = '#FF4D4D';
+/* Paleta — Design System ARGOS v1.0 (se fosse meu: uma só verdade visual).
+   Antes era preto+vermelho solto aqui dentro; agora lê os mesmos tokens do app:
+   fundo azul-noite, superfície, borda e azul eléctrico. Nada de HEX solto. */
+const TINTA = 'var(--t-1)';
+const APAGADO = 'var(--t-2)';
+const FUNDO = 'var(--bg)';
+const CARTAO = 'var(--surface)';
+const BORDA = 'var(--line)';
+const VERMELHO = 'var(--blue-2)';
+const VERMELHO_CLARO = 'var(--blue)';
 
 const pagina: CSSProperties = {
-  background: FUNDO,
+  background: 'var(--grad-hero)',
   color: TINTA,
   margin: '0 -16px',
+  fontFamily: 'var(--font, "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif)',
 };
 
 const coluna: CSSProperties = {
@@ -66,9 +69,9 @@ const iconeQuadro: CSSProperties = {
   borderRadius: 14,
   display: 'grid',
   placeItems: 'center',
-  background: '#0C0C0E',
-  border: '1px solid #33333A',
-  borderBottom: `2px solid ${VERMELHO}`,
+  background: 'var(--surface-2)',
+  border: '1px solid var(--line-strong)',
+  borderBottom: '2px solid var(--blue)',
   color: TINTA,
 };
 
@@ -79,9 +82,9 @@ const setaQuadro: CSSProperties = {
   borderRadius: 12,
   display: 'grid',
   placeItems: 'center',
-  background: '#17171B',
-  border: `1px solid ${BORDA}`,
-  color: TINTA,
+  background: 'var(--surface-3)',
+  border: '1px solid var(--line-strong)',
+  color: 'var(--blue-3)',
   fontSize: 20,
 };
 
@@ -91,8 +94,8 @@ const canal: CSSProperties = {
   borderRadius: 14,
   display: 'grid',
   placeItems: 'center',
-  background: '#121215',
-  border: `1px solid ${BORDA}`,
+  background: 'var(--surface-2)',
+  border: '1px solid var(--line-strong)',
   color: TINTA,
   fontSize: 22,
   textDecoration: 'none',
@@ -171,12 +174,13 @@ export function Landing({ onStart, tools }: { onStart: () => void; tools: ToolPu
             padding: '16px 0',
             borderRadius: 14,
             border: 'none',
-            background: `linear-gradient(180deg, ${VERMELHO_CLARO} 0%, ${VERMELHO} 100%)`,
+            background: 'var(--grad-cta)',
             color: '#fff',
             fontWeight: 900,
             fontSize: 16,
             letterSpacing: 0.5,
             cursor: 'pointer',
+            boxShadow: '0 8px 28px var(--blue-glow)',
           }}
         >
           CRIAR CONTA GRÁTIS
