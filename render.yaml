@@ -96,7 +96,7 @@ services:
       - key: ARGUS_TRUST_PROXY
         value: "true"
       - key: ARGUS_PUBLIC_ORIGIN
-        value: https://argus.senhoramorim.com.br
+        value: https://argos.senhoramorim.com.br
 
       # ---- identidade (o dono muda aqui, sem tocar em código) ----
       # O número de WhatsApp estava escrito à mão no frontend e estava errado

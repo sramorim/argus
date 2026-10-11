@@ -213,6 +213,31 @@ decidires o **valor da chave Pix** e apontares `PIX_KEY` no Render.
 3 provedores (lista fechada) · guard anti-SSRF com janela TOCTOU de DNS rebinding
 documentada no código.
 
+## Correção neon → profissional (2026-10-11)
+
+Pendente não commitado implementava o `docs/ARGOS-FINAL-OFICIAL.webp` (neon cyan
+`#00D9FF`, olho gigante, grid cyberpunk) — oposto da identidade aprovada
+(fundo preto azulado, azul profissional `#2E9BFF`, sem olho/neon).
+Backup em `/data/data/com.termux/files/usr/tmp/opencode/argos-bak/`.
+
+Feito (sem commit, sem deploy, sem infra):
+- `AppShell/Dashboard/Landing/styles.css/main.tsx/index.html` restaurados ao
+  HEAD aprovado; `cyber.css` removido; Google Fonts externas removidas.
+- 6 páginas cyber isoladas em `docs/isolado-seguidores/` (inclui `Seguidores`,
+  pendente de confirmação DataLikers) — fora do build.
+- Comentário `ARGUS` em `Dashboard.tsx:119` → `ARGOS`; zero `ARGUS` nos
+  ficheiros visuais. `--od-neon` restante é só nome interno mapeado para
+  `var(--blue)`.
+- Backend/integrações/rotas/APIs intactos (zero diff em `apps/server/`).
+
+Testes reais:
+- `npm run test --workspace=@argus/web`: **43/43**
+- `npm run test:unit --workspace=@argus/server`: **65 passaram, 0 falharam**
+- `npm run build --workspace=@argus/web`: **ok em 14s**
+
+Diff final: 1 linha (`Dashboard.tsx`). Pendência real: confirmar integração
+DataLikers da página Seguidores isolada; nada publicado.
+
 ## Regras que continuam de pé
 
 Zero dados inventados · proveniência obrigatória · só fontes testadas · nada de códigos de

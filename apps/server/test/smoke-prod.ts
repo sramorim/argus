@@ -148,7 +148,7 @@ const child = spawn(process.execPath, [join(SERVER, 'src', 'index.ts')], {
     ARGUS_SECRET: secretOk,
     ARGUS_COOKIE_SECURE: 'false',   // aceite só porque o bind é loopback
     ARGUS_TRUST_PROXY: 'true',
-    ARGUS_PUBLIC_ORIGIN: 'https://argus.senhoramorim.com.br',
+    ARGUS_PUBLIC_ORIGIN: 'https://argos.senhoramorim.com.br',
     ARGUS_WEB_DIST: WEB_DIST,
   },
   stdio: ['ignore', 'pipe', 'pipe'],

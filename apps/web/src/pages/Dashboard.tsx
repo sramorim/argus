@@ -116,7 +116,7 @@ export default function Dashboard({
         setSaude({
           geral: rel.estadoGeral,
           /*
-           * Só as fontes remotas — o que o ARGUS vai buscar fora. As linhas de
+           * Só as fontes remotas — o que o ARGOS vai buscar fora. As linhas de
            * CLI (SpiderFoot, Photon, GHunt…) e os actors do Apify também são
            * dependências reais, mas são a tecnologia por trás da ferramenta: o
            * painel mostra a finalidade, e o ecrã de Estado do Sistema mostra as
