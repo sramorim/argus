@@ -210,6 +210,35 @@ export function Landing({ onStart, tools }: { onStart: () => void; tools: ToolPu
           <PlanTag minPlan="pro" />
         </div>
 
+        {/* FAQ HONESTO — o que o visitante pergunta antes de criar conta.
+            Respostas curtas, sem promessa além do que o produto entrega. */}
+        <div style={tituloSecao}>Perguntas frequentes</div>
+        <div style={{ display: 'grid', gap: 12 }}>
+          {[
+            {
+              q: 'Os resultados são inventados?',
+              a: 'Não. Cada achado diz de que fonte veio, quando e com que confiança. Se a fonte falhar, aparece como erro ou vazia — nunca um resultado plausível mas falso.',
+            },
+            {
+              q: 'Preciso pagar para começar?',
+              a: 'Não. O Free dá 15 execuções por dia, sem cartão. O Pro é pagamento único e vitalício; a ativação é manual via WhatsApp, depois de confirmares a transferência.',
+            },
+            {
+              q: 'O Apify custa à parte?',
+              a: 'Sim. Os actors do Apify (Instagram, TikTok, Facebook, X) são pay-per-event na tua conta Apify e o ecrã pede confirmação explícita antes de correr. Nada corre escondido.',
+            },
+            {
+              q: 'Isto invade conta ou rede social?',
+              a: 'Não. Só fontes públicas, com proveniência (LGPD). Sem login em rede social, sem scan ativo, sem Tor no backend.',
+            },
+          ].map((f) => (
+            <details key={f.q} style={{ background: CARTAO, border: `1px solid ${BORDA}`, borderRadius: 14, padding: '14px 16px' }}>
+              <summary style={{ fontWeight: 800, fontSize: 14, cursor: 'pointer' }}>{f.q}</summary>
+              <p style={{ color: APAGADO, fontSize: 13, lineHeight: 1.6, margin: '8px 0 0' }}>{f.a}</p>
+            </details>
+          ))}
+        </div>
+
         {/* RODAPÉ — como na referência: assinatura + direitos + canais */}
         <footer
           style={{

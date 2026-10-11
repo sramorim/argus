@@ -28,3 +28,9 @@ apps/web/dist/
 # Ruído
 *.log
 .DS_Store
+
+# Referências visuais locais (binários de 1MB+, só para consulta do dono).
+# Não são código nem asset do build — nunca entram no repo nem no deploy.
+docs/*.webp
+docs/*.png
+pnpm-lock.yaml
