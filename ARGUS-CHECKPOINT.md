@@ -238,6 +238,32 @@ Testes reais:
 Diff final: 1 linha (`Dashboard.tsx`). Pendência real: confirmar integração
 DataLikers da página Seguidores isolada; nada publicado.
 
+## Publicação (2026-10-11)
+
+- Commits: `2abbe37` (domínio `argos.senhoramorim.com.br` + marca ARGOS) +
+  merge `c111654` (workflow CodeQL do remoto). Push para `origin/main` OK.
+- Render fez auto-deploy após o push (uptime reiniciado: 139174s → 318s).
+- Produção em `https://argus.senhoramorim.com.br` (domínio antigo, ainda ativo):
+  `/api/health` → `{"ok":true,"tools":9,"estadoGeral":"NOT_CONFIGURED"}`,
+  `/` → 200 com canonical `https://argos.senhoramorim.com.br/`,
+  `/api/plans` → planos Free/Pro/Pro Max OK. DB `/var/data/argus.db` writable.
+- `https://argos.senhoramorim.com.br` ainda sem DNS/apontamento — ver
+  pendência abaixo.
+
+Testes locais: web 43/43 · server unit 65/65 · api 70/70 · build ok (46s).
+
+## Pendência real pós-deploy
+
+1. **Domínio novo não resolve** (`argos.senhoramorim.com.br`: falha de conexão).
+   Falta, no painel do dono: Render → Settings → Custom Domains →
+   adicionar `argos.senhoramorim.com.br` + criar o CNAME no DNS. Nada disto
+   pode ser feito pelo ambiente.
+2. **Seguidores isolada** em `docs/isolado-seguidores/`: envia
+   `recurso: 'seguidores'/'seguindo'`, mas o backend só aceita IDs
+   (`ig-seguidores`, …) e não há endpoint de "seguindo". Manter isolada.
+3. `NOT_CONFIGURED: 10` no health = integrações opcionais sem chave
+   (Apify/DataLikers etc.) — comportamento esperado, sem custo.
+
 ## Regras que continuam de pé
 
 Zero dados inventados · proveniência obrigatória · só fontes testadas · nada de códigos de
