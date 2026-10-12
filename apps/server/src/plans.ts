@@ -129,7 +129,6 @@ export const TOOL_LOCKS: Record<string, LockedTool['minPlan']> = {
   'graph-investigation': 'free',
   'username-finder': 'free',
   'username-intel': 'free',   // 3 registos locais (MIT/CC BY-SA), sem API paga por trás
-  'osint-engine': 'free',     // CLI de terceiros: custo zero para o ARGOS, só exige instalação local
   'apify': 'free',           // registry aberto; sem APIFY_API_TOKEN devolve NOT_CONFIGURED, não gasta nada
 
   // Pro — pesquisa web real, com pedidos de terceiros por execução

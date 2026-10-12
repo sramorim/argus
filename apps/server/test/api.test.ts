@@ -141,7 +141,7 @@ await t('health responde 200 e diz quantas ferramentas existem', async () => {
   const r = await new Client().get('/api/health');
   eq(r.status, 200);
   eq(r.data.ok, true);
-  eq(r.data.tools, 9, 'o catálogo é o conjunto Social Intelligence + domínio');
+  eq(r.data.tools, 8, 'o catálogo é o conjunto Social Intelligence + domínio');
   eq(r.data.db.writable, true, 'o disco tem de aceitar escrita');
 });
 await t('health estendido: por provider, com os campos do spec e estados honestos', async () => {
@@ -268,7 +268,7 @@ console.log('\n── CATÁLOGO E TRANCAS ────────────�
 await t('catálogo público devolve todas as ferramentas com estado de tranca', async () => {
   const r = await new Client().get('/api/tools', UA);
   eq(r.status, 200);
-  eq(r.data.tools.length, 9, `catálogo inesperado: ${r.data.tools.length} ferramentas`);
+  eq(r.data.tools.length, 8, `catálogo inesperado: ${r.data.tools.length} ferramentas`);
   const graves = r.data.tools.filter((x: any) => x.lock === 'locked');
   const abertos = r.data.tools.filter((x: any) => x.lock === 'open');
   ok(graves.length > 0 && abertos.length > 0, 'faltam ferramentas de um dos lados');
@@ -314,7 +314,7 @@ await t('login para a conta de execução', async () => {
   eq(r.status, 200, JSON.stringify(r.data));
 });
 await t('executar devolve run com achados, fontes e notas', async () => {
-  const r = await c2.post('/api/run/osint-engine', { alvo: 'example.com' }, UA);
+  const r = await c2.post('/api/run/domain-infra', { domain: 'example.com' }, UA);
   eq(r.status, 200, JSON.stringify(r.data).slice(0, 300));
   ok(r.data.run.id, 'o run não tem id (histórico não liga)');
   ok(r.data.run.findings.length > 0, 'sem achados');
@@ -328,7 +328,7 @@ await t('campo obrigatório em falta dá 400 com o nome do campo', async () => {
   eq(r.data.field, 'seed');
 });
 await t('campo que não existe é ignorado (não crasha, não inventa)', async () => {
-  const r = await c2.post('/api/run/osint-engine', { alvo: 'example.com', invencao: 'x' }, UA);
+  const r = await c2.post('/api/run/domain-infra', { domain: 'example.com', invencao: 'x' }, UA);
   eq(r.status, 200);
   ok(!('invencao' in r.data.run.input), 'o campo inventado passou para o run');
 });
@@ -336,13 +336,13 @@ await t('corpo maior que o tecto é recusado com 413', async () => {
   const c = new Client();
   await c.post('/api/auth/login', { email: 'ana@exemplo.test', password: 'senhaforte123' }, UA);
   const enorme = 'x'.repeat(70 * 1024);
-  const r = await c.post('/api/run/osint-engine', { alvo: enorme }, UA);
+  const r = await c.post('/api/run/domain-infra', { domain: enorme }, UA);
   eq(r.status, 413, `status=${r.status}`);
   eq(r.data.error, 'corpo_grande');
 });
 await t('execução sem sessão dá 401 e não gasta nada', async () => {
   const anon = new Client();
-  const r = await anon.post('/api/run/osint-engine', { alvo: 'a'.repeat(40) }, UA);
+  const r = await anon.post('/api/run/domain-infra', { domain: 'a'.repeat(40) }, UA);
   eq(r.status, 401);
 });
 await t('a cota diária é aplicada no servidor', async () => {
@@ -354,9 +354,9 @@ await t('a cota diária é aplicada no servidor', async () => {
   const db = new DatabaseSync(dbPath);
   const uid = db.prepare('SELECT id FROM users WHERE email = ?').get(reg.data.user.email) as any;
   const ins = db.prepare('INSERT INTO usage(user_id, tool_id, at) VALUES(?,?,?)');
-  for (let i = 0; i < 15; i++) ins.run(uid.id, 'osint-engine', new Date().toISOString());
+  for (let i = 0; i < 15; i++) ins.run(uid.id, 'domain-infra', new Date().toISOString());
   db.close();
-  const r = await c.post('/api/run/osint-engine', { alvo: 'a'.repeat(40) }, UA);
+  const r = await c.post('/api/run/domain-infra', { domain: 'a'.repeat(40) }, UA);
   eq(r.status, 429);
   eq(r.data.error, 'limite');
   eq(r.data.kind, 'daily');
@@ -720,7 +720,7 @@ await t('histórico lista as execuções e reabre o resultado completo', async (
   const c = new Client();
   const email = `h${Date.now()}@exemplo.test`;
   await c.post('/api/auth/register', { email, name: 'Hugo', password: 'senhaforte123' }, UA);
-  const run = await c.post('/api/run/osint-engine', { alvo: 'example.com' }, UA);
+  const run = await c.post('/api/run/domain-infra', { domain: 'example.com' }, UA);
   eq(run.status, 200);
   const hist = await c.get('/api/historico', UA);
   ok(hist.data.runs.length >= 1, 'histórico vazio');
@@ -733,7 +733,7 @@ await t('histórico de outro utilizador dá 404', async () => {
   const a = new Client();
   const b = new Client();
   await a.post('/api/auth/register', { email: `ha${Date.now()}@exemplo.test`, name: 'Alu', password: 'senhaforte123' }, UA);
-  await a.post('/api/run/osint-engine', { alvo: 'example.com' }, UA);
+  await a.post('/api/run/domain-infra', { domain: 'example.com' }, UA);
   const id = (await a.get('/api/historico', UA)).data.runs[0].id;
   await b.post('/api/auth/register', { email: `hb${Date.now()}@exemplo.test`, name: 'Bia', password: 'senhaforte123' }, UA);
   eq((await b.get(`/api/historico/${id}`, UA)).status, 404);

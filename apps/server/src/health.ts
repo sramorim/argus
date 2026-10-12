@@ -28,8 +28,6 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { dbHealth } from './db.ts';
-import { existe, versao } from './providers/runtime.ts';
-import { PROVIDERS, type ProviderOsint } from './providers/osint.ts';
 import { ACTORS, estadoDe, saude as saudeApify, token, foraDeAlcance } from './net/apify.ts';
 import { saude as saudeDataLikers, token as tokenDataLikers, ENDPOINTS as ENDPOINTS_DL } from './net/datalikers.ts';
 
@@ -78,49 +76,6 @@ function linha(p: Partial<LinhaSaude> & Pick<LinhaSaude, 'nome' | 'modulo' | 'st
     latenciaMs: null, ultimoTeste: new Date().toISOString(), erro: null, configuracao: '',
     ...p,
   };
-}
-
-async function linhaCli(p: ProviderOsint, detalhe: boolean): Promise<LinhaSaude> {
-  const agoraIso = new Date().toISOString();
-  const base = {
-    nome: p.nome, modulo: 'OSINT Engine', tipo: 'cli', runtime: 'processo isolado',
-    cliApi: 'CLI', dependencias: p.instalacao, servicoExterno: p.repo,
-    secret: null, apikey: null, latenciaMs: null, ultimoTeste: agoraIso,
-  };
-
-  if (p.binario) {
-    const t0 = Date.now();
-    const ok = await existe(p.binario);
-    if (!ok) {
-      return linha({ ...base, status: 'NOT_INSTALLED', erro: null,
-        healthCheck: 'comando não encontrado no PATH',
-        configuracao: `PATH · instale: ${p.instalacao}` });
-    }
-    const v = detalhe ? await versao(p.binario) : null;
-    return linha({ ...base, status: 'READY', versao: v,
-      latenciaMs: Date.now() - t0,
-      healthCheck: detalhe ? (v ? 'respondeu a --version' : 'presente; não respondeu a --version') : 'presente no PATH (não verificado a fundo)',
-      configuracao: `PATH · ${p.binario}` });
-  }
-
-  const nomeEnv = p.envCaminho ?? '';
-  const caminho = (process.env[nomeEnv] ?? '').trim();
-  if (!caminho) {
-    return linha({ ...base, status: 'NOT_CONFIGURED',
-      healthCheck: `variável ${nomeEnv} não definida`,
-      configuracao: `${nomeEnv} com o caminho de ${p.id} · instale: ${p.instalacao}` });
-  }
-  const t0 = Date.now();
-  const ok = await existe(caminho);
-  if (!ok) {
-    return linha({ ...base, status: 'NOT_INSTALLED', latenciaMs: Date.now() - t0,
-      healthCheck: `caminho definido mas o ficheiro não existe: ${caminho}`,
-      configuracao: `${nomeEnv}=${caminho}` });
-  }
-  const v = detalhe ? await versao('python3') : null;
-  return linha({ ...base, status: 'READY', versao: v, latenciaMs: Date.now() - t0,
-    healthCheck: detalhe ? 'script presente; python3 respondeu' : 'script presente (não verificado a fundo)',
-    configuracao: `${nomeEnv}=${caminho}` });
 }
 
 /**
@@ -192,13 +147,6 @@ export async function saudeSistema(opts: { detalhe?: boolean } = {}): Promise<Re
   linhas.push(linhaRegisto('Sherlock (registo)', 'sherlock'));
   linhas.push(linhaRegisto('WhatsMyName (registo)', 'whatsmyname'));
   linhas.push(linhaRegisto('Maigret (registo)', 'maigret'));
-
-  for (const p of PROVIDERS) linhas.push(await linhaCli(p, detalhe));
-  linhas.push(await linhaCli({
-    id: 'blackbird', nome: 'Blackbird', licenca: 'sem licença coerente', repo: 'https://github.com/p1ngul4r/blackbird',
-    tipos: ['email'], instalacao: 'pip3 install blackbird', binario: 'blackbird', envCaminho: null, python: false,
-    args: () => [], interpretar: () => ({ itens: null, nota: '' }),
-  }, detalhe));
 
   const t = token();
   if (!t.token) {

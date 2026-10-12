@@ -7,8 +7,8 @@
  *   1. **Hero** — o que isto é, e o botão de começar. Um CTA, o principal.
  *   2. **Atalhos** — os quatro destinos de sempre, a um toque.
  *   3. **Ferramentas principais** — o que dá para investigar, não a
- *      tecnologia por trás. APIFY e OSINT Engine continuam a existir e a ser
- *      alcançáveis na lateral; não aparecem aqui como se fossem o produto.
+ *      tecnologia por trás. O APIFY continua a existir e a ser
+ *      alcançável na lateral; não aparece aqui como se fosse o produto.
  *   4. **Investigações recentes** — o trabalho a continuar, com dados reais.
  *   5. **Fontes e status** — as fontes que o produto consegue consultar e o
  *      estado em que cada uma está, lido de `GET /api/health`.
@@ -116,12 +116,11 @@ export default function Dashboard({
         setSaude({
           geral: rel.estadoGeral,
           /*
-           * Só as fontes remotas — o que o ARGOS vai buscar fora. As linhas de
-           * CLI (SpiderFoot, Photon, GHunt…) e os actors do Apify também são
-           * dependências reais, mas são a tecnologia por trás da ferramenta: o
-           * painel mostra a finalidade, e o ecrã de Estado do Sistema mostra as
-           * 23 linhas com o detalhe. Mostrar 18 pílulas aqui seria mostrar a
-           * canalização em vez do produto.
+           * Só as fontes remotas — o que o ARGOS vai buscar fora. Os actors
+           * do Apify também são dependências reais, mas são a tecnologia por
+           * trás da ferramenta: o painel mostra a finalidade, e o ecrã de
+           * Estado do Sistema mostra o detalhe. Mostrar pílulas a mais aqui
+           * seria mostrar a canalização em vez do produto.
            */
           linhas: rel.providers.filter((l) => l.tipo === 'api' || l.tipo === 'endpoint'),
         });

@@ -16,7 +16,6 @@ await import('../src/tools/username-intel.ts');
 await import('../src/tools/paste.ts');
 await import('../src/tools/graph.ts');
 await import('../src/tools/social-search.ts');
-await import('../src/tools/osint-engine.ts');
 await import('../src/tools/apify.ts');
 await import('../src/tools/datalikers.ts');
 await import('../src/tools/domain-infra.ts');
@@ -33,18 +32,13 @@ const CASES: Case[] = [
     expect: (r) => hasGroup(r, 'plataforma') },
   { tool: 'username-finder', input: { username: 'zzargusinexistente' + Date.now() + 'q' }, label: 'username inventado NAO pode dar confirmados',
     expect: (r) => !r.findings.some((f) => f.group === 'plataforma' && f.evidence.confidence === 'confirmed') },
-  { tool: 'username-intel', input: { username: 'torvalds', modo: 'QUICK' }, label: 'username conhecido: FOUND em sites reais, 4 providers reportados',
-    expect: (r) => hasGroup(r, 'encontrado') && r.findings.filter((f) => f.group === 'provider').length === 4
+  { tool: 'username-intel', input: { username: 'torvalds', modo: 'QUICK' }, label: 'username conhecido: FOUND em sites reais, 3 providers reportados',
+    expect: (r) => hasGroup(r, 'encontrado') && r.findings.filter((f) => f.group === 'provider').length === 3
       && r.findings.some((f) => f.group === 'encontrado' && f.value !== null && typeof f.value === 'object') },
   { tool: 'username-intel', input: { username: 'zzq7xk9plmw' + Date.now().toString(36), modo: 'QUICK' },
     label: 'username inventado NAO pode dar FOUND em nenhum site (baseline do site)',
     expect: (r) => r.findings.length > 0 && !r.findings.some((f) => f.group === 'encontrado')
       && hasGroup(r, 'provider') },
-  { tool: 'username-intel', input: { username: 'torvalds', modo: 'CUSTOM', providers: 'blackbird' },
-    label: 'provider de CLI sem instalar: estado honesto, sem fabricar resultados',
-    expect: (r) => r.findings.some((f) => f.group === 'provider' && f.label === 'Blackbird')
-      && r.sources.some((s) => s.id === 'p-blackbird')
-      && r.findings.filter((f) => f.group === 'encontrado').every((f) => f.evidence.sourceIds[0] === 'p-blackbird') },
 
   // ---------- exposição pública ----------
   { tool: 'paste-search', input: { term: 'example.com', exec: 'nao' }, label: 'dorks de paste sem executar',
@@ -58,18 +52,9 @@ const CASES: Case[] = [
   { tool: 'graph-investigation', input: { seed: '@@@ !!!' }, label: 'alvo nao reconhecido (tem de dizer o que reconhece)',
     expect: (r) => r.findings.some((f) => /reconhece/i.test(f.label)) },
 
-  // ---------- motor OSINT de CLI (estado honesto por provider) ----------
-  { tool: 'osint-engine', input: { alvo: 'example.com' }, label: '5 providers de CLI: cada um reporta o SEU estado real, nada fabricado',
-    expect: (r) => r.findings.filter((f) => f.group === 'provider').length === 5
-      && r.sources.filter((s) => s.id.startsWith('p-osint-')).length === 5
-      && r.findings.filter((f) => f.group === 'provider').every((f) => /^(READY|NOT_INSTALLED|NOT_CONFIGURED|INCOMPATIBLE|ERROR)/.test(String(f.value))) },
-  { tool: 'osint-engine', input: { alvo: 'example.com', providers: 'holehe' }, label: 'provider que nao aceita este tipo de alvo: INCOMPATIBLE, sem sequer correr',
-    expect: (r) => r.findings.some((f) => f.group === 'provider' && String(f.value).startsWith('INCOMPATIBLE'))
-      && r.sources.some((s) => s.id === 'p-osint-holehe' && s.status === 'skipped') },
-  { tool: 'osint-engine', input: { alvo: 'pessoa@exemplo.com', providers: 'ghunt, holehe, openosint' }, label: 'alvo de email: os 3 que aceitam email reportam estado por provider',
-    expect: (r) => r.findings.filter((f) => f.group === 'provider').length === 3
-      && hasGroup(r, 'alvo')
-      && r.findings.some((f) => f.label === 'Tipo detetado' && f.value === 'email') },
+  // ---------- infraestrutura de domínio (fontes abertas: RDAP + DNS + CT) ----------
+  { tool: 'domain-infra', input: { domain: 'example.com' }, label: 'domínio real: RDAP + DNS + CT com proveniência declarada',
+    expect: (r) => (hasGroup(r, 'registo') || hasGroup(r, 'dns') || hasGroup(r, 'certificados')) && r.sources.some((s) => s.status === 'ok') },
 
   // ---------- Apify (nunca corre sem token) ----------
   { tool: 'apify', input: { alvo: '@exemplo' }, label: 'sem token: NOT_CONFIGURED por actor + needs_key, APIFY_API_TOKEN no aviso',

@@ -119,7 +119,6 @@ await t('TOOL_LOCKS nao referencia ferramentas inexistentes', async () => {
   await import('../src/tools/paste.ts');
   await import('../src/tools/graph.ts');
   await import('../src/tools/social-search.ts');
-  await import('../src/tools/osint-engine.ts');
   await import('../src/tools/apify.ts');
   await import('../src/tools/datalikers.ts');
   await import('../src/tools/domain-infra.ts');
@@ -374,7 +373,7 @@ await t('investigacao guarda contagens de nos/arestas', async () => {
 
 console.log('\n── CATÁLOGO (Social Intelligence) ────────────────────────────────');
 const FERRAMENTAS_SOCIAIS = [
-  'apify', 'datalikers', 'domain-infra', 'graph-investigation', 'osint-engine',
+  'apify', 'datalikers', 'domain-infra', 'graph-investigation',
   'paste-search', 'social-search', 'username-finder', 'username-intel',
 ];
 /** As 25 ferramentas de OSINT técnico/infraestrutura que a limpeza tirou. */
@@ -392,7 +391,6 @@ const carrega = async () => {
   await import('../src/tools/paste.ts');
   await import('../src/tools/graph.ts');
   await import('../src/tools/social-search.ts');
-  await import('../src/tools/osint-engine.ts');
   await import('../src/tools/apify.ts');
   await import('../src/tools/datalikers.ts');
   await import('../src/tools/domain-infra.ts');

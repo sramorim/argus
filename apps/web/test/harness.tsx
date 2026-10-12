@@ -96,10 +96,9 @@ export function stubApi(so: Record<string, unknown> = {}) {
   const ferramentas = [
     ['graph-investigation', 'Investigação (Grafo)', 'investigar', 'free', 'Correlaciona as ferramentas e monta o grafo.'],
     ['username-finder', 'Localizador de Username', 'identidade', 'free', 'Procura o username em várias plataformas.'],
-    ['username-intel', 'Inteligência de Username', 'identidade', 'free', 'Quatro registos independentes sobre o mesmo username.'],
+    ['username-intel', 'Inteligência de Username', 'identidade', 'free', 'Três registos independentes sobre o mesmo username.'],
     ['social-search', 'Busca por Nome nas Redes', 'social', 'pro', 'Perfis públicos que mencionam um nome.'],
     ['datalikers', 'DataLikers', 'social', 'pro', 'Perfis, publicações e seguidores de Instagram e TikTok.'],
-    ['osint-engine', 'OSINT Engine', 'osint', 'free', 'SpiderFoot, Photon, OpenOSINT, GHunt e Holehe isolados.'],
     ['apify', 'APIFY', 'apify', 'free', 'Actors do Apify (Instagram, TikTok, Facebook, X).'],
     ['paste-search', 'Exposição Pública', 'exposicao', 'pro', 'Busca em sites de paste.'],
     ['domain-infra', 'Infraestrutura de Domínio', 'infraestrutura', 'free', 'RDAP, DNS público e CT de um domínio.'],

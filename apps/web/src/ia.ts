@@ -61,16 +61,6 @@ export const GRUPOS: Grupo[] = [
     ferramentas: ['social-search', 'datalikers'],
   },
   {
-    id: 'osint',
-    nome: 'OSINT Engine',
-    resumo: 'Ferramentas externas (SpiderFoot, Photon, OpenOSINT, GHunt, Holehe) corridas isoladas.',
-    icon: Icon.code,
-    // Cada uma destas corre num processo próprio, sem shell e com env mínima.
-    // Se não estiverem instaladas, reportam NOT_INSTALLED — o grupo mostra o
-    // estado real das dependências, nunca um resultado simulado.
-    ferramentas: ['osint-engine'],
-  },
-  {
     id: 'apify',
     nome: 'APIFY',
     resumo: 'Actors pagos do Apify (Instagram, TikTok, Facebook, X) com chave só no backend.',

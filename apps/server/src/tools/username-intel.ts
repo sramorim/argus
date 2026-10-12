@@ -1,5 +1,5 @@
 /**
- * Inteligência de username — quatro providers independentes sobre o mesmo alvo.
+ * Inteligência de username — três providers independentes sobre o mesmo alvo.
  *
  * Cada provider traz o SEU registo de sites (ver `src/data/registries/THIRD-PARTY.md`),
  * a SUA forma de decidir "existe / não existe" e o SEU estado honesto:
@@ -7,7 +7,6 @@
  *   sherlock      READY         registo MIT vendurado, 481 sites
  *   whatsmyname   READY         registo CC BY-SA vendurado, 717 sites
  *   maigret       READY         registo MIT vendurado, 6206 sites (698 desativados ficam de fora)
- *   blackbird     NOT_INSTALLED CLI isolado: só corre se o binário existir no PATH
  *
  * Três regras de decisão, por ordem de solidez:
  *
@@ -26,7 +25,6 @@
  * `FOUND` é "existe uma conta pública com este nome NESTE site". Nunca é
  * "é a mesma pessoa" — isso é correlação, e pertence ao grafo.
  */
-import { execFile } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { registerTool } from '../registry.ts';
@@ -36,7 +34,7 @@ import { safeFetch } from '../net/ssrf.ts';
 // --------------------------------------------------------------------- tipos
 
 export type Estado = 'FOUND' | 'NOT_FOUND' | 'UNKNOWN' | 'ERROR' | 'BLOCKED';
-export type ProviderId = 'sherlock' | 'whatsmyname' | 'maigret' | 'blackbird';
+export type ProviderId = 'sherlock' | 'whatsmyname' | 'maigret';
 export type Regra = 'status' | 'message' | 'response_url' | 'baseline';
 
 /** Um site do registo, já normalizado para o formato comum. */
@@ -90,7 +88,7 @@ interface EstadoProvider {
 // ------------------------------------------------------------------ regissistos
 
 const DIR = join(import.meta.dirname, '..', 'data', 'registries');
-const ORIGEM: Record<Exclude<ProviderId, 'blackbird'>, string> = {
+const ORIGEM: Record<ProviderId, string> = {
   sherlock: 'https://raw.githubusercontent.com/sherlock-project/sherlock/e40a45ec2a074b90703b3b4b842c8a3adbd6ada3/sherlock_project/resources/data.json',
   whatsmyname: 'https://raw.githubusercontent.com/WebBreacher/WhatsMyName/062bcfe48df79fa618e96edc79dc9673f3fe5643/wmn-data.json',
   maigret: 'https://raw.githubusercontent.com/soxoj/maigret/b6642744988e7e6c2d21f75db60ec3093019ba25/maigret/resources/data.json',
@@ -220,7 +218,7 @@ const carga = new Map<ProviderId, { sites: Registo[]; desativados: number; bruto
 
 interface RegistoCarregado { sites: Registo[]; desativados: number; brutos: number; erro?: string }
 
-export function carregar(provider: Exclude<ProviderId, 'blackbird'>): RegistoCarregado {
+export function carregar(provider: ProviderId): RegistoCarregado {
   const hit = carga.get(provider);
   if (hit) return hit;
   let res: RegistoCarregado;
@@ -442,78 +440,10 @@ async function avaliar(reg: Registo, user: string, prazo: number): Promise<Vered
   return v.estado === 'PRECISA_CONTROLO' ? { estado: 'UNKNOWN', via: v.via } : v;
 }
 
-// ------------------------------------------------------------------- blackbird
-
-function binario(nome: string): Promise<boolean> {
-  return new Promise((ok) => {
-    // Sem shell do utilizador: nome fixo, sem interpolação de input.
-    execFile('sh', ['-c', `command -v ${nome}`], { timeout: 4000 }, (err) => ok(!err));
-  });
-}
-
-function executar(args: string[]): Promise<{ stdout: string; code: number }> {
-  return new Promise((res, rej) => {
-    execFile('blackbird', args, { timeout: 60_000, maxBuffer: 8_000_000 }, (err, stdout) => {
-      if (err && !stdout) rej(err);
-      else res({ stdout: String(stdout), code: err ? 1 : 0 });
-    });
-  });
-}
-
-/**
- * Provider 4: o Blackbird corre como CLI isolado.
- *
- * Não há dados dele para copiar (usa o registo do WhatsMyName e o repositório
- * não tem licença de raiz coerente), por isso só existe o binário — e se não
- * estiver instalado, o estado é `NOT_INSTALLED`, não "0 resultados".
- * Se a saída não for JSON, também não se interpreta: `ERROR` com o motivo.
- */
-async function correrBlackbird(user: string, log: SourceLog): Promise<{ estado: EstadoProvider; encontrados: { site: string; url: string }[] }> {
-  const origem = 'https://github.com/p1ngul1n0/blackbird';
-  if (!(await binario('blackbird'))) {
-    log.skipped('p-blackbird', 'Blackbird (CLI isolado)', origem,
-      'não instalado — instale o executável `blackbird` no PATH para ativar este provider');
-    return { estado: { estado: 'NOT_INSTALLED', nota: 'binário `blackbird` ausente do PATH (provider de CLI, sem dados próprios)' }, encontrados: [] };
-  }
-  try {
-    const t0 = Date.now();
-    const { stdout } = await executar(['--username', user, '--json']);
-    let dados: unknown;
-    try { dados = JSON.parse(stdout); } catch {
-      log.error('p-blackbird', 'Blackbird (CLI isolado)', origem, 'saída não estruturada (não é JSON): não interpretada', Date.now() - t0);
-      return { estado: { estado: 'ERROR', nota: 'o CLI respondeu com saída que não dá para ler sem adivinhar' }, encontrados: [] };
-    }
-    const encontrados = extrairSites(dados, user);
-    log.ok('p-blackbird', 'Blackbird (CLI isolado)', origem, Date.now() - t0, encontrados.length,
-      `executado isoladamente; ${encontrados.length} sites devolveram o username`);
-    return { estado: { estado: 'READY', nota: 'CLI instalado e executado isoladamente' }, encontrados };
-  } catch (e) {
-    log.error('p-blackbird', 'Blackbird (CLI isolado)', origem, `falha ao executar: ${String((e as Error).message).slice(0, 140)}`);
-    return { estado: { estado: 'ERROR', nota: 'o CLI não executou' }, encontrados: [] };
-  }
-}
-
-/** Lê a saída JSON do Blackbird sem inventar formato: só objects com url/name. */
-function extrairSites(dados: unknown, user: string): { site: string; url: string }[] {
-  const out: { site: string; url: string }[] = [];
-  const visitar = (v: unknown) => {
-    if (Array.isArray(v)) { for (const x of v) visitar(x); return; }
-    if (!v || typeof v !== 'object') return;
-    const o = v as Record<string, unknown>;
-    const url = typeof o.url === 'string' ? o.url : typeof o.uri === 'string' ? o.uri : null;
-    const nome = typeof o.site === 'string' ? o.site : typeof o.name === 'string' ? o.name : null;
-    const existe = o.exists === true || o.found === true || o.status === 'exists';
-    if (url && existe) out.push({ site: nome ?? url, url: url.replace('{user}', encodeURIComponent(user)) });
-    for (const x of Object.values(o)) if (x && typeof x === 'object') visitar(x);
-  };
-  visitar(dados);
-  return out;
-}
-
 // ------------------------------------------------------------------- ferramenta
 
 const ROTULO: Record<ProviderId, string> = {
-  sherlock: 'Sherlock', whatsmyname: 'WhatsMyName', maigret: 'Maigret', blackbird: 'Blackbird',
+  sherlock: 'Sherlock', whatsmyname: 'WhatsMyName', maigret: 'Maigret',
 };
 const GRUPO_ESTADO: Record<Estado, string> = {
   FOUND: 'encontrado', NOT_FOUND: 'nao-encontrado', UNKNOWN: 'desconhecido',
@@ -536,7 +466,7 @@ function normalizaModo(v: unknown): string {
 }
 
 function providersEscolhidos(txt: unknown, modo: string): ProviderId[] {
-  const todos: ProviderId[] = ['sherlock', 'whatsmyname', 'maigret', 'blackbird'];
+  const todos: ProviderId[] = ['sherlock', 'whatsmyname', 'maigret'];
   if (modo !== 'CUSTOM') return todos;
   const raw = String(txt ?? '').toLowerCase();
   if (!raw.trim()) return todos;
@@ -553,8 +483,8 @@ registerTool({
   id: 'username-intel',
   name: 'Inteligência de Username',
   category: 'pessoa',
-  summary: 'Quatro registos independentes (Sherlock, WhatsMyName, Maigret, Blackbird) sobre o mesmo username.',
-  longDesc: 'Cada provider tem o seu registo de sites e a sua forma de decidir: cadeias de ausência/presença do registo, status HTTP e, quando nada decide, comparação com um username de controlo pedido ao mesmo site (metodologia de baseline). Resultado por site com FOUND / NOT_FOUND / UNKNOWN / ERROR / BLOCKED, nunca "é a mesma pessoa". O Blackbird é CLI isolado e só corre se estiver instalado; sem ele o estado é NOT_INSTALLED.',
+  summary: 'Três registos independentes (Sherlock, WhatsMyName, Maigret) sobre o mesmo username.',
+  longDesc: 'Cada provider tem o seu registo de sites e a sua forma de decidir: cadeias de ausência/presença do registo, status HTTP e, quando nada decide, comparação com um username de controlo pedido ao mesmo site (metodologia de baseline). Resultado por site com FOUND / NOT_FOUND / UNKNOWN / ERROR / BLOCKED, nunca "é a mesma pessoa".',
   minPlan: 'free',
   freeTier: true,
   legalGate: 'lgpd',
@@ -562,7 +492,7 @@ registerTool({
   fields: [
     { name: 'username', label: 'Username', type: 'text', placeholder: 'ex: alvo_demo', required: true, hint: 'Sem @ nem URL' },
     { name: 'modo', label: 'Modo', type: 'text', placeholder: 'QUICK | FULL | CUSTOM', required: false, hint: 'QUICK = 25 sites por registo; FULL = até 600; CUSTOM = usa os campos abaixo.' },
-    { name: 'providers', label: 'Providers (CUSTOM)', type: 'text', placeholder: 'sherlock, whatsmyname, maigret, blackbird', required: false, hint: 'Por omissão, os quatro.' },
+    { name: 'providers', label: 'Providers (CUSTOM)', type: 'text', placeholder: 'sherlock, whatsmyname, maigret', required: false, hint: 'Por omissão, os três.' },
     { name: 'limite', label: 'Limite de sites (CUSTOM)', type: 'text', placeholder: 'ex: 120', required: false, hint: 'Máximo 600 sites por execução.' },
   ],
   async run(input) {
@@ -595,17 +525,6 @@ registerTool({
     let desativados = 0;
 
     for (const prov of escolhidos) {
-      if (prov === 'blackbird') {
-        const r = await correrBlackbird(user, log);
-        estados.blackbird = r.estado;
-        for (const s of r.encontrados) {
-          porEstado.FOUND.push(sintese('FOUND', s.site, s.url, user, 'p-blackbird', 'CLI instalado', 'confirmed'));
-          contas.FOUND++;
-        }
-        analisados += 0; // o CLI não tem denominador conhecido: não se vende como "sites analisados"
-        continue;
-      }
-
       const carregado = carregar(prov);
       const origem = ORIGEM[prov];
       if (carregado.erro) {
@@ -654,7 +573,7 @@ registerTool({
 
     // ---------------------------------------------------------------- achados
     out.push(finding('resumo', 'Execução',
-      `${modo}: ${analisados} de ${planeados} sites dos 3 registos · ${contas.FOUND} FOUND (registos + CLI) / ${contas.NOT_FOUND} NOT_FOUND / ${contas.UNKNOWN} UNKNOWN / ${contas.BLOCKED} BLOCKED / ${contas.ERROR} ERROR`,
+      `${modo}: ${analisados} de ${planeados} sites dos 3 registos · ${contas.FOUND} FOUND / ${contas.NOT_FOUND} NOT_FOUND / ${contas.UNKNOWN} UNKNOWN / ${contas.BLOCKED} BLOCKED / ${contas.ERROR} ERROR`,
       escolhidos.map((p) => `p-${p}`), { kind: 'fact', confidence: 'confirmed' }));
 
     for (const prov of escolhidos) {
@@ -670,9 +589,6 @@ registerTool({
 
     notes.push(`FOUND = existe uma conta pública com este nome no site indicado. Não significa que seja a mesma pessoa — isso é correlação e fica para o grafo.`);
     if (desativados) notes.push(`${desativados} sites vêm marcados como disabled no registo do Maigret e foram ignorados.`);
-    if (escolhidos.includes('blackbird') && estados.blackbird?.estado === 'NOT_INSTALLED') {
-      notes.push('Blackbird: não instalado — provider de CLI isolado, sem dados próprios para copiar (ver src/data/registries/THIRD-PARTY.md).');
-    }
     notes.push(`Registos: Sherlock MIT, Maigret MIT, WhatsMyName CC BY-SA 4.0 — atribuição em src/data/registries/THIRD-PARTY.md.`);
 
     return { findings: out, log, notes };

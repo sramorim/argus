@@ -1,4 +1,4 @@
-/** Infraestrutura de domínio: RDAP + DNS público + Certificate Transparency. Sem chave. */
+/** Infraestrutura de domínio: RDAP + DNS público + Certificate Transparency (2 fontes). Sem chave. */
 import { registerTool } from '../registry.ts';
 import { SourceLog, finding, type Finding } from '../net/provenance.ts';
 import { apiJson } from '../net/ssrf.ts';
@@ -12,7 +12,7 @@ registerTool({
   name: 'Infraestrutura de Domínio',
   category: 'infra',
   summary: 'RDAP, DNS público e certificados emitidos para um domínio — sem chave, tudo fonte aberta.',
-  longDesc: 'Consulta o RDAP (registo do domínio), o DNS-over-HTTPS do Google (A, MX, TXT/SPF/DMARC) e a Certificate Transparency via CertSpotter (subdomínios vistos em certificados reais). Cada bloco diz a fonte, quando e em que estado; fonte que falhou aparece como erro, nunca como dado.',
+  longDesc: 'Consulta o RDAP (registo do domínio), o DNS-over-HTTPS do Google (A, MX, TXT/SPF/DMARC) e a Certificate Transparency em duas fontes abertas (CertSpotter e crt.sh: subdomínios vistos em certificados reais). Cada bloco diz a fonte, quando e em que estado; fonte que falhou aparece como erro, nunca como dado.',
   minPlan: 'free',
   freeTier: true,
   legalGate: 'lgpd',
@@ -52,13 +52,30 @@ registerTool({
           return partes;
         } catch (e) { log.error('dns-google', 'DNS (Google DoH)', 'https://dns.google/resolve', String((e as Error).message)); return null; }
       })(),
-      (async () => {
+      // CT em duas fontes abertas e gratuitas, sem chave. O CertSpotter é a
+      // primeira; se falhar ou vier vazio, o crt.sh (sectigo.com, grátis, sem
+      // chave) tenta em seguida. Qual das duas respondeu fica dito na fonte —
+      // nunca se misturam resultados sem dizer de onde veio cada um.
+      (async (): Promise<{ nomes: string[]; fonte: string } | null> => {
         try {
           const j = await apiJson<any[]>(`https://api.certspotter.com/v1/issuances?domain=${encodeURIComponent(domain)}&include_subdomains=true&expand=dns_names&limit=40`);
           const nomes = [...new Set((Array.isArray(j) ? j : []).flatMap((c: any) => (Array.isArray(c?.dns_names) ? c.dns_names.map(String) : [])))].slice(0, 40);
-          log.ok('certspotter', 'CertSpotter CT', 'https://api.certspotter.com/v1/issuances', nomes.length);
-          return nomes;
-        } catch (e) { log.error('certspotter', 'CertSpotter CT', 'https://api.certspotter.com/v1/issuances', String((e as Error).message)); return null; }
+          if (nomes.length) {
+            log.ok('certspotter', 'CertSpotter CT', 'https://api.certspotter.com/v1/issuances', nomes.length);
+            return { nomes, fonte: 'certspotter' };
+          }
+          log.empty('certspotter', 'CertSpotter CT', 'https://api.certspotter.com/v1/issuances', 0, 'sem certificados recentes — a tentar crt.sh');
+        } catch (e) { log.error('certspotter', 'CertSpotter CT', 'https://api.certspotter.com/v1/issuances', String((e as Error).message)); }
+        try {
+          const j = await apiJson<any[]>(`https://crt.sh/?q=%25.${encodeURIComponent(domain)}&output=json`);
+          const nomes = [...new Set((Array.isArray(j) ? j : []).flatMap((c: any) => String(c?.name_value ?? '').split('\n').map((s) => s.trim().toLowerCase()).filter((s) => s && !s.startsWith('*'))))].slice(0, 40);
+          if (nomes.length) {
+            log.ok('crtsh', 'crt.sh CT', 'https://crt.sh', nomes.length);
+            return { nomes, fonte: 'crtsh' };
+          }
+          log.empty('crtsh', 'crt.sh CT', 'https://crt.sh', 0, 'sem certificados para este domínio');
+          return { nomes: [], fonte: 'crtsh' };
+        } catch (e) { log.error('crtsh', 'crt.sh CT', 'https://crt.sh', String((e as Error).message)); return null; }
       })(),
     ]);
 
@@ -78,8 +95,11 @@ registerTool({
       }
       if (!dns.some((p) => p.ans.length)) out.push(finding('dns', 'DNS', 'sem respostas', ['dns-google'], { kind: 'claim', confidence: 'weak' }));
     }
-    if (ct && ct.length) out.push(finding('certificados', `Subdomínios vistos em CT (${ct.length})`, ct, ['certspotter'], { confidence: 'indicated' }));
-    else if (ct) out.push(finding('certificados', 'CT', 'sem certificados recentes', ['certspotter'], { kind: 'claim', confidence: 'weak' }));
+    const FONTE_CT = ct ? (ct.fonte === 'crtsh' ? 'crt.sh CT' : 'CertSpotter CT') : 'CertSpotter CT';
+    const ID_CT = ct ? (ct.fonte === 'crtsh' ? 'crtsh' : 'certspotter') : 'certspotter';
+    const nomesCt = ct ? ct.nomes : [];
+    if (nomesCt.length) out.push(finding('certificados', `Subdomínios vistos em CT (${nomesCt.length}, via ${FONTE_CT})`, nomesCt, [ID_CT], { confidence: 'indicated' }));
+    else if (ct) out.push(finding('certificados', 'CT', 'sem certificados recentes', [ID_CT], { kind: 'claim', confidence: 'weak' }));
 
     return { findings: out, log };
   },

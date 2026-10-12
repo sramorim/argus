@@ -37,7 +37,6 @@ import './tools/username-intel.ts';
 import './tools/paste.ts';
 import './tools/graph.ts';
 import './tools/social-search.ts';
-import './tools/osint-engine.ts';
 import './tools/apify.ts';
 import './tools/datalikers.ts';
 import './tools/domain-infra.ts';

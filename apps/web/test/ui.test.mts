@@ -216,10 +216,10 @@ test('as categorias de ferramenta têm todas ícone e nome próprios', () => {
   const catLabel = bloco('CATEGORY_LABEL');
 
   const usadas = new Set<string>();
-  // Uma por uma das ferramentas registadas no servidor (as 8 de Social
+  // Uma por uma das ferramentas registadas no servidor (as 7 de Social
   // Intelligence): se uma nova aparecer sem categoria própria, este teste
   // falha — é para isso que ele lê o código do servidor e não uma lista feita.
-  for (const f of ['graph', 'identity', 'paste', 'social-search', 'username-intel', 'osint-engine', 'apify', 'datalikers']) {
+  for (const f of ['graph', 'identity', 'paste', 'social-search', 'username-intel', 'apify', 'datalikers', 'domain-infra']) {
     const p = join(ROOT, 'apps', 'server', 'src', 'tools', `${f}.ts`);
     for (const m of readFileSync(p, 'utf8').matchAll(/category:\s*'([a-z-]+)'/g)) usadas.add(m[1]!);
   }

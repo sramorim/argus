@@ -20,8 +20,6 @@
  */
 import { q } from '../db.ts';
 import { executeTool, LockedError, QuotaError, type ToolCtx } from '../registry.ts';
-import { PROVIDERS, TIPOS_DE_ALVO, planejar, type TipoAlvo } from '../providers/osint.ts';
-import { existe } from '../providers/runtime.ts';
 import { carregar as lerRegisto, type ProviderId } from '../tools/username-intel.ts';
 import { token as tokenApify } from '../net/apify.ts';
 import { token as tokenDataLikers } from '../net/datalikers.ts';
@@ -49,43 +47,11 @@ function contarNos(invId: string): number {
 
 // ------------------------------------------------------------------ factos
 
-/** OSINT Engine: o que falta a cada provider que aceita este tipo de alvo. */
-async function clisOsintEngine(inv: InvAlvo, tipo: string): Promise<Factos['clis']> {
-  const out: Factos['clis'] = [];
-  if (!(TIPOS_DE_ALVO as ReadonlySet<string>).has(tipo)) return out;
-  for (const p of PROVIDERS) {
-    if (!p.tipos.includes(tipo as TipoAlvo)) continue;
-    const planejo = planejar(p, inv.seed, tipo as TipoAlvo, '');
-    if (planejo.estado === 'INCOMPATIBLE') continue;
-
-    let motivo = '';
-    if (planejo.estado === 'NOT_CONFIGURED') {
-      motivo = p.envCaminho
-        ? `\`${p.envCaminho}\` em falta — defina o caminho de ${p.nome} (${p.instalacao})`
-        : planejo.nota;
-    } else if (!(await existe(planejo.executavel))) {
-      motivo = planejo.executavel.includes('/')
-        ? `caminho inexistente: ${planejo.executavel}`
-        : planejo.executavel === 'python3'
-          ? 'python3 não instalado'
-          : `CLI \`${planejo.executavel}\` não instalado`;
-    } else if (p.python && p.envCaminho) {
-      const script = (process.env[p.envCaminho] ?? '').trim();
-      if (script && !(await existe(script))) motivo = `caminho inexistente: ${script}`;
-    }
-    out.push({
-      ferramenta: 'osint-engine', id: p.id, rotulo: p.nome,
-      tipos: p.tipos, ok: !motivo, motivo,
-    });
-  }
-  return out;
-}
-
-/** Username Intel: três registos vendurados + o CLI do Blackbird. */
+/** Username Intel: três registos vendurados, sempre locais. */
 async function clisUsernameIntel(inv: InvAlvo): Promise<Factos['clis']> {
   const out: Factos['clis'] = [];
   if (inv.seed_type !== 'username') return out;
-  const registos: { id: Exclude<ProviderId, 'blackbird'>; rotulo: string }[] = [
+  const registos: { id: ProviderId; rotulo: string }[] = [
     { id: 'sherlock', rotulo: 'Sherlock' },
     { id: 'whatsmyname', rotulo: 'WhatsMyName' },
     { id: 'maigret', rotulo: 'Maigret' },
@@ -97,17 +63,12 @@ async function clisUsernameIntel(inv: InvAlvo): Promise<Factos['clis']> {
       ok: !c.erro, motivo: c.erro ? `registo ${r.rotulo} não lido: ${c.erro}` : '',
     });
   }
-  const tem = await existe('blackbird');
-  out.push({
-    ferramenta: 'username-intel', id: 'blackbird', rotulo: 'Blackbird (CLI)', tipos: ['username'],
-    ok: tem, motivo: tem ? '' : 'CLI `blackbird` não instalado',
-  });
   return out;
 }
 
 /** Tudo o que só se sabe ao vivo. É a entrada honesta do planeador. */
 export async function recolherFactos(inv: InvAlvo, plano: PlanId): Promise<Factos> {
-  const clis = [...await clisOsintEngine(inv, inv.seed_type), ...await clisUsernameIntel(inv)];
+  const clis = [...await clisUsernameIntel(inv)];
   return {
     plano,
     seed: inv.seed,

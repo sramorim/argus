@@ -57,7 +57,7 @@ export interface Factos {
    * (falta a variável, o CLI não está no PATH…) — o planeador não adivinha.
    */
   clis: {
-    ferramenta: 'osint-engine' | 'username-intel';
+    ferramenta: 'username-intel';
     id: string;
     rotulo: string;
     tipos: string[];
@@ -205,7 +205,6 @@ const POR_FASE: Record<FaseNome, DefFerramenta[]> = {
     { id: 'domain-infra', tipos: ['dominio'], input: (s) => ({ domain: s }), quik: true },
   ],
   OSINT: [
-    { id: 'osint-engine', tipos: ['username', 'email', 'dominio', 'ip'], input: (s) => ({ alvo: s }) },
     { id: 'username-intel', tipos: ['username'], input: (s) => ({ username: s }) },
     { id: 'paste-search', tipos: ['username', 'email', 'dominio', 'ip', 'telefone'], input: (s) => ({ term: s, exec: 'sim' }) },
   ],
@@ -220,10 +219,6 @@ const POR_FASE: Record<FaseNome, DefFerramenta[]> = {
   Correlation: [],
   Intelligence: [],
   Snapshots: [],
-};
-
-const TIPO_OINT: Record<string, string> = {
-  username: 'username', email: 'email', dominio: 'dominio', ip: 'ip',
 };
 
 // ------------------------------------------------------------- validação
@@ -312,28 +307,8 @@ function motivoTranca(id: string, f: Factos, cat: ItemCatalogo | undefined): str
   return `plano ${nomePlano(f.plano).toLowerCase()} não inclui esta ferramenta — exige ${nomePlano(min)}`;
 }
 
-/** O que os binários de terceiros permitem (ou não) para este alvo. */
+/** O que os registos e chaves permitem (ou não) para este alvo. */
 function dependencia(id: string, f: Factos): { ok: boolean; motivo?: string; nota?: string } {
-  const tipo = TIPO_OINT[f.seedType];
-
-  if (id === 'osint-engine') {
-    const verificados = f.clis.filter((c) => c.ferramenta === 'osint-engine');
-    if (!verificados.length) return { ok: false, motivo: 'verificação dos CLIs do OSINT Engine em falta' };
-    const aplicaveis = verificados.filter((c) => c.tipos.includes(tipo ?? ''));
-    const prontos = aplicaveis.filter((c) => c.ok);
-    const emFalta = aplicaveis.filter((c) => !c.ok);
-    if (!aplicaveis.length) return { ok: false, motivo: `nenhum dos CLIs do OSINT Engine aceita alvos do tipo "${f.seedType}"` };
-    if (!prontos.length) {
-      return { ok: false, motivo: emFalta.slice(0, 3).map((c) => c.motivo).join(' · ') };
-    }
-    return {
-      ok: true,
-      nota: emFalta.length
-        ? `${prontos.length} de ${aplicaveis.length} prontos · falta: ${emFalta.slice(0, 2).map((c) => c.motivo).join(', ')}`
-        : `${prontos.length} providers prontos`,
-    };
-  }
-
   if (id === 'username-intel') {
     const clis = f.clis.filter((c) => c.ferramenta === 'username-intel');
     // Sem verificação não se afirma que os registos estão cá: dizer "pronto"

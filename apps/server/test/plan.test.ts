@@ -32,7 +32,6 @@ import '../src/tools/username-intel.ts';
 import '../src/tools/paste.ts';
 import '../src/tools/graph.ts';
 import '../src/tools/social-search.ts';
-import '../src/tools/osint-engine.ts';
 import '../src/tools/apify.ts';
 import '../src/tools/datalikers.ts';
 import '../src/tools/domain-infra.ts';
@@ -57,21 +56,11 @@ interface Opcoes { seedType?: string; nos?: number; apifyToken?: boolean; plano?
  */
 function clisDe(seedType: string): Factos['clis'] {
   const out: Factos['clis'] = [];
-  if (seedType === 'dominio' || seedType === 'ip') {
-    out.push(
-      { ferramenta: 'osint-engine', id: 'spiderfoot', rotulo: 'SpiderFoot', tipos: ['dominio', 'ip'], ok: false, motivo: '`ARGUS_SPIDERFOOT` em falta' },
-      { ferramenta: 'osint-engine', id: 'photon', rotulo: 'Photon', tipos: ['dominio'], ok: false, motivo: '`ARGUS_PHOTON` em falta' },
-    );
-  }
-  if (seedType === 'username' || seedType === 'email') {
-    out.push({ ferramenta: 'osint-engine', id: 'openosint', rotulo: 'OpenOSINT', tipos: ['username', 'email'], ok: false, motivo: 'CLI `openosint` não instalado' });
-  }
   if (seedType === 'username') {
     out.push(
       { ferramenta: 'username-intel', id: 'sherlock', rotulo: 'Sherlock', tipos: ['username'], ok: true, motivo: '' },
       { ferramenta: 'username-intel', id: 'whatsmyname', rotulo: 'WhatsMyName', tipos: ['username'], ok: true, motivo: '' },
       { ferramenta: 'username-intel', id: 'maigret', rotulo: 'Maigret', tipos: ['username'], ok: true, motivo: '' },
-      { ferramenta: 'username-intel', id: 'blackbird', rotulo: 'Blackbird (CLI)', tipos: ['username'], ok: false, motivo: 'CLI `blackbird` não instalado' },
     );
   }
   return out;
@@ -161,7 +150,7 @@ ok(filtradas.length > 0 && filtradas.every((id) => faseDe(id) !== null),
   'as filtradas por tipo continuam a ser ferramentas de uma das 8 fases', filtradas.join(', '));
 eq(fullDominio.resumo.fora, foraDoPlano.length + filtradas.length, 'resumo.fora conta tudo o que não entrou');
 ok(!todos(full).includes('graph-investigation'), 'graph-investigation nunca entra no plano (criaria outra investigação)');
-ok(todos(fullDominio).includes('osint-engine') && !todos(fullDominio).includes('username-finder'),
+ok(todos(fullDominio).includes('domain-infra') && !todos(fullDominio).includes('username-finder'),
   'FULL só traz ferramentas do tipo de alvo deste alvo (domínio)');
 ok(todos(full).includes('username-finder'),
   'FULL traz a ferramenta de descoberta quando o alvo é um username');
@@ -204,36 +193,18 @@ const apifyComToken = ferramenta(plano('FULL', undefined, factos({ seedType: 'us
 eq(apifyComToken.estado, 'PRONTO', 'Apify com token está PRONTO');
 ok((apifyComToken.nota ?? '').includes('pay-per-event'), 'PRONTO avisa que custa dinheiro', apifyComToken.nota);
 
-const osintVazio = ferramenta(plano('FULL', undefined, factos({ seedType: 'dominio' })), 'OSINT', 'osint-engine');
-eq(osintVazio.estado, 'BLOQUEADA', 'OSINT Engine sem nenhum CLI instalado está BLOQUEADA');
-ok((osintVazio.motivo ?? '').includes('ARGUS_SPIDERFOOT') && (osintVazio.motivo ?? '').includes('ARGUS_PHOTON'),
-  'o motivo aponta as variáveis que faltam, uma a uma', osintVazio.motivo);
+const infraDominio = ferramenta(plano('FULL', undefined, factos({ seedType: 'dominio' })), 'Discovery', 'domain-infra');
+eq(infraDominio.estado, 'PRONTO', 'domain-infra (RDAP+DNS+CT, fontes abertas) está PRONTO sem chave nem CLI');
 
-const osintPoucos = ferramenta(plano('FULL', undefined, factos({
-  seedType: 'dominio',
-  clis: [
-    { ferramenta: 'osint-engine', id: 'spiderfoot', rotulo: 'SpiderFoot', tipos: ['dominio', 'ip'], ok: true, motivo: '' },
-    { ferramenta: 'osint-engine', id: 'photon', rotulo: 'Photon', tipos: ['dominio'], ok: false, motivo: '`ARGUS_PHOTON` em falta' },
-  ],
-})), 'OSINT', 'osint-engine');
-eq(osintPoucos.estado, 'PRONTO', 'com um CLI instalado a ferramenta pode correr');
-ok((osintPoucos.nota ?? '').includes('1 de 2'), 'e diz quantos estão prontos e o que falta', osintPoucos.nota);
-
-// Um alvo que nenhum CLI aceita: a ferramenta sai do plano em vez de aparecer
-// como "vai correr" para depois falhar sem explicação.
+// Um telefone não tem ferramenta OSINT aplicável: a fase diz o que existe
+// (e que está trancado no free) em vez de fingir que vai correr.
 const osintTelefone = plano('FULL', undefined, factos({ seedType: 'telefone' }));
-ok(!todos(osintTelefone).includes('osint-engine'),
-  'OSINT Engine não entra no plano para um telefone (nenhum CLI o aceita)');
 eq(ferramenta(osintTelefone, 'OSINT', 'paste-search').estado, 'BLOQUEADA',
   'a fase OSINT continua a dizer o que existe (e que está trancado no free)');
 
-const osintSemVerificacao = ferramenta(plano('FULL', undefined, factos({ seedType: 'dominio', clis: [] })), 'OSINT', 'osint-engine');
-eq(osintSemVerificacao.estado, 'BLOQUEADA', 'sem verificação não se afirma que os CLIs estão cá');
-ok((osintSemVerificacao.motivo ?? '').includes('verificação'), 'e o motivo é a falta de verificação', osintSemVerificacao.motivo);
-
 const usernameCli = ferramenta(plano('FULL', undefined, factos({ seedType: 'username' })), 'OSINT', 'username-intel');
-eq(usernameCli.estado, 'PRONTO', 'username-intel corre com os 3 registos mesmo sem o Blackbird');
-ok((usernameCli.nota ?? '').includes('blackbird'), 'mas o que falta está dito na nota', usernameCli.nota);
+eq(usernameCli.estado, 'PRONTO', 'username-intel corre com os 3 registos locais');
+ok((usernameCli.nota ?? '').includes('3 registos'), 'e a nota diz quantos registos estão disponíveis', usernameCli.nota);
 
 const usernameSemCli = ferramenta(plano('FULL', undefined, factos({ seedType: 'username', clis: [] })), 'OSINT', 'username-intel');
 eq(usernameCli.id, 'username-intel', 'a ferramenta existe');
@@ -415,7 +386,7 @@ for (const [id, v] of Object.entries(ETAPAS)) {
   ok(faseDe(id) === v.fase, `etapa ${id} na fase certa`);
 }
 ok(todos(pFull).every((id) => faseDe(id) !== null), 'toda a ferramenta do plano tem fase');
-eq(CATALOGO.length, 9, 'o catálogo real é o que está registado');
+eq(CATALOGO.length, 8, 'o catálogo real é o que está registado');
 ok(Object.keys(PLANS).length === 3, 'três planos');
 
 console.log(`\n${pass} passaram, ${fail} falharam`);
