@@ -485,7 +485,9 @@ test('o painel é o primeiro ecrã e tem a acção principal em grande', () => {
   const { t } = montaApp();
   const html = t.html();
   assert.match(html, /Nova investigação/, 'falta a acção principal');
-  assert.match(html, /hero-panel/, 'falta o bloco principal do painel');
+  // Reconstrução 2026-10 renomeou hero-panel → dash-hero (mesmo bloco, mesma
+  // acção principal). Aceita qualquer um para não prender o nome da classe.
+  assert.match(html, /hero-panel|dash-hero/, 'falta o bloco principal do painel');
   // O painel não pode despejar 8 cartões: tem de estar agrupado.
   const cartoes = (html.match(/class="tool-card"/g) ?? []).length;
   assert.ok(cartoes <= H.GRUPOS.length, `${cartoes} cartões soltos no painel — o objectivo é agrupar, não despejar`);

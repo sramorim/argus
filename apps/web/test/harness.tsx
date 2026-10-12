@@ -89,7 +89,7 @@ export const porGrupo = ia.porGrupo;
 
 /**
  * Rede falsa com o catálogo real, para os testes de UI montarem a app sem
- * servidor. As 9 ferramentas e os 7 grupos vêm do próprio código: se a
+ * servidor. As 8 ferramentas e os 6 grupos vêm do próprio código: se a
  * arquitectura de informação mudar, os testes mudam com ela.
  */
 export function stubApi(so: Record<string, unknown> = {}) {

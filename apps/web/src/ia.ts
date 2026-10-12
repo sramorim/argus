@@ -7,7 +7,7 @@
  * sempre a fonte de "a ferramenta está no site mas não aparece no menu".
  *
  * Regra do projeto: **só entra o que existe e funciona.** Nada é listado por
- * parecer completo. Os grupos abaixo contêm as 9 ferramentas registadas no
+ * parecer completo. Os grupos abaixo contêm as 8 ferramentas registadas no
  * servidor (Social Intelligence), e nenhuma outra — o catálogo real vem da API
  * e o teste `test/ui.test.mts` falha se um grupo prometer uma ferramenta que
  * não existe.
