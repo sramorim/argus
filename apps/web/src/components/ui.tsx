@@ -12,16 +12,17 @@ export { Icon };
 
 // --------------------------------------------------------------------- marca
 /**
- * O símbolo: o "A" com o olho, em azul metálico.
+ * O símbolo: um "A" em duas faixas (prata e azul) dobradas no topo, com uma
+ * conexão de três nós no lugar do traço do meio — é o que o ARGOS faz: liga
+ * informação pública.
  *
- * É uma imagem (não um desenho em SVG): a fonte é `public/brand/argos-a.png`
- * e `npm run icons` gera dela a versão de 128 px usada aqui, o favicon, os
- * ícones da app e a capa social. O teste `ui.test.mts` confirma que este
- * componente e os ficheiros gerados apontam para a mesma fonte.
+ * A fonte é o vector `public/brand/argos-a.svg` (nítido em qualquer ecrã);
+ * `npm run icons` gera a partir da versão PNG o favicon, os ícones da app e a
+ * capa social. O teste `ui.test.mts` confirma que tudo aponta para a mesma fonte.
  */
 export function Mark({ size = 30, className }: { size?: number; className?: string }) {
   return (
-    <img className={className} src="/brand/argos-a-128.png" width={size} height={size}
+    <img className={className} src="/brand/argos-a.svg" width={size} height={size}
       alt="ARGOS" decoding="async" draggable={false} />
   );
 }

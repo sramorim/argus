@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <!-- ARGOS — símbolo: um "A" em duas faixas (prata e azul) dobradas no topo;
+       o traço do meio é uma conexão com três nós. Fonte vectorial da marca. -->
+  <defs>
+    <linearGradient id="prata" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#F4F7FC"/>
+      <stop offset=".55" stop-color="#B9C6DA"/>
+      <stop offset="1" stop-color="#7F92B2"/>
+    </linearGradient>
+    <linearGradient id="azul" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#5BC0FF"/>
+      <stop offset=".5" stop-color="#2E8BFF"/>
+      <stop offset="1" stop-color="#1747C9"/>
+    </linearGradient>
+    <linearGradient id="dobra" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0B2A6E" stop-opacity=".55"/>
+      <stop offset="1" stop-color="#0B2A6E" stop-opacity="0"/>
+    </linearGradient>
+    <radialGradient id="no" cx=".4" cy=".35" r=".7">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#9BE0FF"/>
+    </radialGradient>
+    <filter id="brilho" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="1.1" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <!-- perna esquerda (prata) -->
+  <path d="M23.6 5.5h12.6L14.6 58.5H1.6Z" fill="url(#prata)"/>
+  <!-- perna direita (azul), por cima, com a sombra da dobra -->
+  <path d="M27.8 5.5h12.6l22 53H49.4Z" fill="url(#azul)"/>
+  <path d="M27.8 5.5h12.6l4.4 10.6H32.2Z" fill="url(#dobra)"/>
+  <!-- conexão -->
+  <g filter="url(#brilho)">
+    <path d="M21.6 41h21.4" stroke="#7FD4FF" stroke-width="2.4" stroke-linecap="round"/>
+    <circle cx="21.6" cy="41" r="3" fill="url(#no)"/>
+    <circle cx="32.3" cy="41" r="3.8" fill="url(#no)"/>
+    <circle cx="43" cy="41" r="3" fill="url(#no)"/>
+  </g>
+</svg>
