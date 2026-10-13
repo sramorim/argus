@@ -1,6 +1,6 @@
 /* =============================================================================
    ARGOS — Design System v1.0
-   Dark premium, azul eléctrico, mobile-first, alta densidade sem poluição.
+   Azul-marinho escuro, azul eléctrico, mobile-first, alta densidade sem poluição.
 
    Uma só fonte de verdade para cor, forma e medida. Nenhum HEX solto pelo
    resto do ficheiro: tudo o que é cor, raio ou altura sai daqui, para o
@@ -14,21 +14,21 @@
    /* ---------------------------------------------------------------- 1. tokens */
    :root {
    /* --- fundo ------------------------------------------------------------ */
-   --bg:            #05070C;   /* bg-app     */
-   --bg-2:          #030509;   /* bg-sunken  */
+   --bg:            #050D1F;   /* bg-app     */
+   --bg-2:          #030917;   /* bg-sunken  */
 
    /* --- superfícies ------------------------------------------------------ */
-   --surface:       #0A0F1C;   /* surface-1  — a superfície dos cartões */
-   --surface-2:     #101828;   /* surface-2  — campos, gaveta, chips */
-   --surface-3:     #16213A;   /* surface-3  — realce, item activo   */
+   --surface:       #0A1630;   /* surface-1  — a superfície dos cartões */
+   --surface-2:     #0F1E3D;   /* surface-2  — campos, gaveta, chips */
+   --surface-3:     #16294F;   /* surface-3  — realce, item activo   */
 
    /* --- bordas ----------------------------------------------------------- */
-   --line:          #1B2540;   /* border-subtle */
-   --line-strong:   #2B3B63;   /* border-strong */
+   --line:          #1C2E55;   /* border-subtle */
+   --line-strong:   #2B4677;   /* border-strong */
    /* Derivada: um degrau abaixo da borda subtil, para separadores internos
       (linha de tabela, divisória de cartão) que não são uma borda de peça. */
-   --line-soft:     #141C2E;
-   --glass:         rgba(5, 7, 12, .84);
+   --line-soft:     #142344;
+   --glass:         rgba(5, 13, 31, .84);
    --glass-border:  rgba(255, 255, 255, .07);
 
    /* --- azul principal --------------------------------------------------- */
@@ -45,11 +45,11 @@
 
    /* --- textos ----------------------------------------------------------- */
    --t-1:           #FFFFFF;   /* text-1 */
-   --t-2:           #9AA7BD;   /* text-2 */
-   --t-3:           #5F6B84;   /* text-3 */
+   --t-2:           #A9B7D0;   /* text-2 */
+   --t-3:           #7383A3;   /* text-3 */
    /* Derivada: text-3 escurecido, para a linha legal e as etiquetas de canto
       que têm de existir sem competir com o texto a sério. */
-   --t-4:           #46516B;
+   --t-4:           #5A6A8C;
 
    /* --- estados ---------------------------------------------------------- */
    --erro:          #F0524F;   /* danger  */
@@ -62,7 +62,7 @@
 
    /* --- gradientes ------------------------------------------------------- */
    --grad-cta:  linear-gradient(135deg, #1B6EF3 0%, #2E9BFF 100%);
-   --grad-hero: radial-gradient(120% 90% at 80% 10%, #122B52 0%, #05070C 60%);
+   --grad-hero: radial-gradient(120% 90% at 80% 10%, #133A78 0%, #050D1F 62%);
 
    /* Confiança: escala de azuis + neutro. Sem verde, sem percentagem
       inventada — o backend diz Confirmado/Corroborado/Indicado/Fraco e o
@@ -355,13 +355,6 @@ img, svg { display: block; max-width: 100%; }
   display: flex; align-items: center;
   font-size: 14px; color: var(--t-3); font-variant-numeric: tabular-nums; white-space: nowrap;
 }
-.topbar-links { display: flex; gap: 2px; }
-.topbar-link {
-  font-size: 14px; color: var(--t-2); min-height: 40px; padding: 0 12px;
-  display: inline-flex; align-items: center; border-radius: var(--r);
-  transition: background var(--t-fast), color var(--t-fast);
-}
-.topbar-link:hover { background: var(--surface-2); color: var(--t-1); }
 
 /* A busca da barra superior não tem motor próprio: abre o painel e entrega o
    foco à pesquisa real de lá, que é a mesma de `ia.ts` sobre o catálogo. */
@@ -1062,9 +1055,9 @@ select.input {
   .desk-row { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
   .desk-hint { display: none; }
 
-  /* Barra inferior: 68px + safe-area, quatro destinos, toque de 44px. */
+  /* Barra inferior: 68px + safe-area, cinco destinos, toque de 44px. */
   .tabbar {
-    display: grid; grid-template-columns: repeat(4, 1fr);
+    display: grid; grid-template-columns: repeat(5, 1fr);
     position: fixed; left: 0; right: 0; bottom: 0; z-index: 50;
     height: calc(var(--tabbar-h) + env(safe-area-inset-bottom));
     padding-bottom: env(safe-area-inset-bottom);
@@ -1532,16 +1525,6 @@ html[data-zebra='sim'] .tbl tbody tr:nth-child(even) td { background: var(--surf
 }
 .animate-spin-slow { animation: spin-slow 10s linear infinite; }
 
-/* --------------------------------------- FAB glow pulse */
-@keyframes fab-glow {
-  0%, 100% {
-    box-shadow: 0 0 20px var(--blue-glow), 0 8px 32px rgba(0,0,0,0.5);
-  }
-  50% {
-    box-shadow: 0 0 40px var(--blue-glow-strong), 0 0 80px var(--blue-dim), 0 8px 32px rgba(0,0,0,0.5);
-  }
-}
-.animate-fab-glow { animation: fab-glow 2.5s ease-in-out infinite; }
 
 /* --------------------------------------- Sidebar pulse glow */
 @keyframes pulse-glow {
@@ -1766,68 +1749,6 @@ html[data-zebra='sim'] .tbl tbody tr:nth-child(even) td { background: var(--surf
   .boot-half { transition: none !important; }
 }
 
-/* =============================================================
-   BOTÃO FLUTUANTE E ATALHOS
-   O botão é o alvo grande do telemóvel e o caminho de um clique para o que
-   se repete. O anel que gira devagar dá a leitura de "instrumento ligado"
-   sem custar um requestAnimationFrame: é uma animação de CSS.
-   ============================================================= */
-.fab-wrap {
-  position: fixed; z-index: 68;
-  right: 18px;
-  bottom: calc(var(--taskbar-h) + 16px);
-  display: flex; flex-direction: column; align-items: flex-end; gap: 12px;
-}
-
-/* O menu cresce para cima, nunca para baixo: por baixo já está a barra. */
-.fab-menu {
-  display: flex; flex-direction: column; align-items: stretch; gap: 6px;
-  width: 232px; padding: 8px;
-  background: var(--glass);
-  backdrop-filter: saturate(160%) blur(22px);
-  border: 1px solid var(--line);
-  border-radius: var(--r-lg);
-  box-shadow: var(--shadow-3), 0 0 34px var(--blue-glow);
-  transform-origin: bottom right;
-}
-.fab-item {
-  display: flex; align-items: center; gap: 10px;
-  padding: 9px 11px; border-radius: var(--r-sm);
-  font-size: 14px; font-weight: 560; text-align: left; color: var(--t-2);
-  border: 1px solid transparent;
-  transition: background var(--t-fast), color var(--t-fast), border-color var(--t-fast);
-}
-.fab-item svg { width: 16px; height: 16px; flex: 0 0 16px; color: var(--t-4); }
-.fab-item:hover { background: var(--surface-2); color: var(--t-1); border-color: var(--line); }
-.fab-item:hover svg { color: var(--blue-3); }
-
-.fab {
-  position: relative; display: grid; place-items: center;
-  width: 54px; height: 54px; border-radius: 50%;
-  border: 1px solid var(--blue-line);
-  background: var(--surface-2);
-  box-shadow: var(--shadow-3);
-}
-/* O anel é a pista tracejada que roda. Fica por baixo do núcleo, senão
-   tapava o ícone. */
-.fab-anel {
-  position: absolute; inset: -5px; border-radius: 50%;
-  border: 1px dashed var(--blue-line);
-}
-.fab-nucleo {
-  display: grid; place-items: center;
-  width: 40px; height: 40px; border-radius: 50%;
-  background: var(--grad-cta);
-  border: 1px solid var(--blue-glow-strong);
-}
-.fab-nucleo svg { width: 20px; height: 20px; color: #fff; }
-
-@media (max-width: 1199px) {
-  .fab-wrap { bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 12px); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .fab-anel, .fab-nucleo { animation: none !important; }
-}
 
 /* =============================================================
    OMNIDORK BUILDER — módulo independente
@@ -2210,9 +2131,6 @@ html[data-zebra='sim'] .tbl tbody tr:nth-child(even) td { background: var(--surf
 
 /* ------------------------------------------------------------------ header */
 .topbar-brand { font-family: var(--mono); font-weight: 800; letter-spacing: .14em; color: var(--blue); }
-.topbar-links { gap: 6px; }
-.topbar-link { font-family: var(--mono); border: 1px solid transparent; border-radius: var(--r-sm); padding: 8px 12px; }
-.topbar-link:hover { border-color: var(--line); background: var(--surface-2); color: var(--t-1); }
 
 /* ------------------------------------------- grade de ferramentas (painel) */
 #ferramentas .grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
@@ -2308,7 +2226,7 @@ input,select,textarea{font-size:16px!important} /* sem zoom iOS */
 /* Grade de ferramentas: 2 col no telemóvel, ícone com presença, trancada honesta. */
 #ferramentas .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
 @media(min-width:700px){#ferramentas .grid{grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:14px}}
-.tool-card{padding:20px 14px;text-align:center;border-radius:14px;background:#11161f;transition:border-color .15s,transform .15s}
+.tool-card{padding:20px 14px;text-align:center;border-radius:14px;background:var(--surface-2);transition:border-color .15s,transform .15s}
 .tool-card:active{transform:scale(.98)}
 .tool-card[data-locked]{opacity:.75}
 /* Barra inferior: alvos grandes, rótulo legível, safe-area. */
@@ -2380,3 +2298,200 @@ input,select,textarea{font-size:16px!important} /* sem zoom iOS */
 .dash-quick-form{display:grid;gap:10px}
 .dash-quick-row{display:grid;grid-template-columns:1fr auto;gap:10px}
 @media(max-width:420px){.dash-quick-row{grid-template-columns:1fr}.dash-quick-row .btn{min-height:48px}}
+
+/* ==========================================================================
+   ARGOS 2026-10 — Redesenho azul-marinho: busca global, painel em cartões,
+   mapa de conexões e atividade recente. Só tokens do Design System.
+   O painel vive dentro de uma janela que se redimensiona: o layout responde
+   à largura do próprio painel (container query), não à do ecrã.
+   ========================================================================== */
+body { background: var(--bg); }
+.kbd, .paleta-rodape kbd {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 22px; height: 22px; padding: 0 6px; margin-left: auto;
+  font-family: var(--mono); font-size: 11px; font-weight: 700; letter-spacing: .04em;
+  color: var(--blue-3); background: var(--blue-dim); border: 1px solid var(--blue-line); border-radius: 6px;
+  white-space: nowrap;
+}
+
+/* ---------- barra superior e lateral ---------- */
+.topbar-busca { gap: 10px; min-width: min(420px, 40vw); }
+.topbar-busca .kbd { flex: 0 0 auto; }
+.topbar-user { flex-direction: column; align-items: flex-end; line-height: 1.2; margin-right: 4px; min-width: 0; }
+.topbar-user-nome { font-size: 14px; font-weight: 650; color: var(--t-1); max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.topbar-user-plano { font-size: 12px; color: var(--blue-3); }
+.nav-busca { margin-bottom: 6px; border-color: var(--line); background: var(--bg-2); }
+.nav-busca:hover { border-color: var(--blue-line); }
+.nav-item[aria-current='true'] { box-shadow: inset 3px 0 0 var(--blue); }
+.quota-user { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; min-width: 0; }
+.quota-user-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.quota-nome { font-size: 14px; font-weight: 650; color: var(--t-1); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.quota-user .quota-mail { margin-top: 0; }
+.quota-user .quota-plan { font-size: 11px; color: var(--blue-3); background: var(--blue-dim); border: 1px solid var(--blue-line); border-radius: 6px; padding: 2px 7px; letter-spacing: .08em; }
+.avatar-sm { width: 36px; height: 36px; flex: 0 0 36px; display: grid; place-items: center; border-radius: 50%; font-weight: 800; color: #fff; background: var(--grad-cta); border: 0; cursor: default; }
+.avatar-sm:hover { border-color: transparent; }
+
+/* ---------- busca global (Ctrl/⌘+K) ---------- */
+.paleta-scrim {
+  position: fixed; inset: 0; z-index: 95; background: rgba(2, 6, 16, .72);
+  backdrop-filter: blur(6px); display: flex; justify-content: center; align-items: flex-start;
+  padding: 10vh 16px 16px;
+}
+.paleta {
+  width: min(640px, 100%); max-height: 72vh; display: flex; flex-direction: column;
+  background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--r-xl);
+  box-shadow: var(--shadow-4), 0 0 0 1px var(--blue-line), 0 0 60px var(--blue-dim); overflow: hidden;
+}
+.paleta-campo { display: flex; align-items: center; gap: 12px; padding: 0 14px; border-bottom: 1px solid var(--line); min-height: 60px; }
+.paleta-campo > svg { width: 20px; height: 20px; color: var(--blue); flex: 0 0 20px; }
+.paleta-campo input { flex: 1; min-width: 0; height: 58px; background: transparent; border: 0; outline: 0; color: var(--t-1); font-size: 16px; }
+.paleta-campo input::placeholder { color: var(--t-3); }
+.paleta-esc { font-family: var(--mono); font-size: 12px; color: var(--t-3); padding: 6px 10px; min-height: 36px; border: 1px solid var(--line); border-radius: 8px; }
+.paleta-esc:hover { color: var(--t-1); border-color: var(--blue-line); }
+.paleta-lista { list-style: none; margin: 0; padding: 6px; overflow-y: auto; overscroll-behavior: contain; }
+.paleta-secao { padding: 10px 10px 6px; color: var(--t-3); }
+.paleta-item {
+  display: flex; align-items: center; gap: 12px; width: 100%; min-height: 52px; padding: 8px 10px;
+  border-radius: var(--r); border: 1px solid transparent; text-align: left; color: var(--t-2);
+}
+.paleta-item[aria-selected='true'] { background: var(--blue-dim); border-color: var(--blue-line); color: var(--t-1); }
+.paleta-ico { width: 36px; height: 36px; flex: 0 0 36px; display: grid; place-items: center; border-radius: 10px; background: var(--surface-2); border: 1px solid var(--line); }
+.paleta-ico svg { width: 18px; height: 18px; color: var(--blue-3); }
+.paleta-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.paleta-titulo { font-size: 15px; font-weight: 600; color: var(--t-1); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.paleta-sub { font-size: 13px; color: var(--t-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.paleta-seta { width: 16px; height: 16px; color: var(--t-4); flex: 0 0 16px; }
+.paleta-item[aria-selected='true'] .paleta-seta { color: var(--blue); }
+.paleta-vazio { padding: 28px 18px; text-align: center; color: var(--t-3); font-size: 14px; }
+.paleta-rodape { display: flex; gap: 16px; padding: 10px 14px; border-top: 1px solid var(--line); color: var(--t-3); font-size: 12px; }
+.paleta-rodape span { display: inline-flex; align-items: center; gap: 4px; }
+.paleta-rodape kbd { margin-left: 0; height: 20px; min-width: 20px; }
+@media (max-width: 699px) {
+  .paleta-scrim { padding: 0; align-items: stretch; }
+  .paleta { max-height: none; height: 100%; border-radius: 0; }
+  .paleta-rodape { display: none; }
+}
+
+/* ---------- painel ---------- */
+.dash { container-type: inline-size; gap: 16px; }
+.dash-hero {
+  background: var(--grad-hero); border-color: var(--line-strong); border-radius: var(--r-xl);
+  position: relative; overflow: hidden; padding: 24px;
+}
+.dash-hero::after {
+  content: ''; position: absolute; right: -80px; top: -120px; width: 360px; height: 360px; border-radius: 50%;
+  border: 1px solid var(--blue-line); box-shadow: 0 0 80px var(--blue-glow), inset 0 0 60px var(--blue-dim);
+  opacity: .5; pointer-events: none;
+}
+.dash-hero > * { position: relative; z-index: 1; }
+.dash-hero-txt { display: grid; gap: 0; min-width: 0; }
+.dash-titulo { font-size: clamp(26px, 5vw, 36px); }
+.dash-titulo span { color: var(--blue); }
+.dash-hero .dash-quick-form { margin-top: 18px; max-width: 520px; }
+.dash-cta .btn { gap: 8px; }
+.dash-cta .kbd { margin-left: 6px; }
+
+.dash-acoes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.dash-acao {
+  display: flex; align-items: center; gap: 10px; min-height: 60px; padding: 10px 12px; text-align: left;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); color: var(--t-1);
+  transition: border-color var(--t-fast), background var(--t-fast), transform var(--t-press);
+}
+.dash-acao:hover { border-color: var(--blue-line); background: var(--surface-2); }
+.dash-acao:active { transform: scale(.98); }
+.dash-acao-ico { width: 38px; height: 38px; flex: 0 0 38px; display: grid; place-items: center; border-radius: 10px; background: var(--blue-dim); border: 1px solid var(--blue-line); }
+.dash-acao-ico svg { width: 19px; height: 19px; color: var(--blue); }
+.dash-acao-txt { font-size: 14px; font-weight: 600; line-height: 1.3; }
+
+.dash-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.stat-card {
+  display: grid; grid-template-columns: 1fr auto; grid-template-areas: 'v ico' 'l ico'; align-items: center;
+  gap: 2px 10px; padding: 16px; text-align: left; color: inherit;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg);
+}
+button.stat-card { transition: border-color var(--t-fast); }
+button.stat-card:hover { border-color: var(--blue-line); }
+.stat-v { grid-area: v; font-family: var(--font-display); font-size: 26px; font-weight: 800; color: var(--t-1); line-height: 1.1; }
+.stat-l { grid-area: l; font-size: 13px; color: var(--t-2); }
+.stat-ico { grid-area: ico; width: 40px; height: 40px; display: grid; place-items: center; border-radius: 12px; background: var(--blue-dim); }
+.stat-ico svg { width: 20px; height: 20px; color: var(--blue); }
+
+.dash-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+.dash-card { padding: 18px; display: grid; gap: 14px; align-content: start; border-radius: var(--r-xl); }
+.dash-mapa, .dash-perfis { min-width: 0; }
+.dash-atividade, .dash-fontes { min-width: 0; }
+.dash-card-head { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.dash-card-head .card-title { margin: 0; }
+.dash-card-head .card-sub { margin: 2px 0 0; }
+.dash-card-ico { width: 36px; height: 36px; flex: 0 0 36px; display: grid; place-items: center; border-radius: 10px; background: var(--surface-2); border: 1px solid var(--line); }
+.dash-card-ico svg { width: 18px; height: 18px; color: var(--blue); }
+.dash-card-head .btn { flex: 0 0 auto; gap: 4px; }
+.invest-ico { font-family: var(--font-display); font-weight: 800; font-size: 17px; }
+.invest-meta .tag { margin-right: 4px; }
+
+@container (min-width: 620px) {
+  .dash-acoes, .dash-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .dash-hero { grid-template-columns: 1fr auto; align-items: center; }
+}
+@container (min-width: 900px) {
+  .dash-grid { grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr); }
+}
+
+/* ---------- mapa de conexões ---------- */
+.mapa { display: grid; gap: 12px; }
+.mapa-svg {
+  width: 100%; height: auto; display: block; border-radius: var(--r-lg);
+  background: radial-gradient(60% 70% at 50% 50%, rgba(46, 155, 255, .10) 0%, transparent 70%), var(--bg-2);
+  border: 1px solid var(--line-soft);
+}
+.mapa-aresta { stroke: var(--blue); stroke-opacity: .35; stroke-width: 1.2; }
+.mapa-aresta[data-conf='confirmed'] { stroke-opacity: .85; stroke-width: 1.8; }
+.mapa-aresta[data-conf='corroborated'] { stroke-opacity: .6; stroke-width: 1.5; }
+.mapa-aresta[data-conf='weak'] { stroke-opacity: .2; stroke-dasharray: 4 4; }
+.mapa-no { cursor: default; }
+.mapa-txt { fill: var(--t-2); font-size: 13px; font-family: var(--font); }
+.mapa-txt-centro { fill: var(--t-1); font-size: 15px; font-weight: 700; }
+.mapa-legenda { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.mapa-chip {
+  display: inline-flex; align-items: center; gap: 7px; padding: 6px 10px; font-size: 13px; color: var(--t-2);
+  background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--r-full);
+}
+.mapa-chip i { width: 9px; height: 9px; border-radius: 50%; }
+.mapa-chip b { color: var(--t-1); font-variant-numeric: tabular-nums; }
+
+/* ---------- atividade recente ---------- */
+.feed { list-style: none; margin: 0; padding: 0; display: grid; }
+.feed li + li { border-top: 1px solid var(--line-soft); }
+.feed-item { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 60px; padding: 10px 4px; text-align: left; color: inherit; border-radius: var(--r); }
+.feed-item:hover { background: var(--surface-2); }
+.feed-ico { width: 38px; height: 38px; flex: 0 0 38px; display: grid; place-items: center; border-radius: 50%; background: var(--blue-dim); border: 1px solid var(--blue-line); }
+.feed-ico svg { width: 18px; height: 18px; color: var(--blue); }
+.feed-item[data-tipo='sessao'] .feed-ico { background: var(--surface-3); border-color: var(--line-strong); }
+.feed-item[data-tipo='sessao'] .feed-ico svg { color: var(--blue-3); }
+.feed-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.feed-titulo { font-size: 14px; font-weight: 600; color: var(--t-1); }
+.feed-alvo { font-family: var(--mono); font-size: 13px; color: var(--t-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.feed-quando { font-size: 12px; color: var(--t-3); }
+.feed-seta { width: 16px; height: 16px; color: var(--t-4); flex: 0 0 16px; }
+
+/* ---------- fontes monitoradas ---------- */
+.fontes { list-style: none; margin: 0; padding: 0; display: grid; }
+.fonte { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 48px; padding: 6px 2px; }
+.fonte + .fonte { border-top: 1px solid var(--line-soft); }
+.fonte .fonte-nome { overflow: hidden; text-overflow: ellipsis; }
+.fonte .fonte-estado { display: inline-flex; align-items: center; gap: 7px; font-size: 11px; flex: 0 0 auto; }
+
+/* A barra inferior partilha o nome `.tab` com as abas das Definições (pílulas
+   em mono). Aqui o botão é um destino: sem pílula, sem largura mínima, cinco
+   cabem num ecrã de 320px. */
+.tabbar .tab {
+  flex: initial; min-width: 0; min-height: 56px; padding: 6px 2px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+  font-family: var(--font); font-size: 11px; font-weight: 600; letter-spacing: 0; text-transform: none;
+  background: transparent; border: 0; border-radius: 0; color: var(--t-3);
+}
+.tabbar .tab[aria-current='true'] { color: var(--blue); }
+.tabbar .tab-ico svg { width: 22px; height: 22px; }
+
+/* O campo da busca global não leva a moldura dos campos de formulário. */
+.paleta-campo input, .paleta-campo input:focus { border: 0 !important; box-shadow: none !important; padding: 0; min-height: 0; background: transparent; }

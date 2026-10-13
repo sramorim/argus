@@ -15,7 +15,7 @@
  *  2. **O primeiro ecrã continua a ser o painel.** Quem entra quer investigar,
  *     não ler um índice: a janela do painel abre sozinha.
  *  3. **A navegação nunca aparece duas vezes.** Abaixo de 1200px é a gaveta
- *     (hamburger) mais a barra inferior de quatro destinos; a partir de
+ *     (hamburger) mais a barra inferior de cinco destinos; a partir de
  *     1200px a gaveta dá lugar a uma lateral fixa de 280px e a barra
  *     inferior desaparece. É o CSS que decide o papel da lateral e é ele que
  *     anima a gaveta — em JavaScript só fica o `drawer` aberto ou fechado.
@@ -29,6 +29,7 @@ import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { type ToolPublic, type Usage, type User, useContacto } from '../api';
 import { Icon, CATEGORY_ICON, CATEGORY_LABEL } from '../components/Icons';
 import Janela, { type Geom } from '../components/Janela';
+import Paleta from '../components/Paleta';
 import { Brand } from '../components/ui';
 import { GRUPOS, VISTAS, ATALHOS, NOME_PLANO, porGrupo } from '../ia';
 import Dashboard from './Dashboard';
@@ -53,15 +54,28 @@ export type View =
   | { k: 'plans' } | { k: 'account' } | { k: 'admin' } | { k: 'history' }
   | { k: 'health' } | { k: 'radar' } | { k: 'perfil' } | { k: 'definicoes' };
 
-/** Os 4 destinos da barra inferior. Escolha: o que se usa a toda a hora. */
-const TABS: { v: View; id: string; label: string; icon: (p: Record<string, unknown>) => ReactElement }[] = [
+/**
+ * Os destinos da barra inferior: o que se usa a toda a hora, mais a busca
+ * global e o menu (a gaveta). Os dois últimos não são vistas — são ações —
+ * e por isso não têm `v`.
+ */
+type Tab = { id: string; label: string; icon: (p: Record<string, unknown>) => ReactElement } & (
+  { v: View; acao?: undefined } | { v?: undefined; acao: 'busca' | 'menu' });
+const TABS: Tab[] = [
   { v: { k: 'dashboard' }, id: 'dashboard', label: 'Painel', icon: Icon.grid },
+  { acao: 'busca', id: 'busca', label: 'Buscar', icon: Icon.search },
   { v: { k: 'nova' }, id: 'nova', label: 'Investigar', icon: Icon.target },
   { v: { k: 'inv' }, id: 'inv', label: 'Sessões', icon: Icon.network },
-  { v: { k: 'account' }, id: 'account', label: 'Conta', icon: Icon.user },
+  { acao: 'menu', id: 'menu', label: 'Menu', icon: Icon.menu },
 ];
 
 
+
+/**
+ * O que o menu do avatar oferece: só o que é da pessoa e da conta. O resto da
+ * navegação vive na lateral (e na busca) — não se repete aqui.
+ */
+const CONTA: string[] = ['account', 'plans', 'definicoes'];
 
 /** Identidade de uma vista: é o que liga a rota, a janela e a barra de tarefas. */
 function chave(v: View): string {
@@ -88,7 +102,8 @@ export default function AppShell({
   view: View; setView: (v: View) => void; onLogout: () => void; refreshUser: () => void;
 }) {
   const [drawer, setDrawer] = useState(false);
-  const [fabAberto, setFabAberto] = useState(false);
+  /** Busca global (Ctrl/⌘+K): abre por cima de tudo, a partir de qualquer ecrã. */
+  const [busca, setBusca] = useState(false);
   /* Conta › Gerenciar limites. Vive aqui e não como rota própria para não
      aparecer na barra de tarefas como se fosse mais um ecrã do produto: é uma
      secção da Conta, acedida pelo modal de limite e pelo botão da secção
@@ -241,16 +256,28 @@ export default function AppShell({
     return () => { document.body.style.overflow = prev; };
   }, [drawer]);
 
-  /* O menu do botão flutuante é um menu: Escape fecha, e voltar a abrir a
-     gaveta fecha-o, para os dois nunca ficarem abertos um por cima do outro. */
+  /* Ctrl/⌘+K abre e fecha a busca de qualquer sítio; "/" abre-a quando não
+     se está a escrever num campo. A gaveta e a busca nunca ficam abertas uma
+     por cima da outra. */
   useEffect(() => {
-    if (!fabAberto) return;
-    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') setFabAberto(false); };
-    addEventListener('keydown', esc);
-    return () => removeEventListener('keydown', esc);
-  }, [fabAberto]);
+    const tecla = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setBusca((b) => !b);
+        return;
+      }
+      const alvo = e.target as HTMLElement | null;
+      const aEscrever = !!alvo && (/^(INPUT|TEXTAREA|SELECT)$/.test(alvo.tagName) || alvo.isContentEditable);
+      if (e.key === '/' && !aEscrever && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        e.preventDefault();
+        setBusca(true);
+      }
+    };
+    document.addEventListener('keydown', tecla);
+    return () => document.removeEventListener('keydown', tecla);
+  }, []);
 
-  useEffect(() => { if (drawer) setFabAberto(false); }, [drawer]);
+  useEffect(() => { if (busca) setDrawer(false); }, [busca]);
 
   const alternar = (id: string) => setAbertos((s) => {
     const n = new Set(s);
@@ -299,7 +326,7 @@ export default function AppShell({
 
   const conteudo = (v: View): React.ReactNode => {
     switch (v.k) {
-      case 'dashboard': return <Dashboard user={user} tools={tools} usage={usage} setView={go} />;
+      case 'dashboard': return <Dashboard user={user} tools={tools} usage={usage} setView={go} onBusca={() => setBusca(true)} />;
       case 'nova': return <ToolPage id="graph-investigation" tools={tools} onUsage={refreshUser} comoAlvo onLimites={irParaLimites} />;
       case 'tool': return <ToolPage id={(v as { id: string }).id} tools={tools} onUsage={refreshUser} onLimites={irParaLimites} />;
       case 'inv': return <Investigations view={v as { id?: string }} setView={go} />;
@@ -341,6 +368,12 @@ export default function AppShell({
         >
           <Icon.target /> Nova investigação
         </motion.button>
+
+        <button className="nav-item nav-busca" type="button" onClick={() => setBusca(true)}>
+          <Icon.search className="nav-ico" />
+          <span className="nav-label-txt">Busca global</span>
+          <kbd className="kbd">Ctrl K</kbd>
+        </button>
 
         <div className="nav-title">Navegação</div>
         <div className="nav-group">
@@ -434,12 +467,19 @@ export default function AppShell({
 
       <div className="side-foot">
         <div className="quota-card">
-          <div className="quota-head">
+          <div className="quota-user">
+            <span className="avatar avatar-sm" aria-hidden>{inicial}</span>
+            <span className="quota-user-txt">
+              <span className="quota-nome">{user.name || user.email}</span>
+              <span className="quota-mail" title={user.email}>{user.email}</span>
+            </span>
             <span className="quota-plan">{NOME_PLANO[user.plan]}</span>
+          </div>
+          <div className="quota-head">
+            <span className="t-xs dim">Execuções hoje</span>
             <span className="quota-val">{usage?.today ?? 0}/{usage?.daily ?? 0}</span>
           </div>
           <div className="meter"><i style={{ width: `${pct}%` }} /></div>
-          <div className="quota-mail" title={user.email}>{user.email}</div>
           {usage?.concurrent != null && (
             <div className="t-xs dim" style={{ marginTop: 5 }}>
               {usage.inflight ?? 0}/{usage.concurrent} em curso
@@ -456,13 +496,6 @@ export default function AppShell({
       </div>
     </>
   );
-
-  /* A busca da barra superior não tem motor próprio: leva ao painel, que é
-     onde a busca real vive, e põe o cursor lá. */
-  const irParaBusca = () => {
-    go({ k: 'dashboard' });
-    setTimeout(() => document.getElementById('busca-global')?.focus(), 60);
-  };
 
   /**
    * Abre Conta › Gerenciar limites.
@@ -520,9 +553,10 @@ export default function AppShell({
           >
             <Brand size={26} subtitle="Fontes abertas" />
           </motion.button>
-          <button className="topbar-busca only-wide" type="button" onClick={irParaBusca}>
+          <button className="topbar-busca only-wide" type="button" onClick={() => setBusca(true)}>
             <Icon.search />
-            <span>O que queres investigar?</span>
+            <span>Procurar ferramenta ou ecrã…</span>
+            <kbd className="kbd">Ctrl K</kbd>
           </button>
           <div className="topbar-clock only-desk">
             <Icon.clock />
@@ -535,11 +569,13 @@ export default function AppShell({
           {!esgotada && usage && (
             <span className="topbar-quota only-desk">{usage.daily - usage.today} execuções hoje</span>
           )}
-          <nav className="topbar-links only-desk" aria-label="Atalhos">
-            <button className="topbar-link" type="button" onClick={() => go({ k: 'inv' })}>Sessões</button>
-            <button className="topbar-link" type="button" onClick={() => go({ k: 'history' })}>Histórico</button>
-            <button className="topbar-link" type="button" onClick={() => go({ k: 'plans' })}>Planos</button>
-          </nav>
+          <button className="icon-btn only-narrow" onClick={() => setBusca(true)} aria-label="Busca global" type="button">
+            <Icon.search />
+          </button>
+          <span className="topbar-user only-desk">
+            <span className="topbar-user-nome">{user.name || user.email}</span>
+            <span className="topbar-user-plano">Plano {NOME_PLANO[user.plan]}</span>
+          </span>
           <details className="user-menu">
             <summary className="avatar" title={user.email}>{inicial}</summary>
             <div className="user-pop">
@@ -547,7 +583,7 @@ export default function AppShell({
                 <div className="user-pop-name">{user.name || user.email}</div>
                 <div className="user-pop-mail">{user.email}</div>
               </div>
-              {apps.map((v) => (
+              {apps.filter((v) => CONTA.includes(v.id)).map((v) => (
                 <motion.button
                   key={v.id}
                   className="user-pop-item"
@@ -687,84 +723,41 @@ export default function AppShell({
 
       {/* ---------------------------------------------------------- barra inferior */}
       <nav className="tabbar" aria-label="Destinos">
-        {TABS.map((t) => (
-          <motion.button
-            key={t.id}
-            className="tab"
-            type="button"
-            aria-current={view.k === t.v.k}
-            onClick={() => go(t.v)}
-            whileTap={{ scale: 0.94 }}
-            transition={{ type: 'spring', stiffness: 420, damping: 22 }}
-          >
-            <motion.span
-              className="tab-ico"
-              animate={{ scale: view.k === t.v.k ? 1.1 : 1 }}
-              transition={{ type: 'spring', stiffness: 400, damping: 18 }}
+        {TABS.map((t) => {
+          const atual = t.v ? view.k === t.v.k && !busca && !drawer : t.acao === 'busca' ? busca : drawer;
+          return (
+            <motion.button
+              key={t.id}
+              className="tab"
+              type="button"
+              aria-current={atual}
+              onClick={() => {
+                if (t.v) go(t.v);
+                else if (t.acao === 'busca') setBusca(true);
+                else setDrawer(true);
+              }}
+              whileTap={{ scale: 0.94 }}
+              transition={{ type: 'spring', stiffness: 420, damping: 22 }}
             >
-              <t.icon />
-            </motion.span>
-            {t.label}
-          </motion.button>
-        ))}
+              <motion.span
+                className="tab-ico"
+                animate={{ scale: atual ? 1.1 : 1 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 18 }}
+              >
+                <t.icon />
+              </motion.span>
+              {t.label}
+            </motion.button>
+          );
+        })}
       </nav>
 
-      {/* ------------------------------------------------------------------ atalho rápido */}
-      {/* O botão flutuante é o caminho de um clique para o que se faz a toda a
-          hora. Abre para cima, sobre a barra de tarefas, e fecha-se sozinho com
-          Escape — é um menu, e um menu que fica aberto a tapar o ecrã é pior
-          do que não o ter. */}
-      <div className="fab-wrap">
-        <AnimatePresence>
-          {fabAberto && (
-            <motion.div
-              className="fab-menu"
-              key="menu"
-              initial={{ opacity: 0, scale: 0.7, y: 16 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.7, y: 16 }}
-              transition={{ type: 'spring', stiffness: 320, damping: 26, mass: 0.6 }}
-            >
-              {ATALHOS.map((a, i) => {
-                const v: View = { k: 'tool', id: a.id };
-                return (
-                  <motion.button
-                    key={a.id}
-                    className="fab-item"
-                    type="button"
-                    title={a.nome}
-                    onClick={() => { go(v); setFabAberto(false); }}
-                    initial={{ opacity: 0, y: 12, scale: 0.8 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 8, scale: 0.8 }}
-                    transition={{ type: 'spring', stiffness: 400, damping: 28, delay: i * 0.03 }}
-                    whileTap={{ scale: 0.96 }}
-                  >
-                    {a.icon({})}
-                    <span>{a.nome}</span>
-                  </motion.button>
-                );
-              })}
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        <motion.button
-          className="fab"
-          type="button"
-          aria-label={fabAberto ? 'Fechar atalhos' : 'Abrir atalhos'}
-          aria-expanded={fabAberto}
-          onClick={() => setFabAberto((a) => !a)}
-          animate={{ rotate: fabAberto ? 135 : 0 }}
-          whileTap={{ scale: 0.92 }}
-          transition={{ type: 'spring', stiffness: 340, damping: 24 }}
-        >
-          <span className="animate-spin-slow fab-anel" aria-hidden />
-          <span className="animate-fab-glow fab-nucleo" aria-hidden>
-            <Icon.plus />
-          </span>
-        </motion.button>
-      </div>
+      {/* ------------------------------------------------------------ busca global */}
+      <AnimatePresence>
+        {busca && (
+          <Paleta key="paleta" tools={tools} user={user} onIr={go} onFechar={() => setBusca(false)} />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
