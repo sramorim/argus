@@ -11,6 +11,17 @@
      5. componentes 6. estados    7. responsivo  8. ecrãs especiais
    ============================================================================= */
 
+   /* Fontes servidas pelo próprio projeto (public/fonts, licença OFL): só o
+      subconjunto latino, que cobre todos os acentos do português. São
+      variáveis — um ficheiro por família cobre todos os pesos. Com a CSP
+      `font-src 'self'` não é preciso mudar mais nada. */
+   @font-face { font-family: 'Inter'; src: url('/fonts/inter-var.woff2') format('woff2');
+     font-weight: 400 700; font-style: normal; font-display: swap; }
+   @font-face { font-family: 'Montserrat'; src: url('/fonts/montserrat-var.woff2') format('woff2');
+     font-weight: 500 800; font-style: normal; font-display: swap; }
+   @font-face { font-family: 'JetBrains Mono'; src: url('/fonts/jbmono-var.woff2') format('woff2');
+     font-weight: 500 700; font-style: normal; font-display: swap; }
+
    /* ---------------------------------------------------------------- 1. tokens */
    :root {
    /* --- fundo ------------------------------------------------------------ */
@@ -100,34 +111,17 @@
    --maxw: 1200px;       /* conteúdo máximo no desktop */
 
    /*
-    * Tipografia do Design System: Sora nos títulos, Inter no corpo,
+    * Tipografia do ecossistema Senhor Amorim: Montserrat nos títulos, Inter no corpo,
     * JetBrains Mono no que é copiável.
     *
-    * As três são declaradas PRIMEIRO e não estão embebidas no projeto: nenhum
-    * ficheiro de fonte é servido por /fonts. Ou seja, num dispositivo que não
-    * as tenha instaladas o navegador segue para a pilha do sistema — que é
-    * nativa, carrega instantaneamente e não bloqueia o desenho. Não há
-    * @font-face a pedir um ficheiro que não existe, portanto não há 404 nem
-    * texto invisível à espera de uma fonte.
-    *
-    * Para as tornar reais: põem-se os woff2 em apps/web/public/fonts/ e
-    * descomenta-se o bloco logo abaixo. Com a CSP actual (`font-src 'self'`)
-    * funciona sem mudar mais nada.
+    * As três são servidas pelo projeto (ver os @font-face no topo do
+    * ficheiro). A pilha do sistema continua por trás, para o texto aparecer
+    * logo enquanto a fonte chega (font-display: swap).
     */
-   --font-display: 'Sora', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+   --font-display: 'Montserrat', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
    --font: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
    --mono: 'JetBrains Mono', ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
 
-   /*
-    * @font-face (descomentado quando houver os ficheiros em public/fonts/)
-    *
-    * @font-face { font-family: 'Sora'; src: url('/fonts/sora-800.woff2') format('woff2');
-    *   font-weight: 800; font-display: swap; }
-    * @font-face { font-family: 'Inter'; src: url('/fonts/inter-var.woff2') format('woff2');
-    *   font-weight: 100 900; font-display: swap; }
-    * @font-face { font-family: 'JetBrains Mono'; src: url('/fonts/jbmono-400.woff2') format('woff2');
-    *   font-weight: 400; font-display: swap; }
-    */
 
    /* --- movimento -------------------------------------------------------- */
    /* Os valores são os do Design System: pressão 120ms, alternância 200ms,
@@ -170,7 +164,7 @@ img, svg { display: block; max-width: 100%; }
 }
 
 /* ------------------------------------------------------------ 3. tipografia */
-/* Display e títulos em Sora (800/700); corpo em Inter; mono no que é copiável.
+/* Display e títulos em Montserrat (800/700); corpo em Inter; mono no que é copiável.
    A escala é a do Design System com os valores já calibrados para densidade. */
 .t-display {
   font-family: var(--font-display); font-weight: 800;
@@ -241,7 +235,7 @@ img, svg { display: block; max-width: 100%; }
   background: var(--surface);
 }
 .brand-plain { height: auto; flex: none; padding: 0; border-bottom: 0; background: none; }
-.brand-logo { width: 30px; height: 30px; border-radius: var(--r-sm); flex: 0 0 30px; }
+.brand-logo { width: 30px; height: 30px; flex: 0 0 30px; object-fit: contain; }
 .brand-text { min-width: 0; }
 .brand-name { font-family: var(--font-display); font-size: 15px; font-weight: 800; letter-spacing: .18em; color: var(--t-1); line-height: 1.2; }
 .brand-sub { font-family: var(--mono); font-size: 14px; letter-spacing: .16em; text-transform: uppercase; color: var(--t-4); font-weight: 600; }
@@ -2120,17 +2114,16 @@ html[data-zebra='sim'] .tbl tbody tr:nth-child(even) td { background: var(--surf
    sítio deste bloco.
    ============================================================================= */
 
-/* Botões em mono: a referência fala em mono em todo o lado. A família Sora/
-   Inter continua nas stacks (é o que os testes da ficha exigem) — o mono
-   chega onde se carrega e onde se lê valor. */
-.btn { font-family: var(--mono); letter-spacing: .02em; }
+/* Botões na fonte do corpo: o mono fica para dados, IDs e atalhos de teclado,
+   onde ajuda a ler. Num botão parecia um terminal. */
+.btn { font-family: var(--font); font-weight: 600; letter-spacing: 0; }
 
 /* Blocos com ar: nada encosta a nada. */
 .page { gap: 22px; }
 .grid { gap: 20px; }
 
 /* ------------------------------------------------------------------ header */
-.topbar-brand { font-family: var(--mono); font-weight: 800; letter-spacing: .14em; color: var(--blue); }
+.topbar-brand { font-family: var(--font-display); font-weight: 800; color: var(--t-1); }
 
 /* ------------------------------------------- grade de ferramentas (painel) */
 #ferramentas .grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
@@ -2242,46 +2235,7 @@ input,select,textarea{font-size:16px!important} /* sem zoom iOS */
 
 /* ============ ARGOS 2026-10 — Landing e Painel reconstruídos ============
    (O ecrã de arranque .boot-* não é tocado — ver nota em styles.css:2198.) */
-.lp{max-width:560px;margin:0 auto;padding:0 20px 48px;background:var(--grad-hero);color:var(--t-1)}
-.lp-hero{text-align:center;padding:56px 0 8px}
-.lp-marca{font-size:12px;letter-spacing:8px;color:var(--t-2);font-weight:600}
-.lp-titulo{font-size:56px;line-height:1;margin:8px 0 0;font-weight:900;letter-spacing:2px;font-family:var(--font-display)}
-.lp-titulo::after{content:"";display:block;width:64px;height:3px;border-radius:2px;background:var(--blue);margin:14px auto 0}
-.lp-sub{color:var(--t-2);font-size:15px;line-height:1.65;margin:18px 0 0}
-.lp-sub strong{color:var(--t-1)}
-.lp-cta{display:grid;gap:10px;margin-top:24px}
-.lp-cta .btn-lg{min-height:52px;font-size:16px;font-weight:800}
-.lp-trust{color:var(--t-3);font-size:12px;margin-top:14px}
-.lp-secao{margin-top:36px}
-.lp-h2{font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--t-2);font-weight:700;text-align:center;margin:0 0 16px}
-.lp-passos{list-style:none;margin:0;padding:0;display:grid;gap:10px}
-.lp-passo{display:flex;gap:14px;align-items:flex-start;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px}
-.lp-passo-n{flex:0 0 36px;height:36px;border-radius:10px;display:grid;place-items:center;background:var(--surface-2);border:1px solid var(--line-strong);border-bottom:2px solid var(--blue);font-weight:800;color:var(--blue-3)}
-.lp-passo-t{font-weight:800;font-size:15px}
-.lp-passo-d{color:var(--t-2);font-size:13px;line-height:1.55;margin:4px 0 0}
-.lp-grupos{list-style:none;margin:0;padding:0;display:grid;gap:10px}
-.lp-grupo{display:flex;align-items:center;gap:12px;width:100%;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;color:inherit;cursor:pointer;text-align:left}
-.lp-grupo:active{transform:scale(.99)}
-.lp-grupo-ico{flex:0 0 44px;height:44px;border-radius:12px;display:grid;place-items:center;background:var(--surface-2);border:1px solid var(--line-strong);border-bottom:2px solid var(--blue)}
-.lp-grupo-txt{flex:1;min-width:0}
-.lp-grupo-nome{display:block;font-weight:800;font-size:14px}
-.lp-grupo-d{display:block;color:var(--t-2);font-size:12.5px;margin-top:2px;line-height:1.45}
-.lp-grupo-n{flex:0 0 auto;min-width:32px;height:32px;border-radius:10px;display:grid;place-items:center;background:var(--surface-3);border:1px solid var(--line-strong);color:var(--blue-3);font-weight:800;font-size:14px}
-.lp-planos{display:grid;gap:10px}
-.lp-plano{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px}
-.lp-plano-nome{font-weight:800;font-size:15px}
-.lp-plano-preco{font-size:24px;font-weight:900;margin-top:4px;font-family:var(--font-display)}
-.lp-plano-preco small{font-size:12px;color:var(--t-2);font-weight:400}
-.lp-plano-destaque{color:var(--t-2);font-size:13px;line-height:1.55;margin:8px 0 14px}
-.lp-faq{display:grid;gap:10px}
-.lp-faq-item{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
-.lp-faq-item summary{font-weight:800;font-size:14px;cursor:pointer}
-.lp-faq-item p{color:var(--t-2);font-size:13px;line-height:1.6;margin:8px 0 0}
-.lp-rodape{display:flex;align-items:center;justify-content:space-between;gap:12px;border-top:1px solid var(--line);margin-top:36px;padding-top:18px;color:var(--t-2);font-size:11px}
-.lp-rodape-marca{font-style:italic;font-size:16px;color:var(--t-1)}
-.lp-rodape-copy{text-align:center}
-.lp-rodape-canais{display:flex;gap:12px;font-size:16px}
-.lp-rodape-canais a{color:inherit;text-decoration:none}
+/* (landing: regras no bloco "Tela de entrada" no fim do ficheiro) */
 /* ---------- Painel ---------- */
 .dash-hero{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:22px;display:grid;gap:18px}
 .dash-kicker{font-size:11px;letter-spacing:2.5px;text-transform:uppercase;color:var(--t-2);font-weight:700;margin:0}
@@ -2290,8 +2244,8 @@ input,select,textarea{font-size:16px!important} /* sem zoom iOS */
 .dash-estado strong{color:var(--blue-3)}
 .dash-cta{display:grid;gap:10px}
 .dash-cta .btn-lg{min-height:52px;font-size:15px;font-weight:800}
-@media(min-width:700px){.lp{max-width:640px}.lp-cta{grid-template-columns:1fr 1fr}.dash-hero{grid-template-columns:1fr auto;align-items:center}.dash-cta{min-width:240px}}
-@media(prefers-reduced-motion:reduce){.lp-grupo:active{transform:none}}
+@media(min-width:700px){.dash-cta{min-width:240px}}
+
 /* ---------- Verificação rápida (Maigret-style, mobile-first) ---------- */
 .dash{display:grid;gap:12px}
 .dash-quick{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px;margin-top:12px}
@@ -2326,10 +2280,10 @@ body { background: var(--bg); }
 .sidebar { background: linear-gradient(180deg, #071330 0%, var(--bg) 100%); }
 .side-brand { padding: 22px 20px 18px; border-bottom: 0; }
 .side-brand .brand { height: auto; flex: none; padding: 0; border-bottom: 0; background: none; gap: 12px; }
-.side-brand .brand-logo { width: 40px; height: 40px; flex: 0 0 40px; }
+.side-brand .brand-logo { width: 50px; height: 50px; flex: 0 0 50px; }
 .side-brand .brand-name { font-size: 24px; letter-spacing: .2em; line-height: 1.05; }
 .side-brand .brand-sub { font-size: 10.5px; letter-spacing: .22em; color: var(--t-2); margin-top: 3px; }
-.side-lema { margin: 4px 0 0 52px; font-family: var(--mono); font-size: 9px; letter-spacing: .12em; white-space: nowrap; text-transform: uppercase; color: var(--t-3); }
+.side-lema { margin: 4px 0 0 62px; font-family: var(--mono); font-size: 9px; letter-spacing: .12em; white-space: nowrap; text-transform: uppercase; color: var(--t-3); }
 .sidebar .nav-title { padding-left: 12px; }
 .sidebar .nav-group { border-bottom: 0; }
 .sidebar .nav-item { min-height: 48px; padding: 8px 14px; gap: 14px; font-size: 15px; color: var(--t-2); }
@@ -2602,3 +2556,84 @@ body { background: var(--bg); }
 }
 .tabbar .tab[aria-current='true'] { color: var(--blue); }
 .tabbar .tab-ico svg { width: 22px; height: 22px; }
+
+/* ==========================================================================
+   Tela de entrada (antes do login) — a mesma identidade da app.
+   ========================================================================== */
+.lp { min-height: 100vh; min-height: 100dvh; color: var(--t-1); background: radial-gradient(80% 60% at 80% 0%, #0F2E66 0%, transparent 60%), var(--bg); }
+.lp-topo, .lp-hero, .lp-corpo, .lp-rodape { max-width: 1160px; margin: 0 auto; padding-inline: 20px; }
+.lp-topo { display: flex; align-items: center; gap: 6px; min-height: 76px; }
+.lp-topo .brand-logo { width: 40px; height: 40px; flex: 0 0 40px; }
+.lp-topo .brand-name { font-size: 20px; letter-spacing: .2em; }
+.lp-topo .brand-sub { font-size: 10px; letter-spacing: .2em; color: var(--t-2); }
+.lp-link { display: none; min-height: 44px; padding: 0 14px; color: var(--t-2); font-size: 14.5px; font-weight: 600; border-radius: 10px; }
+.lp-link:hover { color: var(--t-1); background: var(--surface-2); }
+.lp-entrar { min-height: 44px; padding: 0 20px; }
+
+.lp-hero { position: relative; overflow: hidden; display: grid; padding-block: 36px 44px; }
+.lp-hero .globo { position: absolute; right: -40px; top: 0; width: 100%; height: 100%; opacity: .32; pointer-events: none; }
+.lp-hero-txt { position: relative; z-index: 1; max-width: 600px; }
+.lp-marca { font-family: var(--mono); font-size: 11.5px; letter-spacing: .28em; text-transform: uppercase; color: var(--blue-3); font-weight: 700; margin: 0; }
+.lp-titulo { font-family: var(--font-display); font-weight: 800; font-size: clamp(40px, 9vw, 72px); line-height: 1.02; letter-spacing: -.025em; margin: 14px 0 0; }
+.lp-titulo span { color: var(--blue); }
+.lp-sub { color: var(--t-2); font-size: 17px; line-height: 1.65; margin: 18px 0 0; max-width: 54ch; }
+.lp-sub strong { color: var(--t-1); }
+.lp-cta { display: grid; gap: 10px; margin-top: 28px; }
+.lp-cta .btn-lg { min-height: 54px; font-size: 16px; gap: 8px; }
+.lp-cta .btn-lg svg { width: 18px; height: 18px; }
+.lp-trust { color: var(--t-3); font-size: 13px; margin: 14px 0 0; }
+
+.lp-corpo { display: grid; gap: 56px; padding-block: 12px 56px; }
+.lp-secao { display: grid; gap: 18px; }
+.lp-h2 { font-family: var(--mono); font-size: 12px; letter-spacing: .26em; text-transform: uppercase; color: var(--t-2); font-weight: 700; margin: 0; }
+.lp-passos { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.lp-passo { display: flex; gap: 14px; align-items: flex-start; padding: 20px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); }
+.lp-passo-n { flex: 0 0 38px; height: 38px; display: grid; place-items: center; border-radius: 10px; background: var(--blue-dim); border: 1px solid var(--blue-line); color: var(--blue-3); font-family: var(--font-display); font-weight: 800; }
+.lp-passo-t { font-family: var(--font-display); font-weight: 700; font-size: 16.5px; }
+.lp-passo-d { color: var(--t-2); font-size: 14.5px; line-height: 1.6; margin: 6px 0 0; }
+.lp-grupos { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.lp-grupo { display: flex; align-items: center; gap: 14px; width: 100%; height: 100%; padding: 16px; text-align: left; color: inherit; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); transition: border-color var(--t-fast), background var(--t-fast); }
+.lp-grupo:hover { border-color: var(--blue-line); background: var(--surface-2); }
+.lp-grupo-ico { flex: 0 0 44px; height: 44px; display: grid; place-items: center; border-radius: 12px; background: var(--blue-dim); border: 1px solid var(--blue-line); }
+.lp-grupo-ico svg { width: 21px; height: 21px; color: var(--blue); }
+.lp-grupo-txt { flex: 1; min-width: 0; display: grid; gap: 3px; }
+.lp-grupo-nome { font-weight: 700; font-size: 15px; }
+.lp-grupo-d { color: var(--t-2); font-size: 13.5px; line-height: 1.5; }
+.lp-grupo-n { flex: 0 0 auto; min-width: 30px; height: 30px; display: grid; place-items: center; border-radius: 9px; background: var(--surface-3); color: var(--blue-3); font-weight: 700; font-size: 13.5px; font-variant-numeric: tabular-nums; }
+.lp-planos { display: grid; gap: 12px; }
+.lp-plano { display: flex; flex-direction: column; gap: 6px; padding: 22px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); }
+.lp-plano-nome { font-weight: 700; font-size: 15px; color: var(--t-2); }
+.lp-plano-preco { font-family: var(--font-display); font-size: 30px; font-weight: 800; }
+.lp-plano-preco small { font-family: var(--font); font-size: 13px; color: var(--t-2); font-weight: 500; }
+.lp-plano-destaque { color: var(--t-2); font-size: 14px; line-height: 1.6; margin: 4px 0 12px; flex: 1; }
+.lp-plano-nota { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; color: var(--t-3); font-size: 13px; }
+.lp-faq { display: grid; gap: 10px; max-width: 780px; }
+.lp-faq-item { padding: 16px 18px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); }
+.lp-faq-item summary { font-weight: 700; font-size: 15px; cursor: pointer; min-height: 24px; }
+.lp-faq-item p { color: var(--t-2); font-size: 14.5px; line-height: 1.65; margin: 10px 0 0; }
+.lp-rodape { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px; padding-block: 24px 36px; border-top: 1px solid var(--line); color: var(--t-3); font-size: 13px; }
+.lp-rodape .brand-name { font-size: 16px; }
+.lp-rodape .brand-sub { font-size: 9.5px; }
+.lp-rodape-copy { flex: 1 1 260px; text-align: center; }
+.lp-rodape-canais { display: flex; flex-wrap: wrap; gap: 16px; }
+.lp-rodape-canais a { display: inline-flex; align-items: center; gap: 6px; color: var(--t-2); text-decoration: none; }
+.lp-rodape-canais a:hover { color: var(--blue-3); }
+.lp-rodape-canais svg { width: 16px; height: 16px; }
+@media (min-width: 760px) {
+  .lp-link { display: inline-flex; align-items: center; }
+  .lp-hero { padding-block: 64px 80px; }
+  .lp-hero .globo { width: 62%; left: auto; opacity: 1; }
+  .lp-cta { grid-template-columns: auto auto; justify-content: start; }
+  .lp-passos, .lp-planos { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .lp-grupos { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (min-width: 1080px) { .lp-grupos { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+
+/* Ecrã público: a entrada ocupa a largura toda; só o login fica ao centro. */
+.publico { min-height: 100vh; min-height: 100dvh; background: var(--bg); }
+.publico-auth { max-width: 1000px; margin: 0 auto; padding: 8px 16px 64px; scroll-margin-top: 16px; }
+/* O globo funde-se no fundo: sem isto o recorte do SVG aparecia como um bloco. */
+.globo {
+  -webkit-mask-image: radial-gradient(62% 72% at 70% 34%, #000 42%, transparent 100%);
+  mask-image: radial-gradient(62% 72% at 70% 34%, #000 42%, transparent 100%);
+}

@@ -601,11 +601,16 @@ test('o Design System está implementado: gradientes, medidas e micro-label', ()
 
   // Tipografia: as três famílias da ficha primeiro, com fallback do sistema —
   // nenhuma fonte é pedida por URL, logo nada bloqueia o desenho.
-  assert.match(css, /--font-display:[^;]*'Sora'/, 'o display não pede Sora');
+  assert.match(css, /--font-display:[^;]*'Montserrat'/, 'o display não pede Montserrat (tipografia do ecossistema)');
   assert.match(css, /--font:[^;]*'Inter'/, 'o corpo não pede Inter');
   assert.match(css, /--mono:[^;]*'JetBrains Mono'/, 'o mono não pede JetBrains Mono');
-  assert.ok(!/@font-face\s*\{\s*font-family:\s*'Sora'/.test(css),
-    'há um @font-face activo a pedir um ficheiro que o projeto não serve');
+  // Cada @font-face aponta para um ficheiro que o projeto serve de facto:
+  // uma fonte que dá 404 deixa o texto na fonte do sistema sem ninguém notar.
+  const fontes = [...css.matchAll(/@font-face\s*\{[^}]*url\('\/([^']+)'\)/g)].map((m) => m[1]!);
+  assert.ok(fontes.length >= 3, 'as três famílias da ficha deviam ter @font-face');
+  for (const f of fontes) {
+    assert.ok(existsSync(join(WEB, 'public', f)), `o @font-face pede /${f}, que não existe em public/`);
+  }
 });
 
 test('a navegação é uma só: gaveta no telemóvel, lateral fixa no desktop', () => {
@@ -771,17 +776,19 @@ test('o contacto e a autoria vêm do servidor, não escritos à mão', () => {
 });
 
 test('a marca é a mesma no React e nos ficheiros SVG', () => {
+  // A marca tem UMA fonte (public/brand/argos-a.png). O componente React usa a
+  // versão gerada dela, e os SVG levam-na embutida: se alguém trocar o símbolo
+  // num sítio e não no outro, este teste falha.
   const ui = readFileSync(join(SRC, 'components', 'ui.tsx'), 'utf8');
-  const svg = readFileSync(join(WEB, 'public', 'logo-mark.svg'), 'utf8');
-  // O que se exige é que as duas marcas sejam A MESMA: cada cor que o SVG usa
-  // tem de estar também no componente React. As cores não são fixadas aqui —
-  // quando a marca muda de paleta, muda nos dois sítios ou o teste queixa-se.
-  const cores = (s: string) => new Set([...s.matchAll(/#[0-9A-Fa-f]{6}\b/g)].map((m) => m[0].toUpperCase()));
-  const noSvg = cores(svg);
-  const noReact = cores(ui);
-  assert.ok(noSvg.size >= 3, `o logo-mark.svg só tem ${noSvg.size} cores — parece incompleto`);
-  const emFalta = [...noSvg].filter((c) => !noReact.has(c));
-  assert.equal(emFalta.join(', '), '', 'cores do logo-mark.svg que a marca em React não tem: ' + emFalta.join(', '));
+  const src = /<img[^>]*src="\/([^"]+)"/.exec(ui)?.[1];
+  assert.ok(src, 'o Mark deixou de usar a imagem da marca');
+  assert.ok(existsSync(join(WEB, 'public', src!)), `o Mark pede /${src}, que não existe`);
+  assert.ok(existsSync(join(WEB, 'public', 'brand', 'argos-a.png')), 'falta a fonte da marca em public/brand');
+  for (const f of ['logo-mark.svg', 'favicon.svg', 'logo.svg']) {
+    const svg = readFileSync(join(WEB, 'public', f), 'utf8');
+    assert.match(svg, /href="data:image\/png;base64,/, `${f} não leva o símbolo embutido`);
+    assert.match(svg, /gerado por scripts\/make-icons\.mjs/, `${f} não foi gerado pelo script da marca`);
+  }
 });
 
 test('a capa social é 1200x630 e as etiquetas OG são absolutas', () => {

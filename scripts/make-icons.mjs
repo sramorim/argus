@@ -1,154 +1,166 @@
 #!/usr/bin/env node
 /**
- * Gera os ícones PNG do ARGOS a partir da mesma geometria e das mesmas
- * cores do SVG.
+ * Gera os ícones e imagens da marca ARGOS a partir de UMA fonte:
+ * `apps/web/public/brand/argos-a.png` (o "A" com o olho, fundo transparente).
  *
- * Porquê um script em vez de exportar de um editor: o logo tem de ser
- * reproduzível. Se amanhã o traço mudar, `node scripts/make-icons.mjs` volta a
- * gerar tudo — e ninguém depende de um ficheiro binário que ninguém sabe
- * editar.
+ * Porquê um script: a marca tem de ser reproduzível. Se o símbolo mudar,
+ * troca-se o ficheiro-fonte e `npm run icons` volta a gerar tudo — favicon,
+ * ícones da app, a versão pequena da interface, os SVG e a capa social.
  *
- * Saída: apps/web/public/{favicon.png, apple-touch-icon.png, icon-192.png,
- *         icon-512.png, og-cover.png}
- */import { mkdirSync, writeFileSync } from 'node:fs';
+ * Saída em apps/web/public:
+ *   brand/argos-a-128.png        símbolo pequeno, usado pela interface (Mark)
+ *   favicon.png                  32x32, fundo transparente
+ *   apple-touch-icon.png, icon-192.png, icon-512.png   sobre azul-marinho
+ *   favicon.svg, logo-mark.svg   o símbolo embutido (data URI), para <link rel=icon>
+ *   logo.svg                     símbolo + palavra ARGOS + "Inteligência digital"
+ *   og-cover.png                 1200x630, capa para redes sociais
+ */
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { PNG } from 'pngjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const OUT = join(HERE, '..', 'apps', 'web', 'public');
+const FONTE = join(OUT, 'brand', 'argos-a.png');
 
-/*
- * Cores do Design System v1.0 — as mesmas de `apps/web/src/styles.css` e do
- * `public/logo-mark.svg`.
- *
- * Antes esta lista tinha uma pupila VERMELHA (185,28,28) enquanto o SVG e o
- * componente React a pintavam a azul: o ícone que o browser mostrava na
- * aba e no ecrã principal era um olho vermelho que não existia em lado nenhum
- * do resto da marca. As duas cores da íris são agora as do accent.
- */
-const SILVER = [154, 167, 189];   // --t-2
-const RED = [27, 110, 243];        // --blue-2 (accent-deep)
-const RED_HI = [46, 155, 255];     // --blue   (accent)
-const BG = [5, 7, 12];             // --bg
-const BG2 = [16, 24, 40];          // --surface-2
+/* Cores do Design System (as mesmas de apps/web/src/styles.css). */
+const NAVY = [5, 13, 31];          // --bg       #050D1F
+const NAVY_2 = [15, 30, 61];       // --surface-2 #0F1E3D
+const ACCENT = [46, 155, 255];     // --blue     #2E9BFF
+const WHITE = [255, 255, 255];
+const SUB = [169, 183, 208];       // --t-2      #A9B7D0
 
 const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
 const smooth = (e0, e1, x) => { const t = clamp((x - e0) / (e1 - e0)); return t * t * (3 - 2 * t); };
 
-/** Cobertura 0..1 de um pixel, com supersampling 3x3. */
-function render(size) {
-  const png = new PNG({ width: size, height: size });
-  const S = 3;
-  const scale = 32 / size;
-  for (let py = 0; py < size; py++) {
-    for (let px = 0; px < size; px++) {
-      let r = 0, g = 0, b = 0, a = 0;
-      for (let sy = 0; sy < S; sy++) {
-        for (let sx = 0; sx < S; sx++) {
-          const x = (px + (sx + 0.5) / S) * scale;
-          const y = (py + (sy + 0.5) / S) * scale;
-          const c = shade(x, y);
-          r += c[0] * c[3]; g += c[1] * c[3]; b += c[2] * c[3]; a += c[3];
+const src = PNG.sync.read(readFileSync(FONTE));
+
+/**
+ * Reduz a imagem-fonte para `size`x`size` com média por área (alfa
+ * pré-multiplicado): cada píxel de destino é a média ponderada dos píxeis de
+ * origem que cobre. É o que evita o serrilhado e as franjas escuras ao reduzir
+ * uma imagem com transparência.
+ */
+function reduz(size) {
+  const out = new Float64Array(size * size * 4);
+  const k = src.width / size;
+  for (let dy = 0; dy < size; dy++) {
+    const y0 = dy * k, y1 = y0 + k;
+    for (let dx = 0; dx < size; dx++) {
+      const x0 = dx * k, x1 = x0 + k;
+      let r = 0, g = 0, b = 0, a = 0, peso = 0;
+      for (let sy = Math.floor(y0); sy < Math.ceil(y1); sy++) {
+        const wy = Math.min(y1, sy + 1) - Math.max(y0, sy);
+        for (let sx = Math.floor(x0); sx < Math.ceil(x1); sx++) {
+          const w = wy * (Math.min(x1, sx + 1) - Math.max(x0, sx));
+          const i = (src.width * sy + sx) << 2;
+          const al = src.data[i + 3] / 255;
+          r += src.data[i] * al * w; g += src.data[i + 1] * al * w; b += src.data[i + 2] * al * w;
+          a += al * w; peso += w;
         }
       }
-      const n = S * S;
-      const i = (size * py + px) << 2;
-      if (a > 0) { png.data[i] = Math.round(r / a); png.data[i + 1] = Math.round(g / a); png.data[i + 2] = Math.round(b / a); }
-      png.data[i + 3] = Math.round((a / n) * 255);
+      const o = (size * dy + dx) << 2;
+      out[o] = a ? r / a : 0; out[o + 1] = a ? g / a : 0; out[o + 2] = a ? b / a : 0; out[o + 3] = a / peso;
     }
   }
+  return out;
+}
+
+/** Pinta o símbolo reduzido sobre `png`, em (ox, oy), com o lado `size`. */
+function cola(png, size, ox, oy) {
+  const s = reduz(size);
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const px = ox + x, py = oy + y;
+      if (px < 0 || py < 0 || px >= png.width || py >= png.height) continue;
+      const o = (size * y + x) << 2;
+      const a = s[o + 3];
+      if (a <= 0) continue;
+      const i = (png.width * py + px) << 2;
+      const ab = png.data[i + 3] / 255;
+      const ao = a + ab * (1 - a);
+      for (let c = 0; c < 3; c++) {
+        png.data[i + c] = Math.round((s[o + c] * a + png.data[i + c] * ab * (1 - a)) / (ao || 1));
+      }
+      png.data[i + 3] = Math.round(ao * 255);
+    }
+  }
+}
+
+/** O símbolo sozinho, fundo transparente. */
+function soSimbolo(size) {
+  const png = new PNG({ width: size, height: size });
+  cola(png, size, 0, 0);
   return png;
 }
 
-/** Cor com alfa para um ponto (x,y) em coordenadas 0..32. */
-function shade(x, y) {
-  const cx = 16, cy = 16;
-  const d = Math.hypot(x - cx, y - cy);
-  const rr = 6.9;                              // raio do quadrado arredondado (unidades 0..32)
-  const half = 16;
-
-  // Fundo: quadrado arredondado, com um leve gradiente diagonal.
-  const qx = Math.abs(x - cx) - (half - rr);
-  const qy = Math.abs(y - cy) - (half - rr);
-  const inBg = x >= 0 && y >= 0 && x <= 32 && y <= 32
-    && (Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) + Math.min(Math.max(qx, qy), 0) - rr) <= 0;
-  if (!inBg) return [0, 0, 0, 0];
-
-  const t = clamp((x + y) / 64);
-  let col = [BG[0] + (BG2[0] - BG[0]) * t, BG[1] + (BG2[1] - BG[1]) * t, BG[2] + (BG2[2] - BG[2]) * t];
-
-  // Anel exterior (prata, discreto)
-  const ringOuter = Math.max(0, 1 - Math.abs(d - 13.7) / 0.7);
-  col = over(col, SILVER, ringOuter * 0.34);
-
-  // Forma do olho (superelipse n=1.35): contorno a prata
-  const u = x - cx, v = y - cy;
-  const e = Math.pow(Math.abs(u / 11.6), 1.35) + Math.pow(Math.abs(v / 6.7), 1.35);
-  const edge = 1 - smooth(0, 0.06, Math.abs(e - 1));
-  col = over(col, SILVER, edge * 0.95);
-
-  // Anel da íris
-  const iris = 1 - smooth(0.35, 0.75, Math.abs(d - 6.2));
-  col = over(col, SILVER, iris * 0.8);
-
-  // Pupila: o accent, com um degradé do accent-deep para o accent
-  const pt = clamp(1 - d / 3.6);
-  const pr = RED[0] + (RED_HI[0] - RED[0]) * (1 - pt);
-  const pg = RED[1] + (RED_HI[1] - RED[1]) * (1 - pt);
-  const pb = RED[2] + (RED_HI[2] - RED[2]) * (1 - pt);
-  const pupil = 1 - smooth(3.0, 3.5, d);
-  col = over(col, [pr, pg, pb], pupil);
-
-  // Brilho especular
-  const spec = 1 - smooth(0.7, 1.25, Math.hypot(x - (cx + 2.3), y - (cy - 2.3)));
-  col = over(col, [245, 247, 250], spec * 0.85);
-
-  return [col[0], col[1], col[2], 1];
-}
-
 /**
- * Marca com fundo transparente, superamostrada. Usada na capa social, onde o
- * quadrado arredondado do ícone ficava a mais sobre o grafite do cartão.
+ * Ícone da app: o símbolo sobre um quadrado arredondado azul-marinho, com um
+ * halo azul por trás. O ecrã do telemóvel corta os cantos sozinho em alguns
+ * sistemas; o quadrado cobre a imagem toda para nunca sobrar transparência.
  */
-function markShade(x, y) {
-  const c = shade(x, y);
-  if (c[3] <= 0) return c;
-  // o fundo do quadrado arredondado passa a alpha
-  const cx = 16, cy = 16, rr = 6.9, half = 16;
-  const qx = Math.abs(x - cx) - (half - rr);
-  const qy = Math.abs(y - cy) - (half - rr);
-  const sd = Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) + Math.min(Math.max(qx, qy), 0) - rr;
-  const inside = 1 - smooth(-0.8, 0.2, sd);
-  return [c[0], c[1], c[2], inside];
+function icone(size) {
+  const png = new PNG({ width: size, height: size });
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const i = (size * y + x) << 2;
+      const t = clamp((x + y) / (2 * size));
+      const d = Math.hypot(x / size - 0.5, y / size - 0.56) / 0.5;
+      const halo = Math.max(0, 1 - d) ** 2 * 0.55;
+      for (let c = 0; c < 3; c++) {
+        const base = NAVY_2[c] + (NAVY[c] - NAVY_2[c]) * t;
+        png.data[i + c] = Math.round(base + (ACCENT[c] - base) * halo * 0.6);
+      }
+      png.data[i + 3] = 255;
+    }
+  }
+  const pad = Math.round(size * 0.13);
+  cola(png, size - 2 * pad, pad, pad + Math.round(size * 0.02));
+  return png;
 }
 
-function over(base, top, alpha) {
-  const a = clamp(alpha);
-  if (a <= 0) return base;
-  return [base[0] * (1 - a) + top[0] * a, base[1] * (1 - a) + top[1] * a, base[2] * (1 - a) + top[2] * a];
-}
-
-mkdirSync(OUT, { recursive: true });
-const targets = [
-  ['favicon.png', 32],
-  ['apple-touch-icon.png', 180],
-  ['icon-192.png', 192],
-  ['icon-512.png', 512],
-];
-for (const [name, size] of targets) {
-  const png = render(size);
+const grava = (nome, png) => {
   const buf = PNG.sync.write(png);
-  writeFileSync(join(OUT, name), buf);
-  console.log(`${name.padEnd(22)} ${size}x${size}  ${(buf.length / 1024).toFixed(1)} KB`);
-}
+  writeFileSync(join(OUT, nome), buf);
+  console.log(`${nome.padEnd(24)} ${png.width}x${png.height}  ${(buf.length / 1024).toFixed(1)} KB`);
+  return buf;
+};
+
+mkdirSync(join(OUT, 'brand'), { recursive: true });
+grava('brand/argos-a-128.png', soSimbolo(128));
+grava('favicon.png', soSimbolo(32));
+grava('apple-touch-icon.png', icone(180));
+grava('icon-192.png', icone(192));
+grava('icon-512.png', icone(512));
+
+// ---------------------------------------------------------------- SVG
+// O SVG usado como ícone (<link rel="icon">) não pode pedir ficheiros de fora:
+// o símbolo vai embutido como data URI, a partir de uma versão de 64 px.
+const b64 = PNG.sync.write(soSimbolo(64)).toString('base64');
+const simboloSvg = (x, y, s) => `<image x="${x}" y="${y}" width="${s}" height="${s}" href="data:image/png;base64,${b64}"/>`;
+const aviso = '<!-- ARGOS — gerado por scripts/make-icons.mjs a partir de public/brand/argos-a.png. Não editar à mão. -->';
+const mark = `${aviso}
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" role="img" aria-label="ARGOS">
+  ${simboloSvg(0, 0, 32)}
+</svg>
+`;
+writeFileSync(join(OUT, 'logo-mark.svg'), mark);
+writeFileSync(join(OUT, 'favicon.svg'), mark);
+writeFileSync(join(OUT, 'logo.svg'), `${aviso}
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 272 56" width="272" height="56" role="img" aria-label="ARGOS — inteligência digital">
+  ${simboloSvg(2, 6, 44)}
+  <text x="54" y="33" fill="#FFFFFF" font-family="Montserrat,system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif"
+        font-size="26" font-weight="800" letter-spacing="4">ARGOS</text>
+  <text x="55" y="46" fill="#A9B7D0" font-family="Inter,system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif"
+        font-size="8.2" font-weight="600" letter-spacing="2.2">INTELIGÊNCIA DIGITAL</text>
+</svg>
+`);
+console.log('favicon.svg, logo-mark.svg, logo.svg');
 
 // ---------------------------------------------------------------------------
-// Capa social (og:image).
-//
-// Tem de ser 1200x630: as plataformas cortam a imagem a 1.91:1 e um quadrado
-// de 512x512 aparecia minúsculo, com barras pretas dos lados. O 512x512 continua
-// a ser o ícone da app — são coisas diferentes.
+// Capa social (og:image), 1200x630: as plataformas cortam a 1.91:1, e um
+// quadrado de 512 aparecia minúsculo, com barras pretas dos lados.
 // ---------------------------------------------------------------------------
 
 /** Distância de um ponto a um segmento, para desenhar traços com antisserrilhado. */
@@ -160,9 +172,8 @@ function distSeg(px, py, ax, ay, bx, by) {
 }
 
 /**
- * Letra do logótipo como traços normalizados (caixa 0..1, base em y=1).
- * Traço técnico, não uma fonte: é o que mantém a identidade do ARGOS —
- * um SVG não dá para controlar a renderização de texto num PNG social.
+ * Letras da palavra ARGOS como traços normalizados (caixa 0..1, base em y=1):
+ * num PNG não há fontes, e um traço técnico mantém a palavra nítida.
  */
 const WORDMARK = {
   A: [[[0, 1], [0.5, 0], [1, 1]], [[0.21, 0.63], [0.79, 0.63]]],
@@ -172,112 +183,70 @@ const WORDMARK = {
   S: [[[0.94, 0.21], [0.7, 0.02], [0.3, 0.02], [0.05, 0.25], [0.3, 0.5], [0.72, 0.5], [0.95, 0.72], [0.7, 0.98], [0.28, 0.98], [0.05, 0.79]]],
 };
 const tracking = 0.26;
+const wordWidth = (n) => n + (n - 1) * tracking;
 
-/** Largura normalizada da palavra (inclui o espaçamento entre letras). */
-function wordWidth(n) { return n + (n - 1) * tracking; }
+function traco(a, b, ox, oy, capH, stroke, png, cor) {
+  const { data, width: W, height: H } = png;
+  const ax = ox + a[0] * capH, ay = oy + a[1] * capH;
+  const bx = ox + b[0] * capH, by = oy + b[1] * capH;
+  const x0 = Math.max(0, Math.floor(Math.min(ax, bx) - stroke));
+  const x1 = Math.min(W - 1, Math.ceil(Math.max(ax, bx) + stroke));
+  const y0 = Math.max(0, Math.floor(Math.min(ay, by) - stroke));
+  const y1 = Math.min(H - 1, Math.ceil(Math.max(ay, by) + stroke));
+  const half = stroke / 2;
+  for (let y = y0; y <= y1; y++) {
+    for (let x = x0; x <= x1; x++) {
+      const al = 1 - smooth(half - 0.9, half + 0.9, distSeg(x + 0.5, y + 0.5, ax, ay, bx, by));
+      if (al <= 0) continue;
+      const i = (W * y + x) << 2;
+      for (let c = 0; c < 3; c++) data[i + c] = Math.round(data[i + c] * (1 - al) + cor[c] * al);
+    }
+  }
+}
 
-function renderCover(W = 1200, H = 630) {
+function capa(W = 1200, H = 630) {
   const png = new PNG({ width: W, height: H });
-  const data = png.data;
   const cx = W / 2;
-
-  // Fundo: grafite com um brilho radial suave atrás do símbolo.
   for (let y = 0; y < H; y++) {
     for (let x = 0; x < W; x++) {
       const i = (W * y + x) << 2;
-      const d = Math.hypot((x - cx) / (W * 0.62), (y - H * 0.42) / (H * 0.72));
+      const d = Math.hypot((x - cx) / (W * 0.55), (y - H * 0.38) / (H * 0.7));
       const glow = Math.max(0, 1 - d) ** 2.2;
-      const vig = 1 - 0.28 * Math.min(1, Math.hypot((x - cx) / cx, (y - H / 2) / (H / 2)) ** 2);
-      // --bg (5,7,12) com um halo do accent por trás do símbolo: é o mesmo
-      // gradiente do hero, achatado para 1200x630.
-      const base = 5 + 14 * glow;
-      const v = base * vig;
-      data[i] = Math.round(v * 1.0 + 10 * glow);
-      data[i + 1] = Math.round(v * 1.35 + 6 * glow);
-      data[i + 2] = Math.round(v * 2.4 + 4 * glow);
-      data[i + 3] = 255;
+      for (let c = 0; c < 3; c++) png.data[i + c] = Math.round(NAVY[c] + (ACCENT[c] - NAVY[c]) * glow * 0.32);
+      png.data[i + 3] = 255;
     }
   }
+  const lado = 300;
+  cola(png, lado, Math.round(cx - lado / 2), 40);
 
-  // Símbolo, centrado no terço superior.
-  const markSize = 168;
-  const markX = cx - markSize / 2;
-  const markY = 118;
-  for (let py = 0; py < markSize; py++) {
-    for (let px = 0; px < markSize; px++) {
-      const c = markShade(((px + 0.5) / markSize) * 32, ((py + 0.5) / markSize) * 32);
-      if (c[3] <= 0) continue;
-      const i = (W * (markY + py) + (markX + px)) << 2;
-      data[i] = c[0]; data[i + 1] = c[1]; data[i + 2] = c[2];
-      data[i + 3] = Math.round(255 * c[3]);
-    }
-  }
-
-  // Filete no accent por baixo do símbolo.
-  const barY = markY + markSize + 30, barH = 3, barW = 96;
-  for (let y = barY; y < barY + barH; y++) {
-    for (let x = cx - barW / 2; x < cx + barW / 2; x++) {
-      const i = (W * y + x) << 2;
-      data[i] = RED_HI[0]; data[i + 1] = RED_HI[1]; data[i + 2] = RED_HI[2];
-    }
-  }
-
-  // Logótipo ARGOS em traço, centrado por baixo.
-  const capH = 74;
-  const letters = Object.keys(WORDMARK);
-  const totalW = wordWidth(letters.length) * capH;
-  let penX = cx - totalW / 2;
-  const textTop = barY + barH + 46;
-  const stroke = capH * 0.1;
-  for (const ch of letters) {
-    const paths = WORDMARK[ch];
-    for (const poly of paths) {
-      for (let k = 0; k + 1 < poly.length; k++) {
-        strokeLine(poly[k], poly[k + 1], penX, textTop, capH, stroke, data, W, H);
-      }
+  const capH = 70;
+  const letras = Object.keys(WORDMARK);
+  const total = wordWidth(letras.length) * capH;
+  let penX = cx - total / 2;
+  const topo = 40 + lado + 30;
+  for (const ch of letras) {
+    for (const poly of WORDMARK[ch]) {
+      for (let k = 0; k + 1 < poly.length; k++) traco(poly[k], poly[k + 1], penX, topo, capH, capH * 0.1, png, WHITE);
     }
     penX += capH * (1 + tracking);
   }
-
-  // Subtítulo: uma linha de texto real não é controlável num PNG, por isso
-  // fica um traço discreto que dá peso sem prometer o que não está escrito.
-  const subY = textTop + capH + 34, subW = totalW * 0.42;
-  for (let y = subY; y < subY + 2; y++) {
-    for (let x = cx - subW / 2; x < cx + subW / 2; x++) {
+  // Filete do accent por baixo da palavra.
+  const fy = topo + capH + 34;
+  for (let y = fy; y < fy + 3; y++) {
+    for (let x = Math.round(cx - 70); x < Math.round(cx + 70); x++) {
       const i = (W * y + x) << 2;
-      data[i] = SILVER[0]; data[i + 1] = SILVER[1]; data[i + 2] = SILVER[2];
+      png.data[i] = ACCENT[0]; png.data[i + 1] = ACCENT[1]; png.data[i + 2] = ACCENT[2];
+    }
+  }
+  // Traço discreto no lugar do subtítulo (texto real não é controlável num PNG).
+  for (let y = fy + 22; y < fy + 24; y++) {
+    for (let x = Math.round(cx - 140); x < Math.round(cx + 140); x++) {
+      const i = (W * y + x) << 2;
+      png.data[i] = SUB[0]; png.data[i + 1] = SUB[1]; png.data[i + 2] = SUB[2];
     }
   }
   return png;
 }
 
-/** Rasteriza um segmento do logótipo (coords normalizadas -> píxeis). */
-function strokeLine(a, b, ox, oy, capH, stroke, data, W, H) {
-  const ax = ox + a[0] * capH, ay = oy + a[1] * capH;
-  const bx = ox + b[0] * capH, by = oy + b[1] * capH;
-  const pad = stroke;
-  const x0 = Math.max(0, Math.floor(Math.min(ax, bx) - pad));
-  const x1 = Math.min(W - 1, Math.ceil(Math.max(ax, bx) + pad));
-  const y0 = Math.max(0, Math.floor(Math.min(ay, by) - pad));
-  const y1 = Math.min(H - 1, Math.ceil(Math.max(ay, by) + pad));
-  const half = stroke / 2;
-  for (let y = y0; y <= y1; y++) {
-    for (let x = x0; x <= x1; x++) {
-      const d = distSeg(x + 0.5, y + 0.5, ax, ay, bx, by);
-      const a = 1 - smooth(half - 0.9, half + 0.9, d);
-      if (a <= 0) continue;
-      const i = (W * y + x) << 2;
-      data[i] = Math.round(data[i] * (1 - a) + SILVER[0] * a);
-      data[i + 1] = Math.round(data[i + 1] * (1 - a) + SILVER[1] * a);
-      data[i + 2] = Math.round(data[i + 2] * (1 - a) + SILVER[2] * a);
-    }
-  }
-}
-
-{
-  const png = renderCover(1200, 630);
-  const buf = PNG.sync.write(png);
-  writeFileSync(join(OUT, 'og-cover.png'), buf);
-  console.log(`${'og-cover.png'.padEnd(22)} 1200x630 ${(buf.length / 1024).toFixed(1)} KB`);
-}
+grava('og-cover.png', capa(1200, 630));
 console.log('ícones gerados em', OUT);

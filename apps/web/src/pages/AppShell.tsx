@@ -542,7 +542,7 @@ export default function AppShell({
             whileTap={{ scale: 0.98 }}
             transition={{ type: 'spring', stiffness: 420, damping: 24 }}
           >
-            <Brand size={26} subtitle="Fontes abertas" />
+            <Brand size={26} />
           </motion.button>
           <button className="topbar-busca only-wide" type="button" onClick={() => setBusca(true)}>
             <Icon.search />
