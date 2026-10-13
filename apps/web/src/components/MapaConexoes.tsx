@@ -2,52 +2,67 @@
  * Mapa de conexões do painel.
  *
  * Um resumo do grafo da investigação mais recente, não um segundo motor de
- * grafo: o alvo ao centro, os nós descobertos em anéis por salto, e as
+ * grafo: o alvo ao centro, os nós descobertos à volta por salto, e as
  * ligações que o servidor guardou. Tudo vem de `/api/investigations/:id` —
- * sem sessão guardada o mapa diz que está vazio em vez de desenhar um exemplo.
+ * sem sessão guardada o painel diz que está vazio em vez de desenhar um
+ * exemplo.
  *
  * Para explorar a sério (zoom, detalhe do nó, busca) a pessoa abre a sessão,
- * que usa o `GraphView` completo. Por isso as cores e os rótulos de tipo são
- * os do `GraphView`: o resumo e o grafo inteiro dizem a mesma coisa.
+ * que usa o `GraphView` completo. Os rótulos de tipo são os do `GraphView`.
  */
 import { useMemo } from 'react';
+import type { ReactElement, SVGProps } from 'react';
 import type { GraphEdge, GraphNode, InvestigationDetail } from '../api';
-import { NODE_COLOR, TYPE_LABEL } from './GraphView';
+import { TYPE_LABEL } from './GraphView';
+import { Icon } from './Icons';
 
-const W = 640;
-const H = 360;
-/** Acima disto o resumo vira uma mancha: mostra-se o resto pela legenda. */
-const MAX_NOS = 22;
-/** Só os nós mais perto do centro levam nome, para o texto não se sobrepor. */
-const MAX_ROTULOS = 8;
+const W = 760;
+const H = 420;
+/** Acima disto o resumo vira uma mancha: o resto conta-se na legenda. */
+const MAX_NOS = 14;
 
 const ORDEM_CONF: Record<string, number> = { confirmed: 0, corroborated: 1, indicated: 2, weak: 3 };
 
-const corte = (s: string, n = 22) => (s.length > n ? s.slice(0, n - 1) + '…' : s);
+/** Cor saturada por tipo — a mesma no nó e na legenda. */
+export const COR_TIPO: Record<string, string> = {
+  pessoa: '#2E6BF0', username: '#2E6BF0', conta: '#8B5CF6', email: '#0EA5E9',
+  telefone: '#A855F7', dominio: '#0EA5E9', ip: '#64748B', servico: '#64748B',
+  empresa: '#4F46E5', socio: '#4F46E5', endereco: '#2E9BFF', documento: '#10B981',
+  hashtag: '#F59E0B', wallet: '#F59E0B', breach: '#EF4444', cve: '#EF4444',
+  pacote: '#A855F7', portfolio: '#0EA5E9',
+};
+const corDe = (t: string) => COR_TIPO[t] ?? '#3B82F6';
+
+type Ico = (p: SVGProps<SVGSVGElement>) => ReactElement;
+const ICONE_TIPO: Record<string, Ico> = {
+  pessoa: Icon.user, username: Icon.user, socio: Icon.user, conta: Icon.link, email: Icon.mail,
+  telefone: Icon.phone, dominio: Icon.globe, portfolio: Icon.globe, ip: Icon.server, servico: Icon.server,
+  empresa: Icon.building, endereco: Icon.target, documento: Icon.file, hashtag: Icon.hash,
+  breach: Icon.shield, cve: Icon.shield, wallet: Icon.coins, pacote: Icon.code,
+};
+const iconeDe = (t: string): Ico => ICONE_TIPO[t] ?? Icon.layers;
+
+const corte = (s: string, n = 24) => (s.length > n ? s.slice(0, n - 1) + '…' : s);
+
+/** Estrelas do fundo: fixas (semente), para o desenho não tremer a cada render. */
+const ESTRELAS = (() => {
+  let x = 7;
+  const r = () => ((x = (x * 9301 + 49297) % 233280) / 233280);
+  return Array.from({ length: 70 }, () => ({ cx: r() * W, cy: r() * H, r: 0.5 + r() * 1.2, o: 0.15 + r() * 0.5 }));
+})();
 
 function posicoes(nos: GraphNode[]) {
-  const cx = W / 2, cy = H / 2;
+  const cx = W / 2, cy = H / 2 - 6;
   const centro = nos.find((n) => n.hop === 0) ?? nos[0];
   const resto = nos.filter((n) => n !== centro);
-  const porHop = new Map<number, GraphNode[]>();
-  for (const n of resto) {
-    const h = Math.max(1, n.hop);
-    if (!porHop.has(h)) porHop.set(h, []);
-    porHop.get(h)!.push(n);
-  }
-  const hops = [...porHop.keys()].sort((a, b) => a - b);
   const m = new Map<string, { x: number; y: number; n: GraphNode }>();
   if (centro) m.set(centro.id, { x: cx, y: cy, n: centro });
-  hops.forEach((h, i) => {
-    const lista = porHop.get(h)!;
-    const raio = hops.length === 1 ? 128 : 96 + (i / (hops.length - 1)) * 70;
-    const passo = (Math.PI * 2) / lista.length;
-    const desvio = -Math.PI / 2 + i * 0.5;
-    lista.forEach((n, j) => {
-      const a = desvio + j * passo;
-      // Elipse: o cartão é largo e baixo.
-      m.set(n.id, { x: cx + Math.cos(a) * raio * 1.7, y: cy + Math.sin(a) * raio * 0.95, n });
-    });
+  // Um anel; os nós de salto maior ficam mais longe dentro do mesmo anel.
+  const passo = (Math.PI * 2) / Math.max(1, resto.length);
+  resto.forEach((n, i) => {
+    const a = -Math.PI / 2 + passo / 2 + i * passo;
+    const k = n.hop > 1 ? 1.1 : 0.92;
+    m.set(n.id, { x: cx + Math.cos(a) * 290 * k, y: cy + Math.sin(a) * 140 * k, n });
   });
   return m;
 }
@@ -72,7 +87,6 @@ export default function MapaConexoes({ detalhe }: { detalhe: InvestigationDetail
   }, [detalhe]);
 
   const pos = useMemo(() => posicoes(nos), [nos]);
-  const comNome = new Set(nos.slice(0, MAX_ROTULOS + 1).map((n) => n.id));
 
   return (
     <div className="mapa">
@@ -83,7 +97,12 @@ export default function MapaConexoes({ detalhe }: { detalhe: InvestigationDetail
             <stop offset="0%" stopColor="#2E9BFF" stopOpacity=".55" />
             <stop offset="100%" stopColor="#2E9BFF" stopOpacity="0" />
           </radialGradient>
+          <linearGradient id="mapa-centro" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="#4FB0FF" />
+            <stop offset="100%" stopColor="#1B6EF3" />
+          </linearGradient>
         </defs>
+        {ESTRELAS.map((e, i) => <circle key={i} cx={e.cx} cy={e.cy} r={e.r} fill="#6FC0FF" opacity={e.o} />)}
         {arestas.map((e, i) => {
           const a = pos.get(e.from), b = pos.get(e.to);
           if (!a || !b) return null;
@@ -96,23 +115,30 @@ export default function MapaConexoes({ detalhe }: { detalhe: InvestigationDetail
           const p = pos.get(n.id);
           if (!p) return null;
           const centro = n.hop === 0;
-          const cor = centro ? NODE_COLOR.seed : (NODE_COLOR[n.type] ?? '#9AA7BD');
+          const I = iconeDe(n.type);
+          const nome = corte(n.value || n.label);
+          if (centro) {
+            return (
+              <g key={n.id} className="mapa-no" data-centro="true">
+                <circle cx={p.x} cy={p.y} r={70} fill="url(#mapa-halo)" />
+                <circle cx={p.x} cy={p.y} r={36} fill="none" stroke="#2E9BFF" strokeOpacity=".55" strokeWidth={2} />
+                <circle cx={p.x} cy={p.y} r={29} fill="url(#mapa-centro)" />
+                <I x={p.x - 15} y={p.y - 15} width={30} height={30} color="#FFFFFF" strokeWidth={1.9} />
+                <text className="mapa-txt mapa-txt-centro" x={p.x} y={p.y + 58} textAnchor="middle">{corte(n.value || n.label, 30)}</text>
+                <title>{`${TYPE_LABEL[n.type] ?? n.type}: ${n.value || n.label}`}</title>
+              </g>
+            );
+          }
           const esquerda = p.x < W / 2 - 4;
+          const tx = p.x + (esquerda ? -26 : 26);
           return (
             <g key={n.id} className="mapa-no">
-              {centro && <circle cx={p.x} cy={p.y} r={46} fill="url(#mapa-halo)" />}
-              <circle cx={p.x} cy={p.y} r={centro ? 17 : 7.5} fill={cor}
-                stroke="#050D1F" strokeWidth={centro ? 4 : 2.5} />
-              {centro ? (
-                <text className="mapa-txt mapa-txt-centro" x={p.x} y={p.y + 36} textAnchor="middle">
-                  {corte(n.value || n.label, 28)}
-                </text>
-              ) : comNome.has(n.id) ? (
-                <text className="mapa-txt" x={p.x + (esquerda ? -12 : 12)} y={p.y + 4}
-                  textAnchor={esquerda ? 'end' : 'start'}>
-                  {corte(n.value || n.label)}
-                </text>
-              ) : null}
+              <circle cx={p.x} cy={p.y} r={19} fill={corDe(n.type)} stroke="#050D1F" strokeWidth={3} />
+              <I x={p.x - 10} y={p.y - 10} width={20} height={20} color="#FFFFFF" strokeWidth={1.9} />
+              <text className="mapa-txt" x={tx} y={p.y - 2} textAnchor={esquerda ? 'end' : 'start'}>{nome}</text>
+              <text className="mapa-txt-sub" x={tx} y={p.y + 15} textAnchor={esquerda ? 'end' : 'start'}>
+                {TYPE_LABEL[n.type] ?? n.type}
+              </text>
               <title>{`${TYPE_LABEL[n.type] ?? n.type}: ${n.value || n.label}`}</title>
             </g>
           );
@@ -122,7 +148,7 @@ export default function MapaConexoes({ detalhe }: { detalhe: InvestigationDetail
         <ul className="mapa-legenda" aria-label="Nós por tipo">
           {legenda.map(([tipo, n]) => (
             <li key={tipo} className="mapa-chip">
-              <i style={{ background: NODE_COLOR[tipo] ?? '#9AA7BD' }} />
+              <i style={{ background: corDe(tipo) }} />
               {TYPE_LABEL[tipo] ?? tipo}
               <b>{n}</b>
             </li>

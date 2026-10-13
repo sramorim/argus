@@ -62,11 +62,11 @@ export type View =
 type Tab = { id: string; label: string; icon: (p: Record<string, unknown>) => ReactElement } & (
   { v: View; acao?: undefined } | { v?: undefined; acao: 'busca' | 'menu' });
 const TABS: Tab[] = [
-  { v: { k: 'dashboard' }, id: 'dashboard', label: 'Painel', icon: Icon.grid },
-  { acao: 'busca', id: 'busca', label: 'Buscar', icon: Icon.search },
-  { v: { k: 'nova' }, id: 'nova', label: 'Investigar', icon: Icon.target },
-  { v: { k: 'inv' }, id: 'inv', label: 'Sessões', icon: Icon.network },
-  { acao: 'menu', id: 'menu', label: 'Menu', icon: Icon.menu },
+  { v: { k: 'dashboard' }, id: 'dashboard', label: 'Início', icon: Icon.grid },
+  { acao: 'busca', id: 'busca', label: 'Busca', icon: Icon.search },
+  { v: { k: 'inv' }, id: 'inv', label: 'Análises', icon: Icon.chart },
+  { v: { k: 'history' }, id: 'history', label: 'Relatórios', icon: Icon.file },
+  { acao: 'menu', id: 'menu', label: 'Mais', icon: Icon.menu },
 ];
 
 
@@ -122,13 +122,6 @@ export default function AppShell({
   const [ordem, setOrdem] = useState<string[]>([]);
   const [ativa, setAtiva] = useState<string | null>(null);
 
-  /** Relógio da barra superior — só muda de estado de 30 em 30 segundos. */
-  const [agora, setAgora] = useState(() => new Date());
-  useEffect(() => {
-    const t = setInterval(() => setAgora(new Date()), 30_000);
-    return () => clearInterval(t);
-  }, []);
-
   /**
    * A área de trabalho encolhe com o ecrã e é ela que define até onde uma
    * janela pode andar. Mede-se o próprio elemento, não a janela do browser.
@@ -162,8 +155,9 @@ export default function AppShell({
         y: clamp(16 + n * 24, 0, Math.max(0, ah - h)),
         w, h,
       };
-      // A investigação é a vista que pede ecrã inteiro: é um grafo, não um formulário.
-      return { ...prev, [k]: { vista: v, geom, max: v.k === 'nova', min: false } };
+      // O painel e a investigação pedem ecrã inteiro: o painel é a página de
+      // entrada (as ferramentas abrem por cima dele), a investigação é um grafo.
+      return { ...prev, [k]: { vista: v, geom, max: v.k === 'nova' || v.k === 'dashboard', min: false } };
     });
     setOrdem((o) => [...o.filter((x) => x !== k), k]);
     setAtiva(k);
@@ -286,7 +280,6 @@ export default function AppShell({
   });
 
   const pct = usage?.daily ? Math.min(100, (usage.today / usage.daily) * 100) : 0;
-  const esgotada = usage ? usage.today >= usage.daily : false;
   const visivel = (id: string) => (user.isAdmin ? true : id !== 'admin');
   const apps = VISTAS.filter((v) => visivel(v.id));
 
@@ -342,9 +335,10 @@ export default function AppShell({
     }
   };
 
-  const data = agora.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' });
-  const hora = agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
   const inicial = (user.name || user.email || '?').trim().slice(0, 1).toUpperCase();
+  /* Duas iniciais quando o nome tem duas palavras ("Daniel Amorim" → DA). */
+  const iniciais = (user.name || '').trim().split(/\s+/).filter(Boolean).slice(0, 2)
+    .map((p) => p[0]!.toUpperCase()).join('') || inicial;
 
   /**
    * A lateral: onde vive a navegação, e só uma vez.
@@ -357,27 +351,23 @@ export default function AppShell({
   const conteudoLateral = (
     <>
       <div className="side-scroll">
-        <motion.button
-          className="btn btn-primary btn-block"
-          type="button"
-          onClick={() => go({ k: 'nova' })}
-          whileHover={{ y: -1 }}
-          whileTap={{ scale: 0.99 }}
-          transition={{ type: 'spring', stiffness: 420, damping: 24 }}
-          style={{ marginBottom: 14 }}
-        >
-          <Icon.target /> Nova investigação
-        </motion.button>
-
-        <button className="nav-item nav-busca" type="button" onClick={() => setBusca(true)}>
-          <Icon.search className="nav-ico" />
-          <span className="nav-label-txt">Busca global</span>
-          <kbd className="kbd">Ctrl K</kbd>
-        </button>
-
         <div className="nav-title">Navegação</div>
         <div className="nav-group">
-          {apps.filter((v) => v.id !== 'nova').map((v) => {
+          <button className="nav-item" type="button" aria-current={view.k === 'dashboard'} data-view="dashboard"
+            onClick={() => go({ k: 'dashboard' })}>
+            <Icon.grid className="nav-ico" />
+            <span className="nav-label-txt">Painel</span>
+          </button>
+          <button className="nav-item nav-busca" type="button" onClick={() => setBusca(true)}>
+            <Icon.search className="nav-ico" />
+            <span className="nav-label-txt">Busca global</span>
+            <kbd className="kbd">Ctrl K</kbd>
+          </button>
+          <button className="nav-item" type="button" aria-current={view.k === 'nova'} onClick={() => go({ k: 'nova' })}>
+            <Icon.target className="nav-ico" />
+            <span className="nav-label-txt">Nova investigação</span>
+          </button>
+          {apps.filter((v) => v.id !== 'nova' && v.id !== 'dashboard').map((v) => {
             const atual = view.k === v.id;
             return (
               <motion.button
@@ -468,7 +458,7 @@ export default function AppShell({
       <div className="side-foot">
         <div className="quota-card">
           <div className="quota-user">
-            <span className="avatar avatar-sm" aria-hidden>{inicial}</span>
+            <span className="avatar avatar-sm" aria-hidden>{iniciais}</span>
             <span className="quota-user-txt">
               <span className="quota-nome">{user.name || user.email}</span>
               <span className="quota-mail" title={user.email}>{user.email}</span>
@@ -514,7 +504,8 @@ export default function AppShell({
           telemóvel é a gaveta que desliza. A animação é do CSS. */}
       <aside className="sidebar" data-open={drawer} aria-label="Navegação principal">
         <div className="side-brand">
-          <Brand size={30} subtitle="Fontes abertas" />
+          <Brand size={40} subtitle="Inteligência digital" />
+          <div className="side-lema">OSINT · Análise · Estratégia</div>
         </div>
         {conteudoLateral}
       </aside>
@@ -555,29 +546,26 @@ export default function AppShell({
           </motion.button>
           <button className="topbar-busca only-wide" type="button" onClick={() => setBusca(true)}>
             <Icon.search />
-            <span>Procurar ferramenta ou ecrã…</span>
+            <span>Buscar ferramentas, sessões e ecrãs…</span>
             <kbd className="kbd">Ctrl K</kbd>
           </button>
-          <div className="topbar-clock only-desk">
-            <Icon.clock />
-            <span className="topbar-data">{data}</span>
-            <span className="topbar-sep">·</span>
-            <span className="topbar-hora">{hora}</span>
-          </div>
           <span className="grow" />
-          {esgotada && <span className="tag tag-warn only-desk">cota esgotada</span>}
-          {!esgotada && usage && (
-            <span className="topbar-quota only-desk">{usage.daily - usage.today} execuções hoje</span>
-          )}
           <button className="icon-btn only-narrow" onClick={() => setBusca(true)} aria-label="Busca global" type="button">
             <Icon.search />
           </button>
-          <span className="topbar-user only-desk">
-            <span className="topbar-user-nome">{user.name || user.email}</span>
-            <span className="topbar-user-plano">Plano {NOME_PLANO[user.plan]}</span>
-          </span>
+          <button className="icon-btn only-desk" type="button" aria-label="Definições" title="Definições"
+            onClick={() => go({ k: 'definicoes' })}>
+            <Icon.sliders />
+          </button>
           <details className="user-menu">
-            <summary className="avatar" title={user.email}>{inicial}</summary>
+            <summary className="user-sum" title={user.email}>
+              <span className="avatar">{iniciais}</span>
+              <span className="topbar-user only-desk">
+                <span className="topbar-user-nome">{user.name || user.email}</span>
+                <span className="topbar-user-plano">Plano {NOME_PLANO[user.plan]}</span>
+              </span>
+              <Icon.chevronDown className="user-sum-seta only-desk" />
+            </summary>
             <div className="user-pop">
               <div className="user-pop-head">
                 <div className="user-pop-name">{user.name || user.email}</div>
@@ -687,38 +675,6 @@ export default function AppShell({
           {usage && <span className="task-quota">{usage.today}/{usage.daily}</span>}
           <span className="task-copy">{wa?.copyright ?? '© 2026 SR. Amorim'} · Todos os direitos reservados.</span>
         </footer>
-      </div>
-
-      {/* ------------------------------------------------------------ canal de contacto */}
-      <div className="dock only-desk" aria-label="Contacto">
-        {wa && (
-          <motion.a
-            className="dock-btn"
-            href={wa.link}
-            target="_blank"
-            rel="noopener noreferrer"
-            title={wa.label}
-            aria-label={wa.label}
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.92 }}
-            transition={{ type: 'spring', stiffness: 420, damping: 18 }}
-          >
-            <Icon.phone />
-          </motion.a>
-        )}
-        <motion.a
-          className="dock-btn"
-          href="https://github.com/sramorim/argus"
-          target="_blank"
-          rel="noopener noreferrer"
-          title="Código-fonte"
-          aria-label="Código-fonte"
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.92 }}
-          transition={{ type: 'spring', stiffness: 420, damping: 18 }}
-        >
-          <Icon.code />
-        </motion.a>
       </div>
 
       {/* ---------------------------------------------------------- barra inferior */}

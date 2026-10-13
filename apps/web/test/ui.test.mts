@@ -476,12 +476,14 @@ test('minimizar esconde a janela e a barra de tarefas restaura-a', () => {
 test('maximizar ocupa a área toda e o botão passa a dizer Restaurar', () => {
   const { t } = montaApp();
   const painel = '.janela[aria-label="Painel"]';
-  H.clica(t, `${painel} [aria-label^="Maximizar"]`);
-  assert.equal(t.caixa.querySelector(`${painel}[data-max="true"]`) !== null, true, 'devia maximizar');
-  assert.ok(t.caixa.querySelector('[aria-label^="Restaurar"]'), 'o botão devia passar a Restaurar');
+  // O painel é a página de entrada: abre já maximizado (redesenho 2026-10).
+  assert.equal(t.caixa.querySelector(`${painel}[data-max="true"]`) !== null, true, 'o painel devia abrir maximizado');
+  assert.ok(t.caixa.querySelector(`${painel} [aria-label^="Restaurar"]`), 'maximizado, o botão devia dizer Restaurar');
 
   H.clica(t, `${painel} [aria-label^="Restaurar"]`);
-  assert.equal(t.caixa.querySelector(`${painel}[data-max="false"]`) !== null, true, 'devia voltar ao tamanho anterior');
+  assert.equal(t.caixa.querySelector(`${painel}[data-max="false"]`) !== null, true, 'devia voltar a janela');
+  H.clica(t, `${painel} [aria-label^="Maximizar"]`);
+  assert.equal(t.caixa.querySelector(`${painel}[data-max="true"]`) !== null, true, 'devia maximizar outra vez');
   t.desmontar();
 });
 
