@@ -47,6 +47,11 @@ g.HTMLElement = dom.window.HTMLElement;
 g.Element = dom.window.Element;
 g.Node = dom.window.Node;
 g.Event = dom.window.Event;
+// O React decide no arranque se o navegador tem o evento `input` (`'oninput'
+// in document`). O linkedom não o declara e o React cairia num polyfill do IE
+// (attachEvent) que rebenta; declarar a propriedade põe-no no caminho de um
+// navegador real, onde o `onChange` de um campo ouve o `input`.
+if (!('oninput' in dom.window.document)) (dom.window.document as any).oninput = null;
 g.KeyboardEvent ??= dom.window.KeyboardEvent;
 g.MouseEvent ??= dom.window.MouseEvent;
 g.getComputedStyle ??= () => ({ getPropertyValue: () => '' });
@@ -471,12 +476,14 @@ test('minimizar esconde a janela e a barra de tarefas restaura-a', () => {
 test('maximizar ocupa a área toda e o botão passa a dizer Restaurar', () => {
   const { t } = montaApp();
   const painel = '.janela[aria-label="Painel"]';
-  H.clica(t, `${painel} [aria-label^="Maximizar"]`);
-  assert.equal(t.caixa.querySelector(`${painel}[data-max="true"]`) !== null, true, 'devia maximizar');
-  assert.ok(t.caixa.querySelector('[aria-label^="Restaurar"]'), 'o botão devia passar a Restaurar');
+  // O painel é a página de entrada: abre já maximizado (redesenho 2026-10).
+  assert.equal(t.caixa.querySelector(`${painel}[data-max="true"]`) !== null, true, 'o painel devia abrir maximizado');
+  assert.ok(t.caixa.querySelector(`${painel} [aria-label^="Restaurar"]`), 'maximizado, o botão devia dizer Restaurar');
 
   H.clica(t, `${painel} [aria-label^="Restaurar"]`);
-  assert.equal(t.caixa.querySelector(`${painel}[data-max="false"]`) !== null, true, 'devia voltar ao tamanho anterior');
+  assert.equal(t.caixa.querySelector(`${painel}[data-max="false"]`) !== null, true, 'devia voltar a janela');
+  H.clica(t, `${painel} [aria-label^="Maximizar"]`);
+  assert.equal(t.caixa.querySelector(`${painel}[data-max="true"]`) !== null, true, 'devia maximizar outra vez');
   t.desmontar();
 });
 
@@ -524,29 +531,29 @@ function abreCamadas(t: { caixa: Element; html: () => string }) {
 /** O CSS sem os comentários: é o que o navegador aplica. */
 const semComentarios = (css: string): string => css.replace(/\/\*[\s\S]*?\*\//g, '');
 
-test('a paleta é a do Design System — tema claro com accent esmeralda', () => {
+test('a paleta é a do Design System — azul profesional, sem verde Matrix', () => {
   const css = readFileSync(join(SRC, 'styles.css'), 'utf8');
   // Lê o valor pelo nome do token, sem depender do alinhamento de espaços.
   const token = (nome: string) => new RegExp(nome + '\\s*:\\s*(#[0-9A-Fa-f]{3,8})').exec(css)?.[1];
-  // Os valores são os da ficha (Design System v3.0 "lobo claro"). O que este
-  // teste protege não é a moda: é que o accent continue a ser o mesmo em toda
-  // a aplicação.
+  // Os valores são os da ficha (Design System v1.0, redesenho azul-marinho 2026-10). O que este teste protege
+  // não é a moda: é que o accent continue a ser azul e a continue a ser o
+  // mesmo em toda a aplicação.
   const esperado: Record<string, string> = {
-    '--bg': '#FFFFFF',
-    '--bg-2': '#F4F6F8',
-    '--surface': '#FFFFFF',
-    '--surface-2': '#F1F4F7',
-    '--surface-3': '#E5EAF0',
-    '--line': '#E0E7ED',
-    '--line-strong': '#C2CDD6',
-    '--blue': '#0E9F6E',
-    '--blue-2': '#046C4E',
-    '--t-1': '#10181D',
-    '--t-2': '#4A5A66',
-    '--t-3': '#6E7B86',
-    '--erro': '#D43A33',
-    '--ok': '#149A63',
-    '--aviso': '#B26A00',
+    '--bg': '#050D1F',
+    '--bg-2': '#030917',
+    '--surface': '#0A1630',
+    '--surface-2': '#0F1E3D',
+    '--surface-3': '#16294F',
+    '--line': '#1C2E55',
+    '--line-strong': '#2B4677',
+    '--blue': '#2E9BFF',
+    '--blue-2': '#1B6EF3',
+    '--t-1': '#FFFFFF',
+    '--t-2': '#A9B7D0',
+    '--t-3': '#7383A3',
+    '--erro': '#F0524F',
+    '--ok': '#2FD27D',
+    '--aviso': '#F5A623',
   };
   for (const [nome, valor] of Object.entries(esperado)) {
     assert.equal(token(nome), valor, `${nome} devia ser ${valor}, obtive ${token(nome)}`);
@@ -568,9 +575,9 @@ test('o Design System está implementado: gradientes, medidas e micro-label', ()
   const css = semComentarios(readFileSync(join(SRC, 'styles.css'), 'utf8'));
 
   // CTA e hero são os gradientes exactos da ficha.
-  assert.match(css, /--grad-cta:\s*linear-gradient\(135deg,\s*#046C4E 0%,\s*#0E9F6E 100%\)/,
+  assert.match(css, /--grad-cta:\s*linear-gradient\(135deg,\s*#1B6EF3 0%,\s*#2E9BFF 100%\)/,
     'o gradiente do CTA não é o da ficha');
-  assert.match(css, /--grad-hero:\s*radial-gradient\(120% 90% at 80% 10%,\s*#DCEFE6 0%,\s*#FFFFFF 60%\)/,
+  assert.match(css, /--grad-hero:\s*radial-gradient\(120% 90% at 80% 10%,\s*#133A78 0%,\s*#050D1F 62%\)/,
     'o gradiente do hero não é o da ficha');
 
   // Medidas: alvo de toque 44, botão e campo 52, cartão 20 de raio, 68 de barra.
@@ -594,11 +601,16 @@ test('o Design System está implementado: gradientes, medidas e micro-label', ()
 
   // Tipografia: as três famílias da ficha primeiro, com fallback do sistema —
   // nenhuma fonte é pedida por URL, logo nada bloqueia o desenho.
-  assert.match(css, /--font-display:[^;]*'Sora'/, 'o display não pede Sora');
+  assert.match(css, /--font-display:[^;]*'Montserrat'/, 'o display não pede Montserrat (tipografia do ecossistema)');
   assert.match(css, /--font:[^;]*'Inter'/, 'o corpo não pede Inter');
   assert.match(css, /--mono:[^;]*'JetBrains Mono'/, 'o mono não pede JetBrains Mono');
-  assert.ok(!/@font-face\s*\{\s*font-family:\s*'Sora'/.test(css),
-    'há um @font-face activo a pedir um ficheiro que o projeto não serve');
+  // Cada @font-face aponta para um ficheiro que o projeto serve de facto:
+  // uma fonte que dá 404 deixa o texto na fonte do sistema sem ninguém notar.
+  const fontes = [...css.matchAll(/@font-face\s*\{[^}]*url\('\/([^']+)'\)/g)].map((m) => m[1]!);
+  assert.ok(fontes.length >= 3, 'as três famílias da ficha deviam ter @font-face');
+  for (const f of fontes) {
+    assert.ok(existsSync(join(WEB, 'public', f)), `o @font-face pede /${f}, que não existe em public/`);
+  }
 });
 
 test('a navegação é uma só: gaveta no telemóvel, lateral fixa no desktop', () => {
@@ -764,17 +776,19 @@ test('o contacto e a autoria vêm do servidor, não escritos à mão', () => {
 });
 
 test('a marca é a mesma no React e nos ficheiros SVG', () => {
+  // A marca tem UMA fonte (public/brand/argos-a.png). O componente React usa a
+  // versão gerada dela, e os SVG levam-na embutida: se alguém trocar o símbolo
+  // num sítio e não no outro, este teste falha.
   const ui = readFileSync(join(SRC, 'components', 'ui.tsx'), 'utf8');
-  const svg = readFileSync(join(WEB, 'public', 'logo-mark.svg'), 'utf8');
-  // O que se exige é que as duas marcas sejam A MESMA: cada cor que o SVG usa
-  // tem de estar também no componente React. As cores não são fixadas aqui —
-  // quando a marca muda de paleta, muda nos dois sítios ou o teste queixa-se.
-  const cores = (s: string) => new Set([...s.matchAll(/#[0-9A-Fa-f]{6}\b/g)].map((m) => m[0].toUpperCase()));
-  const noSvg = cores(svg);
-  const noReact = cores(ui);
-  assert.ok(noSvg.size >= 3, `o logo-mark.svg só tem ${noSvg.size} cores — parece incompleto`);
-  const emFalta = [...noSvg].filter((c) => !noReact.has(c));
-  assert.equal(emFalta.join(', '), '', 'cores do logo-mark.svg que a marca em React não tem: ' + emFalta.join(', '));
+  const src = /<img[^>]*src="\/([^"]+)"/.exec(ui)?.[1];
+  assert.ok(src, 'o Mark deixou de usar a imagem da marca');
+  assert.ok(existsSync(join(WEB, 'public', src!)), `o Mark pede /${src}, que não existe`);
+  assert.ok(existsSync(join(WEB, 'public', 'brand', 'argos-a.png')), 'falta a fonte da marca em public/brand');
+  for (const f of ['logo-mark.svg', 'favicon.svg', 'logo.svg']) {
+    const svg = readFileSync(join(WEB, 'public', f), 'utf8');
+    assert.match(svg, /href="data:image\/png;base64,/, `${f} não leva o símbolo embutido`);
+    assert.match(svg, /gerado por scripts\/make-icons\.mjs/, `${f} não foi gerado pelo script da marca`);
+  }
 });
 
 test('a capa social é 1200x630 e as etiquetas OG são absolutas', () => {
@@ -1088,4 +1102,116 @@ test('o painel do plano é honesto no ecrã: sem verde decorativo, sem window.in
   assert.match(css, /\.tag-err\s*\{/, 'a classe de erro existe');
   assert.match(css, /\.fase\[data-estado='ERRO'\]/, 'a fase em erro fica marcada na borda');
   assert.match(css, /\.fase\[data-estado='BLOQUEADA'\]/, 'a fase bloqueada fica marcada na borda');
+});
+
+/* ------------------------------------------------------------------------
+   Redesenho 2026-10: busca global, navegação sem repetição e painel em
+   cartões com dados reais.
+   ------------------------------------------------------------------------ */
+
+test('a busca do topo abre a busca global, que encontra ferramentas reais e não inventa', (ctx) => {
+  const { t } = montaApp();
+  ctx.after(() => { t.desmontar(); });
+  assert.equal(t.caixa.querySelector('.paleta'), null, 'a busca não devia começar aberta');
+  H.clica(t, '.topbar-busca');
+  assert.ok(t.caixa.querySelector('.paleta[role="dialog"]'), 'clicar na busca do topo devia abrir a busca global');
+
+  const input = t.caixa.querySelector('.paleta input') as any;
+  const escreve = (v: string) => H.escreve(input, v);
+
+  escreve('username');
+  const chaves = [...t.caixa.querySelectorAll('.paleta-item')].map((b) => b.getAttribute('data-chave'));
+  assert.ok(chaves.includes('t:username-finder'), `devia achar o localizador: ${chaves.join(', ')}`);
+
+  escreve('nao-existe-nada-xyz');
+  assert.equal(t.caixa.querySelectorAll('.paleta-item').length, 0, 'não devia inventar resultados');
+  assert.match(t.texto(), /Nada encontrado/, 'sem resultados tem de o dizer');
+
+  // Escolher um resultado abre a janela da ferramenta e fecha a busca.
+  escreve('domínio');
+  H.clica(t, '.paleta-item[data-chave="t:domain-infra"]');
+  assert.equal(t.caixa.querySelector('.paleta'), null, 'a busca devia fechar ao abrir um resultado');
+  assert.ok(t.caixa.querySelector('.janela[aria-label="Infraestrutura de Domínio"]'), 'a ferramenta devia abrir numa janela');
+});
+
+test('a busca global não mostra a administração a quem não é admin', (ctx) => {
+  const { t } = montaApp();
+  ctx.after(() => { t.desmontar(); });
+  H.clica(t, '.topbar-busca');
+  const chaves = [...t.caixa.querySelectorAll('.paleta-item')].map((b) => b.getAttribute('data-chave'));
+  assert.ok(chaves.includes('v:dashboard'), 'as vistas deviam aparecer sem termo');
+  assert.ok(!chaves.includes('v:admin'), 'a administração apareceu a um utilizador comum');
+});
+
+test('Ctrl+K abre a busca global de qualquer ecrã', (ctx) => {
+  const { t } = montaApp();
+  ctx.after(() => { t.desmontar(); });
+  H.tecla('k', { ctrlKey: true });
+  assert.ok(t.caixa.querySelector('.paleta'), 'Ctrl+K devia abrir a busca');
+  H.tecla('k', { ctrlKey: true });
+  assert.equal(t.caixa.querySelector('.paleta'), null, 'Ctrl+K outra vez devia fechar');
+});
+
+test('a navegação não se repete: sem botão flutuante, sem links duplicados, menu do avatar só com a conta', (ctx) => {
+  const shell = readFileSync(join(SRC, 'pages', 'AppShell.tsx'), 'utf8');
+  assert.ok(!/busca-global/.test(shell), 'a busca do topo voltou a apontar para um #busca-global que não existe');
+  assert.ok(!/className="fab/.test(shell), 'o botão flutuante voltou — repete os atalhos do painel');
+  assert.ok(!/topbar-links/.test(shell), 'os links da barra superior repetem a lateral');
+
+  const { t } = montaApp();
+  ctx.after(() => { t.desmontar(); });
+  const pop = t.caixa.querySelector('.user-pop');
+  assert.ok(pop, 'o menu do avatar desapareceu');
+  const itens = [...pop!.querySelectorAll('.user-pop-item')].map((b) => b.textContent?.trim());
+  for (const nome of ['Painel', 'Histórico', 'Investigações', 'Radar de Presença']) {
+    assert.ok(!itens.some((i) => i?.includes(nome)), `o menu do avatar repete "${nome}" da lateral`);
+  }
+  assert.ok(itens.some((i) => i?.includes('Conta')), 'o menu do avatar perdeu a Conta');
+  assert.ok(itens.some((i) => i?.includes('Sair')), 'o menu do avatar perdeu o Sair');
+});
+
+test('o painel não inventa indicadores: sem tendências, e vazio diz que está vazio', async (ctx) => {
+  const dash = readFileSync(join(SRC, 'pages', 'Dashboard.tsx'), 'utf8');
+  // Não há séries no servidor: qualquer "+12%" seria inventado.
+  assert.ok(!/['"`]\+\d+%/.test(dash), 'o painel tem uma percentagem de crescimento escrita à mão');
+  assert.match(dash, /api\.investigations\(/, 'as sessões não vêm do servidor');
+  assert.match(dash, /api\.history\(/, 'a atividade não vem do histórico real');
+  assert.match(dash, /api\.investigation\(/, 'o mapa não lê o grafo guardado');
+
+  const { t } = montaApp();
+  ctx.after(() => { t.desmontar(); });
+  await ate(() => /Sem grafo para mostrar/.test(t.texto()), 'sem sessões o mapa devia dizer que está vazio');
+  assert.equal(t.caixa.querySelector('.mapa-svg'), null, 'desenhou um mapa sem dados');
+  assert.match(t.texto(), /Atividade Recente/);
+  assert.match(t.texto(), /Perfis Analisados/);
+});
+
+test('o mapa de conexões desenha o grafo real da última sessão', async (ctx) => {
+  const agora = new Date().toISOString();
+  const sessao = { id: 's1', seed: 'alvo_demo', seed_type: 'username', title: 'alvo_demo', created_at: agora, updated_at: agora, node_count: 3, edge_count: 2 };
+  const { t } = montaApp({
+    investigations: [sessao],
+    detalhe: {
+      investigation: sessao,
+      nodes: [
+        { id: 'n0', type: 'username', label: 'alvo', value: 'alvo_demo', confidence: 'confirmed', sourceIds: [], hop: 0 },
+        { id: 'n1', type: 'conta', label: 'conta', value: 'github.com/alvo_demo', confidence: 'corroborated', sourceIds: [], hop: 1 },
+        { id: 'n2', type: 'dominio', label: 'domínio', value: 'exemplo.com', confidence: 'indicated', sourceIds: [], hop: 1 },
+      ],
+      edges: [
+        { from: 'n0', to: 'n1', rel: 'tem', confidence: 'corroborated', sourceIds: [] },
+        { from: 'n0', to: 'n2', rel: 'liga', confidence: 'indicated', sourceIds: [] },
+      ],
+    },
+  });
+  ctx.after(() => { t.desmontar(); });
+  await ate(() => !!t.caixa.querySelector('.mapa-svg'), 'o mapa devia aparecer com uma sessão guardada');
+  assert.equal(t.caixa.querySelectorAll('.mapa-no').length, 3, 'devia haver um nó por nó do grafo');
+  assert.equal(t.caixa.querySelectorAll('.mapa-aresta').length, 2, 'devia haver uma linha por ligação');
+  const legenda = [...t.caixa.querySelectorAll('.mapa-chip')].map((c) => c.textContent);
+  assert.ok(legenda.some((c) => /conta\s*1/.test(c ?? '')), `a legenda devia contar as contas: ${legenda.join(' | ')}`);
+  // Os indicadores são as contas do servidor, não números fixos.
+  const stats = [...t.caixa.querySelectorAll('.stat-card')].map((c) => c.textContent ?? '');
+  assert.ok(stats.some((s) => /^1\s*Sessões guardadas/.test(s.trim()) || /1Sessões guardadas/.test(s)), `sessões: ${stats.join(' | ')}`);
+  assert.ok(stats.some((s) => /3\s*Entidades mapeadas/.test(s)), `entidades: ${stats.join(' | ')}`);
 });

@@ -159,4 +159,22 @@ export const ATALHOS: { id: string; nome: string; exemplo: string; icon: (p: SVG
 ];
 
 /** Rótulo do plano, para mostrar o estado real sem inventar. */
+/**
+ * Ícone próprio de cada ferramenta.
+ *
+ * A categoria que o backend devolve é grossa — quase tudo cai em "pessoa" —,
+ * por isso os cartões ficavam todos com o mesmo ícone. Aqui cada ferramenta
+ * tem o seu, significativo; quem não estiver na lista cai na categoria.
+ */
+export const ICONE_FERRAMENTA: Record<string, (p: SVGProps<SVGSVGElement>) => ReactElement> = {
+  'graph-investigation': Icon.network,
+  'username-finder': Icon.user,
+  'username-intel': Icon.search,
+  'social-search': Icon.globe,
+  'datalikers': Icon.layers,
+  'apify': Icon.link,
+  'domain-infra': Icon.server,
+  'paste-search': Icon.shield,
+};
+
 export const NOME_PLANO: Record<PlanId, string> = { free: 'Free', pro: 'Pro', pro_max: 'Pro Max' };

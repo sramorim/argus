@@ -80,6 +80,29 @@ export function clica(raiz: { caixa: Element }, seletor: string) {
   return alvo;
 }
 
+/**
+ * Escreve num campo controlado pelo React. Atribuir `.value` não chega: o
+ * React só ouve o evento `input`, por isso dispara-se um, dentro de `act()`
+ * (o `ui.test.mts` declara `document.oninput` para o React o ouvir).
+ */
+export function escreve(campo: HTMLInputElement, valor: string) {
+  act(() => {
+    const proto = Object.getPrototypeOf(campo);
+    const set = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
+    if (set) set.call(campo, valor); else campo.value = valor;
+    campo.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+}
+
+/** Uma tecla no documento (atalhos globais como Ctrl+K). */
+export function tecla(key: string, mods: { ctrlKey?: boolean; metaKey?: boolean } = {}) {
+  act(() => {
+    const e = new Event('keydown', { bubbles: true, cancelable: true });
+    Object.assign(e, { key, ctrlKey: !!mods.ctrlKey, metaKey: !!mods.metaKey, altKey: false });
+    document.dispatchEvent(e);
+  });
+}
+
 export { useEffect, createElement as el, ToastHost, AppShell };
 export const GRUPOS = ia.GRUPOS;
 export const VISTAS = ia.VISTAS;
@@ -120,6 +143,8 @@ export function stubApi(so: Record<string, unknown> = {}) {
     }
     if (url.includes('/api/tools')) return { tools, plan: 'free', usage: null };
     if (url.includes('/api/plans')) return { plans: so.plans ?? [] };
+    // O detalhe de uma sessão (`/api/investigations/:id`) é o que o mapa do painel lê.
+    if (/\/api\/investigations\/[^/?]+/.test(url)) return so.detalhe ?? {};
     if (url.includes('/api/investigations')) return { investigations: so.investigations ?? [] };
     if (url.includes('/api/historico')) return { runs: so.runs ?? [] };
     return {};

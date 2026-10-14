@@ -12,50 +12,23 @@ export { Icon };
 
 // --------------------------------------------------------------------- marca
 /**
- * O símbolo: o lobo geométrico em facetas planas (identidade v3.0).
+ * O símbolo: um "A" em duas faixas (prata e azul) dobradas no topo, com uma
+ * conexão de três nós no lugar do traço do meio — é o que o ARGOS faz: liga
+ * informação pública.
  *
- * A geometria é a mesma do `public/logo-mark.svg` e as cores são as mesmas
- * da marca — o teste `ui.test.mts` compara as duas e falha se divergirem,
- * que é como se garante que o logótipo do browser e o do React são a mesma
- * marca.
+ * A fonte é `public/brand/argos-a.png` (o símbolo da marca);
+ * `npm run icons` gera a partir da versão PNG o favicon, os ícones da app e a
+ * capa social. O teste `ui.test.mts` confirma que tudo aponta para a mesma fonte.
  */
 export function Mark({ size = 30, className }: { size?: number; className?: string }) {
   return (
-    <svg className={className} width={size} height={size} viewBox="0 0 32 32" role="img" aria-label="ARGOS">
-      <defs>
-        <linearGradient id="argos-fundo" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#0E3B2F" />
-          <stop offset="1" stopColor="#071F19" />
-        </linearGradient>
-      </defs>
-      <rect width="32" height="32" rx="6.9" fill="url(#argos-fundo)" />
-      <g stroke="none">
-        <path d="M7 3.5 L12.5 6 L8 12.5 Z" fill="#4E7A66" />
-        <path d="M25 3.5 L19.5 6 L24 12.5 Z" fill="#4E7A66" />
-        <path d="M8.7 6.2 L11.3 7.1 L9.4 11.3 Z" fill="#2FE08F" />
-        <path d="M23.3 6.2 L20.7 7.1 L22.6 11.3 Z" fill="#2FE08F" />
-        <path d="M12.5 6 L19.5 6 L16 10.5 Z" fill="#EAF7F0" />
-        <path d="M8 12.5 L16 10.5 L11.5 15 Z" fill="#EAF7F0" />
-        <path d="M24 12.5 L16 10.5 L20.5 15 Z" fill="#EAF7F0" />
-        <path d="M16 10.5 L16 15.5 L11.5 15 Z" fill="#EAF7F0" />
-        <path d="M16 10.5 L16 15.5 L20.5 15 Z" fill="#EAF7F0" />
-        <path d="M8 12.5 L11.5 15 L8.8 21 Z" fill="#A9DCC3" />
-        <path d="M24 12.5 L20.5 15 L23.2 21 Z" fill="#A9DCC3" />
-        <path d="M8.8 21 L16 17.5 L11.5 27.5 Z" fill="#A9DCC3" />
-        <path d="M23.2 21 L16 17.5 L20.5 27.5 Z" fill="#A9DCC3" />
-        <path d="M11.5 27.5 L16 24.5 L16 29 Z" fill="#4E7A66" />
-        <path d="M20.5 27.5 L16 24.5 L16 29 Z" fill="#4E7A66" />
-        <path d="M13.5 18 L18.5 18 L16 25 Z" fill="#EAF7F0" />
-        <path d="M14.2 22.3 L17.8 22.3 L16 24.3 Z" fill="#071F19" />
-        <path d="M10.3 15.3 L13.2 15.8 L11 18 Z" fill="#2FE08F" />
-        <path d="M21.7 15.3 L18.8 15.8 L21 18 Z" fill="#2FE08F" />
-      </g>
-    </svg>
+    <img className={className} src="/brand/argos-a-128.png" width={size} height={size}
+      alt="ARGOS" decoding="async" draggable={false} />
   );
 }
 
 export function Brand({
-  size = 30, subtitle = 'Fontes abertas', className,
+  size = 30, subtitle = 'Inteligência digital', className,
 }: { size?: number; subtitle?: string; className?: string }) {
   return (
     // `brand-plain` é a variante sem a moldura da barra: a landing e o ecrã de

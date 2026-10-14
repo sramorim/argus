@@ -185,10 +185,10 @@ function App() {
 
   if (!user) {
     return (
-      <div style={{ maxWidth: 1000, margin: '0 auto', padding: '0 16px 64px' }}>
+      <div className="publico">
         {down && <div className="offline">Sem ligação — a mostrar o que está em cache.</div>}
         <Landing onStart={() => document.getElementById('argus-auth')?.scrollIntoView({ behavior: 'smooth' })} tools={publicTools} />
-        <div id="argus-auth" style={{ marginTop: 40 }}><Auth onDone={loadAll} /></div>
+        <div id="argus-auth" className="publico-auth"><Auth onDone={loadAll} /></div>
       </div>
     );
   }
