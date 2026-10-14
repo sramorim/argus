@@ -47,6 +47,13 @@ services:
       sizeGB: 1
 
     envVars:
+      # Versão do Node no Render. O servidor corre a partir do TypeScript
+      # (`node src/index.ts`, type-stripping nativo) e o repo exige >=22.18
+      # (ver `.node-version` = 24 e `engines`). Sem isto o Render usa o Node
+      # por omissão da plataforma — se for anterior ao 22.18 o arranque morre
+      # com "Unknown file extension .ts" e o domínio devolve 502.
+      - key: NODE_VERSION
+        value: "24"
       - key: NODE_ENV
         value: production
       - key: ARGUS_DB

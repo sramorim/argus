@@ -925,7 +925,8 @@ test('toda variável de produção de que o código precisa está no render.yaml
 
   // HOST e PORT são injected pelo Render; as de tuning e as deliberadamente
   // opcionais têm valor por omissão razoável e não precisam de ser declaradas.
-  const injetadas = new Set(['HOST', 'PORT']);
+  // NODE_VERSION é lida pela plataforma (não pelo código) para escolher o Node.
+  const injetadas = new Set(['HOST', 'PORT', 'NODE_VERSION']);
   const opcionais = new Set([
     'ARGUS_ALLOWED_ORIGINS', 'ARGUS_AUTH_MAX', 'ARGUS_AUTH_WINDOW_MIN',
     'ARGUS_COOKIE_SAMESITE', 'ARGUS_IP_MAX', 'ARGUS_REGISTER_MAX', 'ARGUS_RUN_MAX',
