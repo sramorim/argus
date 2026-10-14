@@ -16,13 +16,13 @@ export { Icon };
  * conexão de três nós no lugar do traço do meio — é o que o ARGOS faz: liga
  * informação pública.
  *
- * A fonte é o vector `public/brand/argos-a.svg` (nítido em qualquer ecrã);
+ * A fonte é `public/brand/argos-a.png` (o símbolo da marca);
  * `npm run icons` gera a partir da versão PNG o favicon, os ícones da app e a
  * capa social. O teste `ui.test.mts` confirma que tudo aponta para a mesma fonte.
  */
 export function Mark({ size = 30, className }: { size?: number; className?: string }) {
   return (
-    <img className={className} src="/brand/argos-a.svg" width={size} height={size}
+    <img className={className} src="/brand/argos-a-128.png" width={size} height={size}
       alt="ARGOS" decoding="async" draggable={false} />
   );
 }

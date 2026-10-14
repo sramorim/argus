@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /**
  * Gera os ícones e imagens da marca ARGOS a partir de UMA fonte:
- * `apps/web/public/brand/argos-a.png` (o "A" em duas faixas com a conexão,
- * fundo transparente), exportada do vector `public/brand/argos-a.svg`.
+ * `apps/web/public/brand/argos-a.png` (o símbolo da marca — o "A" em triângulo
+ * com o olho —, fundo transparente).
  *
  * Porquê um script: a marca tem de ser reproduzível. Se o símbolo mudar,
  * troca-se o ficheiro-fonte e `npm run icons` volta a gerar tudo — favicon,
