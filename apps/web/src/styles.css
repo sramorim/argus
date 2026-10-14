@@ -2336,7 +2336,10 @@ body { background: var(--bg); }
 }
 /* O painel maximizado é a página de entrada: sem barra de título. As outras
    janelas abrem por cima dele com os controlos de sempre. */
-.janela[aria-label='Painel'][data-max='true'] { border: 0; border-radius: 0; box-shadow: none; background: transparent; }
+/* O Painel maximizado é a página de entrada: sem a moldura da janela, mas com
+   fundo sólido — transparente deixava qualquer janela aberta por trás (uma
+   ferramenta, por exemplo) vazar e misturar os textos no telemóvel. */
+.janela[aria-label='Painel'][data-max='true'] { border: 0; border-radius: 0; box-shadow: none; background: var(--bg); }
 .janela[aria-label='Painel'][data-max='true'] > .win-title { display: none; }
 
 /* ---------- busca global (Ctrl/⌘+K) ---------- */
