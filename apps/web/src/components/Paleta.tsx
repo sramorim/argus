@@ -14,7 +14,7 @@ import type { ReactElement, SVGProps } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import type { ToolPublic, User } from '../api';
 import { Icon, CATEGORY_ICON } from './Icons';
-import { VISTAS, FERRAMENTA_POR_ID, buscar } from '../ia';
+import { VISTAS, FERRAMENTA_POR_ID, buscar, ICONE_FERRAMENTA } from '../ia';
 import { MODULOS } from '../pages/ToolPage';
 import type { View } from '../pages/AppShell';
 
@@ -52,7 +52,7 @@ export default function Paleta({
     const ferramentas: Item[] = buscar(tools, termo).map((t) => ({
       chave: `t:${t.id}`, titulo: t.name,
       sub: FERRAMENTA_POR_ID[t.id]?.grupo.nome ?? t.summary,
-      secao: 'Ferramentas', icone: CATEGORY_ICON[t.category] ?? Icon.grid,
+      secao: 'Ferramentas', icone: ICONE_FERRAMENTA[t.id] ?? CATEGORY_ICON[t.category] ?? Icon.grid,
       pro: t.lock === 'locked', vista: { k: 'tool', id: t.id },
     }));
     const modulos: Item[] = Object.entries(MODULOS)

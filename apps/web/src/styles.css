@@ -2637,3 +2637,33 @@ body { background: var(--bg); }
   -webkit-mask-image: radial-gradient(62% 72% at 70% 34%, #000 42%, transparent 100%);
   mask-image: radial-gradient(62% 72% at 70% 34%, #000 42%, transparent 100%);
 }
+
+/* ==========================================================================
+   Ícones em azulejo (chip metálico azul) — estilo do logo.
+   O glifo de traço fino continua, mas dentro de um azulejo escuro com um
+   gradiente diagonal, rebordo azul-ciano e um leve brilho. É o que dá peso aos
+   ícones sem os transformar em desenhos. Só visual; nenhuma lógica muda.
+   ========================================================================== */
+.tool-glyph, .dash-pilar-ico, .layer-card-ico, .paleta-ico, .lp-grupo-ico,
+.dash-card-ico, .stat-ico, .dash-acao-ico {
+  background:
+    linear-gradient(150deg, rgba(91, 176, 255, .22), rgba(23, 71, 201, .07) 62%),
+    var(--surface-2);
+  border: 1px solid rgba(111, 192, 255, .26);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .10), 0 3px 10px rgba(7, 21, 51, .45);
+}
+.tool-glyph svg, .dash-pilar-ico svg, .layer-card-ico svg, .paleta-ico svg,
+.lp-grupo-ico svg, .dash-card-ico svg, .stat-ico svg, .dash-acao svg {
+  color: var(--blue-3);
+  filter: drop-shadow(0 0 5px rgba(46, 155, 255, .40));
+}
+/* O azulejo acende ao passar o rato: é o único movimento, e é discreto. */
+.tool-card:hover .tool-glyph, .dash-pilar:hover .dash-pilar-ico,
+.lp-grupo:hover .lp-grupo-ico, .dash-acao:hover {
+  border-color: rgba(111, 192, 255, .55);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .14), 0 5px 16px rgba(27, 110, 243, .40), 0 0 18px rgba(46, 155, 255, .22);
+}
+.tool-card:hover .tool-glyph svg { color: #FFFFFF; }
+@media (prefers-reduced-motion: reduce) {
+  .tool-glyph, .dash-pilar-ico, .lp-grupo-ico { transition: none; }
+}

@@ -18,11 +18,11 @@ import {
   api, type ToolPublic, type Usage, type User, type LinhaSaude, type EstadoSaude,
   type Investigation, type InvestigationDetail,
 } from '../api';
-import { Icon } from '../components/Icons';
+import { Icon, CATEGORY_ICON } from '../components/Icons';
 import { Empty, SearchInput, Skeleton } from '../components/ui';
 import MapaConexoes from '../components/MapaConexoes';
 import Globo from '../components/Globo';
-import { GRUPOS, porGrupo, buscar, NOME_PLANO } from '../ia';
+import { GRUPOS, porGrupo, buscar, NOME_PLANO, ICONE_FERRAMENTA } from '../ia';
 import type { View } from './AppShell';
 
 interface Execucao { id: string; tool_id: string; input: string; created_at: string; bytes: number }
@@ -409,13 +409,15 @@ export default function Dashboard({
             </div>
           ) : (
             <div className="grid grid-3">
-              {encontrados.map((t) => (
+              {encontrados.map((t) => {
+                const Cat = ICONE_FERRAMENTA[t.id] ?? CATEGORY_ICON[t.category] ?? Icon.grid;
+                return (
                 <button key={t.id} className="tool-card" type="button"
                   data-locked={t.lock === 'locked'}
                   onClick={() => setView({ k: 'tool', id: t.id })}>
                   {t.lock === 'locked' && <span className="tag tag-pro tool-badge">PRO</span>}
                   <div className="tool-top">
-                    <span className="tool-glyph"><Icon.network /></span>
+                    <span className="tool-glyph"><Cat /></span>
                     <span className="grow" style={{ minWidth: 0 }}>
                       <span className="tool-name">{t.name}</span>
                     </span>
@@ -423,7 +425,8 @@ export default function Dashboard({
                   <div className="tool-sum">{t.summary}</div>
                   <span className="tool-chevron"><Icon.chevronRight /></span>
                 </button>
-              ))}
+                );
+              })}
             </div>
           )
         ) : (
