@@ -12,39 +12,23 @@ export { Icon };
 
 // --------------------------------------------------------------------- marca
 /**
- * O símbolo: um olho de traço fino com a íris no azul da marca.
+ * O símbolo: um "A" em duas faixas (prata e azul) dobradas no topo, com uma
+ * conexão de três nós no lugar do traço do meio — é o que o ARGOS faz: liga
+ * informação pública.
  *
- * A geometria é a mesma do `public/logo-mark.svg` e as cores são as mesmas
- * tokens da interface — o teste `ui.test.mts` compara as duas e falha se
- * divergirem, que é como se garante que o logótipo do browser e o do React
- * são a mesma marca.
+ * A fonte é `public/brand/argos-a.png` (o símbolo da marca);
+ * `npm run icons` gera a partir da versão PNG o favicon, os ícones da app e a
+ * capa social. O teste `ui.test.mts` confirma que tudo aponta para a mesma fonte.
  */
 export function Mark({ size = 30, className }: { size?: number; className?: string }) {
   return (
-    <svg className={className} width={size} height={size} viewBox="0 0 32 32" role="img" aria-label="ARGOS">
-      <defs>
-        <linearGradient id="argos-pupila" x1="0" y1="0" x2="0.35" y2="1">
-          <stop offset="0" stopColor="#2E9BFF" />
-          <stop offset="1" stopColor="#1B6EF3" />
-        </linearGradient>
-        <linearGradient id="argos-fundo" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#101828" />
-          <stop offset="1" stopColor="#05070C" />
-        </linearGradient>
-      </defs>
-      <rect width="32" height="32" rx="6.9" fill="url(#argos-fundo)" />
-      <circle cx="16" cy="16" r="13.7" fill="none" stroke="#9AA7BD" strokeOpacity=".30" strokeWidth="1.4" />
-      <path d="M4.4 16C7.5 11.6 11.5 9.3 16 9.3s8.5 2.3 11.6 6.7c-3.1 4.4-7.1 6.7-11.6 6.7S7.5 20.4 4.4 16Z"
-        fill="none" stroke="#9AA7BD" strokeOpacity=".92" strokeWidth="1.5" strokeLinejoin="round" />
-      <circle cx="16" cy="16" r="6.2" fill="none" stroke="#9AA7BD" strokeOpacity=".72" strokeWidth="1.1" />
-      <circle cx="16" cy="16" r="3.2" fill="url(#argos-pupila)" />
-      <circle cx="18.3" cy="13.7" r="1.05" fill="#FFFFFF" fillOpacity=".85" />
-    </svg>
+    <img className={className} src="/brand/argos-a-128.png" width={size} height={size}
+      alt="ARGOS" decoding="async" draggable={false} />
   );
 }
 
 export function Brand({
-  size = 30, subtitle = 'Fontes abertas', className,
+  size = 30, subtitle = 'Inteligência digital', className,
 }: { size?: number; subtitle?: string; className?: string }) {
   return (
     // `brand-plain` é a variante sem a moldura da barra: a landing e o ecrã de

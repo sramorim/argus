@@ -22,14 +22,14 @@ import { Icon } from './Icons';
 /* As cores dos nós saem da paleta do Design System: o accent para o alvo, uma
    rampa de azuis e neutros para o resto, e o âmbar do estado de aviso para
    carteira e conta. Nenhuma cor nova foi inventada. */
-const NODE_COLOR: Record<string, string> = {
+export const NODE_COLOR: Record<string, string> = {
   seed: '#2E9BFF', pessoa: '#FFFFFF', username: '#FFFFFF', conta: '#F5A623',
   email: '#9BD4FF', telefone: '#B9A5D9', dominio: '#6FC0FF', ip: '#5F6B84',
   servico: '#7A879F', empresa: '#9AA7BD', socio: '#8C97AB', endereco: '#8492A8',
   wallet: '#F5A623', portfolio: '#6FC0FF', cve: '#2E9BFF', pacote: '#B9A5D9',
   breach: '#2E9BFF', documento: '#7A879F', hashtag: '#C7B48C',
 };
-const TYPE_LABEL: Record<string, string> = {
+export const TYPE_LABEL: Record<string, string> = {
   pessoa: 'pessoa', username: 'username', conta: 'conta', email: 'email', telefone: 'telefone',
   dominio: 'domínio', ip: 'IP', servico: 'serviço', empresa: 'empresa', socio: 'sócio',
   endereco: 'endereço', wallet: 'carteira', cve: 'CVE', pacote: 'pacote', breach: 'breach',

@@ -69,6 +69,10 @@ export const Icon = {
   activity: (p: P) => (<svg {...base(p)}><path d="M3 12.4h4l2.4-6 4.2 12 2.4-6h5" /></svg>),
   building: (p: P) => (<svg {...base(p)}><path d="M4.6 20.4V4.6h9v15.8M13.6 10h5.8v10.4M3 20.4h18" /><path d="M7.2 8h1.4M11 8h1.4M7.2 11.4h1.4M11 11.4h1.4M7.2 14.8h1.4M11 14.8h1.4M16 13.4h1.2M16 16.8h1.2" /></svg>),
   history: (p: P) => (<svg {...base(p)}><path d="M3.4 12a8.6 8.6 0 1 0 2.6-6.1" /><path d="M3.2 4.6v4.2h4.2M12 7.6V12l3 1.8" /></svg>),
+  sliders: (p: P) => (<svg {...base(p)}><path d="M4 7h9M17 7h3M4 17h3M11 17h9" /><circle cx="15" cy="7" r="2.2" /><circle cx="9" cy="17" r="2.2" /></svg>),
+  arrowRight: (p: P) => (<svg {...base(p)}><path d="M5 12h14M13 6l6 6-6 6" /></svg>),
+  expand: (p: P) => (<svg {...base(p)}><path d="M14 4h6v6M10 20H4v-6M20 4l-6.5 6.5M4 20l6.5-6.5" /></svg>),
+  chart: (p: P) => (<svg {...base(p)}><path d="M4 20V10M9.3 20V4M14.6 20v-7M20 20V8" /></svg>),
   star: (p: P) => (<svg {...base(p)}><path d="m12 3.6 2.6 5.3 5.8.8-4.2 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8L3.6 9.7l5.8-.8Z" /></svg>),
 };
 
