@@ -109,7 +109,12 @@ export default function ToolPage({
   const campoRef = useRef<HTMLInputElement>(null);
   const busyFor = useRef<string | null>(null);
 
-  useEffect(() => { setVals({}); setFiles({}); setRun(null); setErr(''); setExemplo(''); }, [id]);
+  useEffect(() => {
+    const alvoInicial = id === 'graph-investigation' ? sessionStorage.getItem('argos:initial-target') : null;
+    setVals(alvoInicial ? { seed: alvoInicial } : {});
+    if (alvoInicial) sessionStorage.removeItem('argos:initial-target');
+    setFiles({}); setRun(null); setErr(''); setExemplo('');
+  }, [id]);
   useEffect(() => { if (busy) resRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, [busy]);
 
   /* Módulos independentes: existem mesmo sem estarem no catálogo, por isso

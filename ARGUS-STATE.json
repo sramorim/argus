@@ -301,19 +301,19 @@
     ]
   },
   "identidade_visual": {
-    "marca": "ARGUS · ecossistema SR. Amorim",
+    "marca": "ARGOS · ecossistema SR. Amorim",
+    "versao": "v3.0 lobo claro (2026-10-14): lobo geométrico em facetas planas; tema claro branco com accent esmeralda; sem azul-marinho. Nome, domínio e ferramentas preservados.",
     "paleta": {
-      "background": "#07111F",
-      "surface": "#0D1B2A",
-      "surface_2": "#102338",
-      "border": "#1E334A",
-      "azul": "#1677FF",
-      "azul_2": "#2F8CFF",
-      "azul_claro": "#58B0FF",
-      "texto": "#F4F7FB",
-      "texto_2": "#91A4B8",
-      "erro": "#EF4444",
-      "sucesso": "#22C55E"
+      "background": "#FFFFFF",
+      "surface": "#FFFFFF",
+      "surface_2": "#F1F4F7",
+      "border": "#E0E7ED",
+      "accent": "#0E9F6E",
+      "accent_deep": "#046C4E",
+      "texto": "#10181D",
+      "texto_2": "#4A5A66",
+      "erro": "#D43A33",
+      "sucesso": "#149A63"
     },
     "nota": "Azul de accao e destaque. Superficies quase neutras com tom azul muito baixo, para o azul ter peso sem a interface ficar toda azul. Sem verde Matrix, sem neon, sem gamer.",
     "rodape": "SR. AMORIM · Criado e desenvolvido por SR. Amorim · (c) 2026 SR. Amorim. Todos os direitos reservados.",

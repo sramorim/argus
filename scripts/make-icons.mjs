@@ -19,22 +19,55 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const OUT = join(HERE, '..', 'apps', 'web', 'public');
 
 /*
- * Cores do Design System v1.0 — as mesmas de `apps/web/src/styles.css` e do
- * `public/logo-mark.svg`.
+ * Cores da identidade v3.0 ("lobo") — as mesmas do `public/logo-mark.svg`.
  *
- * Antes esta lista tinha uma pupila VERMELHA (185,28,28) enquanto o SVG e o
- * componente React a pintavam a azul: o ícone que o browser mostrava na
- * aba e no ecrã principal era um olho vermelho que não existia em lado nenhum
- * do resto da marca. As duas cores da íris são agora as do accent.
+ * v3.0 é uma cabeça de lobo frontal em facetas planas sobre fundo verde-pinheiro
+ * profundo. As facetas são triângulos com cores chapadas; o rasterizador testa
+ * ponto-em-triângulo com supersampling 3x3, por isso as arestas saem com
+ * antisserrilhado sem borrar as facetas.
  */
-const SILVER = [154, 167, 189];   // --t-2
-const RED = [27, 110, 243];        // --blue-2 (accent-deep)
-const RED_HI = [46, 155, 255];     // --blue   (accent)
-const BG = [5, 7, 12];             // --bg
-const BG2 = [16, 24, 40];          // --surface-2
+const BG0 = [14, 59, 47];        // fundo do ícone (topo do degradé)
+const BG1 = [7, 31, 25];         // fundo do ícone (base do degradé)
+const LIGHT = [234, 247, 240];   // faceta clara
+const MID = [169, 220, 195];     // faceta média
+const SHADE = [78, 122, 102];    // faceta sombra
+const ACC = [47, 224, 143];      // esmeralda viva (orelhas internas, olhos)
+const DARK = [7, 31, 25];        // focinho
+const INK = [16, 24, 29];        // tinta da palavra na capa clara
 
 const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
 const smooth = (e0, e1, x) => { const t = clamp((x - e0) / (e1 - e0)); return t * t * (3 - 2 * t); };
+
+/*
+ * Facetas do lobo como triângulos [x1,y1,x2,y2,x3,y3, cor, espelha].
+ * Metade esquerda + centro; `espelha` duplica em x -> 32-x. Desenhadas de trás
+ * para a frente: a última que contém o ponto vence.
+ */
+const TRIS = [
+  [[7, 3.5, 12.5, 6, 8, 12.5], SHADE, true],      // orelha externa
+  [[8.7, 6.2, 11.3, 7.1, 9.4, 11.3], ACC, true],  // orelha interna
+  [[12.5, 6, 19.5, 6, 16, 10.5], LIGHT, false],   // coroa
+  [[8, 12.5, 16, 10.5, 11.5, 15], LIGHT, true],   // sobrancelha
+  [[16, 10.5, 16, 15.5, 11.5, 15], LIGHT, true],  // testa lateral
+  [[8, 12.5, 11.5, 15, 8.8, 21], MID, true],      // bochecha alta
+  [[8.8, 21, 16, 17.5, 11.5, 27.5], MID, true],   // bochecha baixa
+  [[11.5, 27.5, 16, 24.5, 16, 29], SHADE, true],  // mandíbula
+  [[13.5, 18, 18.5, 18, 16, 25], LIGHT, false],   // focinho
+  [[14.2, 22.3, 17.8, 22.3, 16, 24.3], DARK, false], // nariz
+  [[10.3, 15.3, 13.2, 15.8, 11, 18], ACC, true],  // olho
+];
+
+/** Teste ponto-em-triângulo (baricêntrico, com margem para a borda). */
+function inTri(x, y, t) {
+  const [x1, y1, x2, y2, x3, y3] = t;
+  const d = (y2 - y3) * (x1 - x3) + (x3 - x2) * (y1 - y3);
+  if (Math.abs(d) < 1e-9) return false;
+  const a = ((y2 - y3) * (x - x3) + (x3 - x2) * (y - y3)) / d;
+  const b = ((y3 - y1) * (x - x3) + (x1 - x3) * (y - y3)) / d;
+  const c = 1 - a - b;
+  const m = -0.02;
+  return a >= m && b >= m && c >= m;
+}
 
 /** Cobertura 0..1 de um pixel, com supersampling 3x3. */
 function render(size) {
@@ -63,46 +96,24 @@ function render(size) {
 
 /** Cor com alfa para um ponto (x,y) em coordenadas 0..32. */
 function shade(x, y) {
-  const cx = 16, cy = 16;
-  const d = Math.hypot(x - cx, y - cy);
   const rr = 6.9;                              // raio do quadrado arredondado (unidades 0..32)
   const half = 16;
 
   // Fundo: quadrado arredondado, com um leve gradiente diagonal.
-  const qx = Math.abs(x - cx) - (half - rr);
-  const qy = Math.abs(y - cy) - (half - rr);
+  const qx = Math.abs(x - half) - (half - rr);
+  const qy = Math.abs(y - half) - (half - rr);
   const inBg = x >= 0 && y >= 0 && x <= 32 && y <= 32
     && (Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) + Math.min(Math.max(qx, qy), 0) - rr) <= 0;
   if (!inBg) return [0, 0, 0, 0];
 
   const t = clamp((x + y) / 64);
-  let col = [BG[0] + (BG2[0] - BG[0]) * t, BG[1] + (BG2[1] - BG[1]) * t, BG[2] + (BG2[2] - BG[2]) * t];
+  let col = [BG0[0] + (BG1[0] - BG0[0]) * t, BG0[1] + (BG1[1] - BG0[1]) * t, BG0[2] + (BG1[2] - BG0[2]) * t];
 
-  // Anel exterior (prata, discreto)
-  const ringOuter = Math.max(0, 1 - Math.abs(d - 13.7) / 0.7);
-  col = over(col, SILVER, ringOuter * 0.34);
-
-  // Forma do olho (superelipse n=1.35): contorno a prata
-  const u = x - cx, v = y - cy;
-  const e = Math.pow(Math.abs(u / 11.6), 1.35) + Math.pow(Math.abs(v / 6.7), 1.35);
-  const edge = 1 - smooth(0, 0.06, Math.abs(e - 1));
-  col = over(col, SILVER, edge * 0.95);
-
-  // Anel da íris
-  const iris = 1 - smooth(0.35, 0.75, Math.abs(d - 6.2));
-  col = over(col, SILVER, iris * 0.8);
-
-  // Pupila: o accent, com um degradé do accent-deep para o accent
-  const pt = clamp(1 - d / 3.6);
-  const pr = RED[0] + (RED_HI[0] - RED[0]) * (1 - pt);
-  const pg = RED[1] + (RED_HI[1] - RED[1]) * (1 - pt);
-  const pb = RED[2] + (RED_HI[2] - RED[2]) * (1 - pt);
-  const pupil = 1 - smooth(3.0, 3.5, d);
-  col = over(col, [pr, pg, pb], pupil);
-
-  // Brilho especular
-  const spec = 1 - smooth(0.7, 1.25, Math.hypot(x - (cx + 2.3), y - (cy - 2.3)));
-  col = over(col, [245, 247, 250], spec * 0.85);
+  // Facetas do lobo, de trás para a frente.
+  for (const [tri, cor, espelha] of TRIS) {
+    if (inTri(x, y, tri)) col = cor;
+    if (espelha && inTri(x, y, [32 - tri[0], tri[1], 32 - tri[2], tri[3], 32 - tri[4], tri[5]])) col = cor;
+  }
 
   return [col[0], col[1], col[2], 1];
 }
@@ -181,20 +192,18 @@ function renderCover(W = 1200, H = 630) {
   const data = png.data;
   const cx = W / 2;
 
-  // Fundo: grafite com um brilho radial suave atrás do símbolo.
+  // Fundo: branco com um halo esmeralda suave atrás do símbolo.
   for (let y = 0; y < H; y++) {
     for (let x = 0; x < W; x++) {
       const i = (W * y + x) << 2;
       const d = Math.hypot((x - cx) / (W * 0.62), (y - H * 0.42) / (H * 0.72));
       const glow = Math.max(0, 1 - d) ** 2.2;
-      const vig = 1 - 0.28 * Math.min(1, Math.hypot((x - cx) / cx, (y - H / 2) / (H / 2)) ** 2);
-      // --bg (5,7,12) com um halo do accent por trás do símbolo: é o mesmo
-      // gradiente do hero, achatado para 1200x630.
-      const base = 5 + 14 * glow;
-      const v = base * vig;
-      data[i] = Math.round(v * 1.0 + 10 * glow);
-      data[i + 1] = Math.round(v * 1.35 + 6 * glow);
-      data[i + 2] = Math.round(v * 2.4 + 4 * glow);
+      const vig = 1 - 0.05 * Math.min(1, Math.hypot((x - cx) / cx, (y - H / 2) / (H / 2)) ** 2);
+      // Branco com halo do accent: a capa do tema claro.
+      const v = 255 * vig;
+      data[i] = Math.round(v - 22 * glow);
+      data[i + 1] = Math.round(v - 6 * glow);
+      data[i + 2] = Math.round(v - 16 * glow);
       data[i + 3] = 255;
     }
   }
@@ -218,7 +227,7 @@ function renderCover(W = 1200, H = 630) {
   for (let y = barY; y < barY + barH; y++) {
     for (let x = cx - barW / 2; x < cx + barW / 2; x++) {
       const i = (W * y + x) << 2;
-      data[i] = RED_HI[0]; data[i + 1] = RED_HI[1]; data[i + 2] = RED_HI[2];
+      data[i] = 14; data[i + 1] = 159; data[i + 2] = 110;
     }
   }
 
@@ -245,7 +254,7 @@ function renderCover(W = 1200, H = 630) {
   for (let y = subY; y < subY + 2; y++) {
     for (let x = cx - subW / 2; x < cx + subW / 2; x++) {
       const i = (W * y + x) << 2;
-      data[i] = SILVER[0]; data[i + 1] = SILVER[1]; data[i + 2] = SILVER[2];
+      data[i] = INK[0]; data[i + 1] = INK[1]; data[i + 2] = INK[2];
     }
   }
   return png;
@@ -267,9 +276,9 @@ function strokeLine(a, b, ox, oy, capH, stroke, data, W, H) {
       const a = 1 - smooth(half - 0.9, half + 0.9, d);
       if (a <= 0) continue;
       const i = (W * y + x) << 2;
-      data[i] = Math.round(data[i] * (1 - a) + SILVER[0] * a);
-      data[i + 1] = Math.round(data[i + 1] * (1 - a) + SILVER[1] * a);
-      data[i + 2] = Math.round(data[i + 2] * (1 - a) + SILVER[2] * a);
+      data[i] = Math.round(data[i] * (1 - a) + INK[0] * a);
+      data[i + 1] = Math.round(data[i + 1] * (1 - a) + INK[1] * a);
+      data[i + 2] = Math.round(data[i + 2] * (1 - a) + INK[2] * a);
     }
   }
 }

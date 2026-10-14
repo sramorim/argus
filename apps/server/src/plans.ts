@@ -34,7 +34,7 @@ export const PLANS: Record<PlanId, Plan> = {
     graphHops: 1,
     investigations: 3,
     concurrent: 1,
-    highlight: 'Sem cartao, sem trial que expira.',
+    highlight: 'Grátis para começar, com limites de uso e ferramentas Pro bloqueadas.',
     perks: [
       '15 execucoes por dia',
       '3 execucoes seguidas (burst)',
@@ -56,8 +56,9 @@ export const PLANS: Record<PlanId, Plan> = {
     graphHops: 3,
     investigations: 50,
     concurrent: 3,
-    highlight: 'Pagamento unico, vitalicio. Sem mensalidade, sem renovacao.',
+    highlight: 'Todas as ferramentas Pro liberadas. Pagamento único, vitalício e sem renovação.',
     perks: [
+      'Acesso a todas as ferramentas Pro do catálogo',
       'Vitalicio: paga-se uma vez',
       '300 execucoes por dia',
       '8 execucoes seguidas (burst)',

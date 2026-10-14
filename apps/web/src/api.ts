@@ -43,6 +43,11 @@ export interface Plan {
 }
 export interface User { userId: string; plan: PlanId; email: string; name: string; isAdmin: boolean; }
 export interface Usage { today: number; daily: number; inflight?: number; concurrent?: number; maxItems?: number; graphHops?: number; investigations?: number; }
+export interface PixIntent {
+  id: string; plan_id: PlanId; amount_brl: number; clicks: number;
+  first_clicked_at: string; last_clicked_at: string; user_id: string;
+  name: string; email: string; current_plan: PlanId;
+}
 
 export interface GraphNode {
   id: string; type: string; label: string; value: string;
@@ -292,6 +297,8 @@ export interface Contacto {
    * errada no dia em que a chave muda.
    */
   pix: string | null;
+  pixNome: string | null;
+  pixCidade: string | null;
 }
 
 /** O estado dos créditos de uma ferramenta com quota partilhada. */
@@ -416,6 +423,16 @@ export const api = {
     users: { id: string; email: string; name: string; plan: PlanId; is_admin: number; suspended: number; created_at: string }[];
     nUsers: number; nRuns: number; nInvs: number; hoje: number; plans: Plan[]; db: { path: string; writable: boolean };
   }>('/api/admin/estado'),
+  pixIntent: (planId: PlanId) => req<{ ok: boolean; id: string; repeated: boolean }>('/api/pix/intent', {
+    method: 'POST', body: JSON.stringify({ planId }),
+  }),
+  adminPixIntents: () => req<{ intents: PixIntent[] }>('/api/admin/pix-intents'),
+  adminApprovePixIntent: (id: string) => req<{ ok: boolean; plan: PlanId }>(
+    `/api/admin/pix-intents/${encodeURIComponent(id)}/approve`, { method: 'POST', body: '{}' },
+  ),
+  adminDismissPixIntent: (id: string) => req<{ ok: boolean }>(
+    `/api/admin/pix-intents/${encodeURIComponent(id)}/dismiss`, { method: 'POST', body: '{}' },
+  ),
   /**
    * Muda o plano. `planExpires: null` é o que faz um PRO **vitalício** — é a
    * diferenca entre "paga uma vez e fica" e "paga ate uma data".

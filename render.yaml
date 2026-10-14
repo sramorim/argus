@@ -73,6 +73,10 @@ services:
       # Criar/rodar a chave no banco do próprio (ou na PSP que usar).
       - key: PIX_KEY
         sync: false
+      - key: PIX_MERCHANT_NAME
+        sync: false
+      - key: PIX_MERCHANT_CITY
+        sync: false
       # Chave da conta Apify — só o backend a lê (process.env.APIFY_API_TOKEN).
       # Sem ela a ferramenta APIFY devolve NOT_CONFIGURED e não gasta nada; com
       # ela, correr um actor é pay-per-event e consome o crédito da conta.

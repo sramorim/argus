@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api, type Contacto, type Plan, type ToolPublic, type User, CONTACTO, useContacto, pedidoPlanoLink, precoTexto, periodoCurto } from '../api';
 import { Icon } from '../components/Icons';
-import { Modal, Note, Skeleton, useToast } from '../components/ui';
+import { Modal, Note, Skeleton } from '../components/ui';
 import PagamentoPix from '../components/PagamentoPix';
 
 export default function Plans({ user }: { user: User }) {
@@ -11,7 +11,6 @@ export default function Plans({ user }: { user: User }) {
      escrito à mão. */
   const [tools, setTools] = useState<ToolPublic[] | null>(null);
   const [ask, setAsk] = useState<Plan | null>(null);
-  const toast = useToast();
   const wa = useContacto();
 
   useEffect(() => { api.plans().then((r) => setPlans(r.plans)).catch(() => setPlans([])); }, []);
@@ -81,14 +80,13 @@ export default function Plans({ user }: { user: User }) {
         <div className="card-head">Como funciona a ativação</div>
         <div style={{ display: 'grid', gap: 10 }}>
           <Note kind="info">
-            Não há gateway de pagamento integrado. A ativação é feita à mão depois de confirmada a
-            transferência — é uma decisão de produto, não uma limitação técnica.
+            Pix direto para o responsável. O botão JA PAGUEI avisa a administração; o acesso Pro
+            é liberado manualmente depois da conferência do comprovante.
           </Note>
           <div className="t-sm muted" style={{ display: 'grid', gap: 6 }}>
-            <p><b>1.</b> Escolhes o plano e pagas por Pix (a chave e o QR aparecem no ecrã).</p>
-            <p><b>2.</b> Envia o comprovante no WhatsApp — a mensagem já vai escrita com o teu email.</p>
-            <p><b>3.</b> Confirmamos o pagamento e ativamos o plano à mão, na nossa administração.</p>
-            <p><b>4.</b> Recarregas a página: o plano, as cotas e as ferramentas destrancam logo.</p>
+            <p><b>1.</b> Copie a chave Pix e transfira o valor exibido no plano.</p>
+            <p><b>2.</b> Toque em JA PAGUEI e envie o comprovante pelo WhatsApp que abrir.</p>
+            <p><b>3.</b> Depois da conferência, a administração libera o Pro para sua conta.</p>
           </div>
           <div>
             {wa && <a className="btn btn-quiet" href={wa.link} target="_blank" rel="noopener noreferrer">
@@ -101,24 +99,10 @@ export default function Plans({ user }: { user: User }) {
       <Modal
         open={!!ask} onClose={() => setAsk(null)}
         title={`Ativar o plano ${ask?.name ?? ''}`}
-        actions={ask ? (
-          <>
-            <button className="btn btn-quiet" type="button" onClick={async () => {
-              const link = pedidoPlanoLink(ask, user, wa?.whatsapp ?? CONTACTO.whatsapp);
-              try {
-                await navigator.clipboard.writeText(link);
-                toast('ok', 'Link do pedido copiado. É só abrir e enviar.');
-              } catch {
-                toast('err', 'O navegador não deixou copiar. Abre o botão do WhatsApp.');
-              }
-            }}>
-              <Icon.copy width={15} height={15} /> copiar
-            </button>
-            <a className="btn btn-primary" href={pedidoPlanoLink(ask, user, wa?.whatsapp ?? CONTACTO.whatsapp)}
-              target="_blank" rel="noopener noreferrer">
-              <Icon.phone width={15} height={15} /> pedir no WhatsApp
-            </a>
-          </>
+        actions={ask && ask.id !== 'pro' ? (
+          <a className="btn btn-primary" href={pedidoPlanoLink(ask, user, wa?.whatsapp ?? CONTACTO.whatsapp)} target="_blank" rel="noopener noreferrer">
+            <Icon.phone width={15} height={15} /> conversar no WhatsApp
+          </a>
         ) : undefined}
       >
         {ask && (
@@ -135,14 +119,22 @@ export default function Plans({ user }: { user: User }) {
             {/* O Pix entra aqui, e só aqui: dentro do pedido de ativação. Não há
                 gateway de pagamento, e a chave não está escrita no código — vem
                 do servidor (PIX_KEY). */}
-            {ask.priceBRL > 0 && wa?.pix && (
+            {ask.id === 'pro' && ask.priceBRL > 0 && wa?.pix && wa.whatsapp && (
               <PagamentoPix
                 chave={wa.pix}
                 preco={ask.priceBRL}
                 vitalicio={ask.pricePeriod === 'unico'}
                 numero={wa.whatsapp}
                 email={user.email}
+                planId={ask.id}
+                planName={ask.name}
+                nomeRecebedor={wa.pixNome ?? ''}
+                cidadeRecebedor={wa.pixCidade ?? ''}
               />
+            )}
+
+            {ask.id === 'pro' && ask.priceBRL > 0 && !wa?.pix && (
+              <Note kind="warn">O Pix ainda não está configurado. Fale com a administração para concluir o pagamento.</Note>
             )}
 
             <Note kind="warn">
@@ -205,8 +197,17 @@ function PlanCardView({
           vitalicio={p.pricePeriod === 'unico'}
           numero={pix.whatsapp}
           email={email}
+          planId={p.id}
+          planName={p.name}
+          nomeRecebedor={pix.pixNome ?? ''}
+          cidadeRecebedor={pix.pixCidade ?? ''}
           compacto
         />
+      )}
+      {p.id === 'pro' && !pix?.pix && (
+        <p className="t-xs dim" style={{ marginTop: 12, textAlign: 'center' }}>
+          Pix direto ainda não configurado. Fale com a administração.
+        </p>
       )}
     </div>
   );

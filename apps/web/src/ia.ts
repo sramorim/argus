@@ -30,18 +30,12 @@ export interface Grupo {
 /**
  * Os grupos, pela ordem em que aparecem.
  *
- * A ordem responde à pergunta "o que é que estou a tentar fazer agora?", não a
- * uma taxonomia de tweaked: primeiro investigar, depois perceber quem é a pessoa,
- * depois onde está na web, depois a infraestrutura, depois a segurança.
+ * A ordem segue o padrão das referências mobile de OSINT (módulos de pessoa
+ * primeiro, relatório/IA por último): primeiro quem é o alvo, depois onde
+ * está na web, depois a infraestrutura, depois a exposição, e por fim a
+ * investigação correlacionada que monta o grafo.
  */
 export const GRUPOS: Grupo[] = [
-  {
-    id: 'investigar',
-    nome: 'Investigação',
-    resumo: 'Correlaciona todas as ferramentas sobre um alvo e monta o grafo.',
-    icon: Icon.network,
-    ferramentas: ['graph-investigation'],
-  },
   {
     id: 'identidade',
     nome: 'Identidade',
@@ -82,6 +76,13 @@ export const GRUPOS: Grupo[] = [
     resumo: 'O que está publicado à vista: pastes, segredos e menções públicas do alvo.',
     icon: Icon.shield,
     ferramentas: ['paste-search'],
+  },
+  {
+    id: 'investigar',
+    nome: 'Investigação',
+    resumo: 'Correlaciona todas as ferramentas sobre um alvo e monta o grafo.',
+    icon: Icon.network,
+    ferramentas: ['graph-investigation'],
   },
 ];
 
@@ -149,12 +150,12 @@ export function buscar(ferramentas: ToolPublic[], termo: string): ToolPublic[] {
 
 /** Sugestões de atalho para o painel, por ordem de utilidade. */
 export const ATALHOS: { id: string; nome: string; exemplo: string; icon: (p: SVGProps<SVGSVGElement>) => ReactElement }[] = [
-  { id: 'graph-investigation', nome: 'Investigação completa', exemplo: 'alvo_demo', icon: Icon.network },
   { id: 'username-finder', nome: 'Localizar username', exemplo: '@alvo_demo', icon: Icon.user },
   { id: 'social-search', nome: 'Perfis que mencionam um nome', exemplo: 'Nome Exemplo', icon: Icon.globe },
   { id: 'datalikers', nome: 'Perfil de Instagram/TikTok', exemplo: '@alvo_demo', icon: Icon.layers },
-  { id: 'paste-search', nome: 'Exposição pública', exemplo: 'example.com', icon: Icon.shield },
   { id: 'domain-infra', nome: 'Infraestrutura de domínio', exemplo: 'exemplo.com', icon: Icon.activity },
+  { id: 'paste-search', nome: 'Exposição pública', exemplo: 'example.com', icon: Icon.shield },
+  { id: 'graph-investigation', nome: 'Investigação completa', exemplo: 'alvo_demo', icon: Icon.network },
 ];
 
 /** Rótulo do plano, para mostrar o estado real sem inventar. */

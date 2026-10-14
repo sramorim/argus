@@ -1,257 +1,145 @@
-/**
- * Painel — primeiro ecrã de quem entra (reconstrução 2026-10).
- *
- * Ordem curta: ação principal → estado real (cota + fontes numa linha) →
- * continuar o trabalho → ferramentas com busca. Sem secções repetidas, sem
- * cartões a competir. Todos os dados vêm do backend; vazio mostra-se vazio.
- */
 import { useEffect, useState } from 'react';
-import { api, type ToolPublic, type Usage, type User, type LinhaSaude, type EstadoSaude } from '../api';
+import type { FormEvent } from 'react';
+import { api, type Graph, type Investigation, type LinhaSaude, type ToolPublic, type Usage, type User } from '../api';
 import { Icon } from '../components/Icons';
-import { Empty, SearchInput, Skeleton } from '../components/ui';
-import { GRUPOS, porGrupo, buscar, ATALHOS, NOME_PLANO } from '../ia';
+import GraphView from '../components/GraphView';
+import { Empty, Skeleton } from '../components/ui';
+import { GRUPOS, porGrupo } from '../ia';
 import type { View } from './AppShell';
 
-interface Resumo {
-  sessoes: { id: string; title: string; seed: string; updated_at: string; seed_type?: string; node_count?: number; edge_count?: number }[];
-  historico: { id: string; tool_id: string; created_at: string; bytes: number }[];
-}
-
-const ESTADO_FONTE: Record<string, { chave: 'ok' | 'lim' | 'nc' | 'erro'; texto: string }> = {
-  READY: { chave: 'ok', texto: 'ONLINE' },
-  RATE_LIMITED: { chave: 'lim', texto: 'LIMITADO' },
-  NOT_CONFIGURED: { chave: 'nc', texto: 'NÃO CONFIGURADO' },
-  NOT_INSTALLED: { chave: 'nc', texto: 'NÃO INSTALADO' },
-  MISSING_SECRET: { chave: 'nc', texto: 'NÃO CONFIGURADO' },
-  ERROR: { chave: 'erro', texto: 'ERRO' },
-  DISABLED: { chave: 'nc', texto: 'DESLIGADO' },
-  INCOMPATIBLE: { chave: 'nc', texto: 'INCOMPATÍVEL' },
+type Snapshot = { sessions: Investigation[]; sources: LinhaSaude[]; health: string };
+// Estados vindos de /api/health: ONLINE, LIMITADO, NÃO CONFIGURADO, ERRO.
+const STATE: Record<string, { label: string; className: string }> = {
+  READY: { label: 'Online', className: 'ready' }, RATE_LIMITED: { label: 'Limitado', className: 'limited' },
+  NOT_CONFIGURED: { label: 'Não configurado', className: 'offline' }, MISSING_SECRET: { label: 'Não configurado', className: 'offline' },
+  NOT_INSTALLED: { label: 'Não instalado', className: 'offline' }, DISABLED: { label: 'Desligado', className: 'offline' },
+  ERROR: { label: 'Erro', className: 'error' }, INCOMPATIBLE: { label: 'Incompatível', className: 'offline' },
 };
+const sourceStatus = (status: string) => STATE[status] ?? { label: status, className: 'offline' };
 
-const estadoDe = (s: EstadoSaude | string) => ESTADO_FONTE[s] ?? { chave: 'nc' as const, texto: s };
-
-export default function Dashboard({
-  user, tools, usage, setView,
-}: {
-  user: User; tools: ToolPublic[]; usage: Usage | null; setView: (v: View) => void;
+export default function Dashboard({ user, tools, usage, setView }: {
+  user: User; tools: ToolPublic[]; usage: Usage | null; setView: (view: View) => void;
 }) {
-  const [q, setQ] = useState('');
-  const [alvo, setAlvo] = useState('');
-  const [resumo, setResumo] = useState<Resumo | null>(null);
-  const [saude, setSaude] = useState<{ linhas: LinhaSaude[]; geral: EstadoSaude } | null>(null);
+  const [target, setTarget] = useState('');
+  const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
+  const [graph, setGraph] = useState<Graph | null>(null);
 
   useEffect(() => {
-    let vivo = true;
+    let active = true;
     Promise.all([
       api.investigations().then((r) => r.investigations).catch(() => []),
-      api.history().then((r) => r.runs).catch(() => []),
       api.saude(false).then((r) => r.relatorio).catch(() => null),
-    ]).then(([sessoes, hist, rel]) => {
-      if (!vivo) return;
-      setResumo({ sessoes: sessoes.slice(0, 4) as Resumo['sessoes'], historico: hist.slice(0, 5) });
-      if (rel && Array.isArray(rel.providers)) {
-        setSaude({
-          geral: rel.estadoGeral,
-          linhas: rel.providers.filter((l) => l.tipo === 'api' || l.tipo === 'endpoint'),
-        });
+    ]).then(([sessions, health]) => {
+      if (!active) return;
+      setSnapshot({
+        sessions: sessions.slice(0, 4),
+        sources: health?.providers ?? [],
+        health: health?.estadoGeral ?? 'NOT_CONFIGURED',
+      });
+      if (sessions[0]) {
+        api.investigation(sessions[0].id).then((detail) => {
+          if (active) setGraph({ nodes: detail.nodes, edges: detail.edges, runs: [], seedType: detail.investigation.seed_type });
+        }).catch(() => { if (active) setGraph(null); });
       }
     });
-    return () => { vivo = false; };
+    return () => { active = false; };
   }, []);
 
-  const restantes = usage ? Math.max(0, usage.daily - usage.today) : null;
-  const encontrados = q.trim() ? buscar(tools, q) : tools;
-  const geral = saude ? estadoDe(saude.geral) : null;
-  const prontas = saude?.linhas.filter((l) => l.status === 'READY').length ?? 0;
-
-  const principais = ATALHOS
-    .map((a) => tools.find((t) => t.id === a.id))
-    .filter((t): t is ToolPublic => !!t && t.lock !== 'locked')
-    .slice(0, 4);
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    const value = target.trim().replace(/^@/, '');
+    if (!value) return;
+    sessionStorage.setItem('argos:initial-target', value);
+    setView({ k: 'nova' });
+  };
+  const status = sourceStatus(snapshot?.health ?? 'NOT_CONFIGURED');
+  const online = snapshot?.sources.filter((source) => source.status === 'READY').length ?? 0;
+  const used = usage?.today ?? 0;
+  const daily = usage?.daily ?? 0;
 
   return (
-    <div className="page dash">
-      {/* ---------- Ação principal + estado real ---------- */}
-      <section className="dash-hero">
-        <div>
-          <p className="dash-kicker">Painel · {NOME_PLANO[user.plan]}</p>
-          <h1 className="dash-titulo">O que vamos investigar?</h1>
-          <p className="dash-estado">
-            {geral ? (
-              <><span className="ponto" data-e={geral.chave} /> {geral.texto} · {prontas}/{saude!.linhas.length} fontes prontas</>
-            ) : (
-              'A ler o estado do sistema…'
-            )}
-            {restantes !== null && (
-              <> · <strong>{restantes}</strong> de {usage!.daily} execuções hoje</>
-            )}
-          </p>
-        </div>
-        <div className="dash-cta">
-          <button className="btn btn-primary btn-lg" type="button" onClick={() => setView({ k: 'nova' })}>
-            <Icon.target /> Nova investigação
-          </button>
-          <button className="btn" type="button" onClick={() => setView({ k: 'health' })}>
-            Estado do sistema
-          </button>
-        </div>
-      </section>
-
-      {/* ---------- Verificação rápida estilo Maigret: username primeiro ---------- */}
-      <section className="dash-quick" aria-label="Verificação rápida de username">
-        <form
-          className="dash-quick-form"
-          onSubmit={(e) => {
-            e.preventDefault();
-            const v = alvo.trim().replace(/^@/, '');
-            if (!v) return;
-            const t = tools.find((t) => t.id === 'username-intel' && t.lock !== 'locked')
-              ?? tools.find((t) => t.id === 'username-finder' && t.lock !== 'locked');
-            setView(t ? { k: 'tool', id: t.id } : { k: 'nova' });
-          }}
-        >
-          <label className="micro" htmlFor="dash-username">Verificação rápida — username</label>
-          <div className="dash-quick-row">
-            <input
-              id="dash-username"
-              className="input"
-              type="text"
-              inputMode="text"
-              autoComplete="off"
-              autoCapitalize="none"
-              spellCheck={false}
-              placeholder="@username"
-              value={alvo}
-              onChange={(e) => setAlvo(e.target.value)}
-            />
-            <button className="btn btn-primary" type="submit" disabled={!alvo.trim()}>
-              Verificar
-            </button>
+    <div className="dashboard-layout">
+      <div className="dashboard-main">
+        <section className="dashboard-hero dash-hero">
+          <div className="dashboard-hero-copy">
+            <p className="dashboard-eyebrow">ARGOS <span>POR SR. AMORIM</span></p>
+            <h1>Investigue <em>qualquer alvo.</em><br className="hero-break" /> Em segundos.</h1>
+            <p className="dashboard-lede">Módulos de investigação OSINT com relatório, fontes e proveniência — no seu telemóvel.</p>
           </div>
-          <p className="t-xs dim">Presença pública em centenas de sites (Maigret + registos abertos). Só fontes públicas.</p>
-        </form>
-      </section>
+        </section>
 
-      {/* ---------- Continuar ---------- */}
-      <section aria-label="Investigações recentes">
-        <div className="regra">
-          <span className="micro">Continuar</span>
-          <span className="grow" />
-          <button className="btn btn-sm btn-quiet" type="button" onClick={() => setView({ k: 'inv' })}>ver todas</button>
-        </div>
-        {!resumo ? (
-          <Skeleton lines={2} />
-        ) : resumo.sessoes.length === 0 ? (
-          <div className="card">
-            <Empty icon={Icon.network} title="Ainda não investigaste nada"
-              action={<button className="btn btn-primary btn-sm" type="button" onClick={() => setView({ k: 'nova' })}>começar a primeira</button>}>
-              O resultado fica guardado com o grafo inteiro, e relê-lo não gasta cota.
-            </Empty>
+        <section className="dashboard-search-panel" aria-labelledby="new-investigation-title">
+          <div className="section-heading">
+            <span className="section-heading-icon"><Icon.search /></span>
+            <div><h2 id="new-investigation-title">Nova investigação</h2><p>Digite um alvo para começar. O ARGOS seleciona as ferramentas mais relevantes.</p></div>
           </div>
-        ) : (
-          <div className="stack" style={{ gap: 'var(--s-2)' }}>
-            {resumo.sessoes.map((s) => (
-              <button key={s.id} className="invest-card" type="button" onClick={() => setView({ k: 'inv', id: s.id })}>
-                <span className="invest-ico"><Icon.network /></span>
-                <span className="invest-txt">
-                  <span className="invest-alvo">{s.seed || s.title}</span>
-                  <span className="invest-meta">
-                    {s.seed_type ?? 'alvo'} · {s.node_count ?? 0} nós · {s.edge_count ?? 0} ligações ·{' '}
-                    {new Date(s.updated_at).toLocaleDateString('pt-BR')}
-                  </span>
-                </span>
-                <Icon.chevronRight width={16} height={16} style={{ color: 'var(--t-4)' }} />
-              </button>
-            ))}
-          </div>
-        )}
-      </section>
+          <form className="dashboard-target-form" onSubmit={submit}>
+            <label className="sr-only" htmlFor="busca-global">Usuário, e-mail, domínio, telefone, IP ou URL</label>
+            <Icon.search />
+            <input id="busca-global" value={target} onChange={(event) => setTarget(event.target.value)} placeholder="Usuário, e-mail, domínio, telefone, IP ou URL..." autoCapitalize="none" autoComplete="off" />
+            <button className="btn btn-primary" type="submit" disabled={!target.trim()}>Iniciar análise <span aria-hidden>→</span></button>
+          </form>
+          <div className="target-examples"><span>Exemplos:</span>{['usuario123', 'exemplo.com', 'teste@email.com', '+55 11 99999-9999', '192.168.1.1'].map((example) => <button type="button" key={example} onClick={() => setTarget(example)}>{example}</button>)}</div>
+        </section>
 
-      {/* ---------- Ferramentas ---------- */}
-      <section aria-label="Ferramentas">
-        <div className="regra"><span className="micro">Ferramentas</span></div>
-        <div className="grid grid-2" style={{ marginBottom: 'var(--s-4)' }}>
-          {principais.map((t) => (
-            <button key={t.id} className="tool-card" type="button" onClick={() => setView({ k: 'tool', id: t.id })}>
-              <div className="tool-top">
-                <span className="tool-glyph"><Icon.network /></span>
-                <span className="grow" style={{ minWidth: 0 }}>
-                  <span className="tool-name">{t.name}</span>
-                </span>
-              </div>
-              <div className="tool-sum">{t.summary}</div>
-              <span className="tool-chevron"><Icon.chevronRight /></span>
-            </button>
-          ))}
-        </div>
-        <div style={{ marginBottom: 'var(--s-4)' }}>
-          <SearchInput
-            value={q}
-            onChange={setQ}
-            placeholder="Procurar ferramenta… (ex.: username, domínio, telefone)"
-          />
-        </div>
-        {q.trim() ? (
-          encontrados.length === 0 ? (
-            <div className="card">
-              <Empty icon={Icon.search} title="Nada encontrado"
-                action={<button className="btn btn-quiet btn-sm" type="button" onClick={() => setQ('')}>limpar pesquisa</button>}>
-                Não há ferramenta para “{q}”.
-              </Empty>
-            </div>
-          ) : (
-            <div className="grid grid-3">
-              {encontrados.map((t) => (
-                <button key={t.id} className="tool-card" type="button"
-                  data-locked={t.lock === 'locked'}
-                  onClick={() => setView({ k: 'tool', id: t.id })}>
-                  {t.lock === 'locked' && <span className="tag tag-pro tool-badge">PRO</span>}
-                  <div className="tool-top">
-                    <span className="tool-glyph"><Icon.network /></span>
-                    <span className="grow" style={{ minWidth: 0 }}>
-                      <span className="tool-name">{t.name}</span>
-                    </span>
-                  </div>
-                  <div className="tool-sum">{t.summary}</div>
-                  <span className="tool-chevron"><Icon.chevronRight /></span>
-                </button>
-              ))}
-            </div>
-          )
-        ) : (
-          <div className="grid grid-2">
-            {GRUPOS.map((g) => {
-              const lista = porGrupo(tools, g.id);
-              if (!lista.length) return null;
-              const Ico = g.icon;
-              return (
-                <article className="card layer-card" key={g.id}>
-                  <div className="layer-card-head">
-                    <span className="layer-card-ico"><Ico /></span>
-                    <div style={{ minWidth: 0, flex: 1 }}>
-                      <div className="card-title">{g.nome}</div>
-                      <div className="card-sub">{g.resumo}</div>
-                    </div>
-                    <span className="layer-card-n">{lista.length}</span>
-                  </div>
-                  <div className="layer-list">
-                    {lista.map((t) => (
-                      <button key={t.id} className="nav-item" type="button"
-                        aria-current={false}
-                        onClick={() => setView({ k: 'tool', id: t.id })}>
-                        <span className="nav-label-txt">{t.name}</span>
-                        {t.lock === 'locked'
-                          ? <span className="tag tag-pro">PRO</span>
-                          : <Icon.chevronRight width={14} height={14} style={{ color: 'var(--t-4)' }} />}
-                      </button>
-                    ))}
-                  </div>
-                </article>
-              );
+        <section className="dashboard-modules" aria-labelledby="modules-title">
+          <div className="dashboard-section-title"><span><Icon.grid /><h2 id="modules-title">Módulos de investigação</h2></span><button type="button" onClick={() => setView({ k: 'nova' })}>Ver todas as ferramentas <span>→</span></button></div>
+          <div className="mod-list">
+            {GRUPOS.map((group) => {
+              const entries = porGrupo(tools, group.id);
+              if (!entries.length) return null;
+              const GroupIcon = group.icon;
+              const locked = entries.every((tool) => tool.lock === 'locked');
+              return <button className="mod-card" type="button" key={group.id} onClick={() => setView({ k: 'tool', id: entries[0].id })}>
+                <span className="mod-ico"><GroupIcon /></span>
+                <span className="mod-copy"><strong>{group.nome}</strong><small>{group.resumo}</small><span className="mod-tools">{entries.map((tool) => tool.name).join(' · ')}{locked && ' · PRO'}</span></span>
+                <Icon.chevronRight />
+              </button>;
             })}
           </div>
-        )}
-      </section>
+        </section>
+
+        <section className="dashboard-graph-card">
+          <div className="dashboard-section-title"><span><Icon.network /><h2>Grafo de conexões</h2></span><div><button type="button" onClick={() => setView({ k: 'inv' })}>Ver investigações <span>→</span></button></div></div>
+          {graph?.nodes.length ? <div className="dashboard-graph"><GraphView graph={graph} /></div> : snapshot?.sessions.length === 0 ? <div className="dashboard-graph-empty"><Empty icon={Icon.network} title="Seu primeiro grafo começa com uma investigação" action={<button className="btn btn-primary btn-sm" type="button" onClick={() => setView({ k: 'nova' })}>Iniciar investigação</button>}>As conexões aparecem aqui quando houver resultados salvos.</Empty></div> : <Skeleton lines={3} />}
+        </section>
+      </div>
+
+      <aside className="dashboard-rail" aria-label="Resumo do sistema e atividade">
+        <section className="rail-card">
+          <div className="rail-title"><Icon.activity /><h2>Status do sistema</h2><button type="button" onClick={() => setView({ k: 'health' })}>Detalhes <span>→</span></button></div>
+          <div className="system-overview"><span className={`status-pip ${status.className}`} /><div><strong>{status.label}</strong><small>{snapshot ? `${online} de ${snapshot.sources.length} fontes prontas` : 'Consultando fontes reais'}</small></div><span className="system-count">{snapshot ? `${online}/${snapshot.sources.length}` : '—'}</span></div>
+          <div className="source-status-list">{!snapshot ? <Skeleton lines={4} /> : snapshot.sources.slice(0, 8).map((source) => {
+            const itemStatus = sourceStatus(source.status);
+            return <div className="source-status-row" key={`${source.nome}-${source.modulo}`}><span className={`status-pip ${itemStatus.className}`} /><span>{source.nome}</span><small>{itemStatus.label}</small></div>;
+          })}</div>
+          <button className="rail-footer-link" type="button" onClick={() => setView({ k: 'health' })}>Abrir relatório de saúde <span>→</span></button>
+        </section>
+
+        <section className="rail-card">
+          <div className="rail-title"><Icon.clock /><h2>Investigações recentes</h2><button type="button" onClick={() => setView({ k: 'inv' })}>Ver todas <span>→</span></button></div>
+          {!snapshot ? <Skeleton lines={3} /> : snapshot.sessions.length ? <div className="recent-list">{snapshot.sessions.slice(0, 4).map((session) => <button type="button" className="recent-item" key={session.id} onClick={() => setView({ k: 'inv', id: session.id })}><span className="recent-icon"><Icon.globe /></span><span className="recent-copy"><strong>{session.seed || session.title}</strong><small>{session.seed_type || 'Alvo'} · {session.node_count ?? 0} fontes/entidades</small></span><span className="recent-meta">{relativeTime(session.updated_at)}<Icon.chevronRight /></span></button>)}</div> : <p className="rail-empty">Nenhuma investigação salva ainda.</p>}
+        </section>
+
+        <section className="rail-card">
+          <div className="rail-title"><Icon.server /><h2>Fontes disponíveis</h2><button type="button" onClick={() => setView({ k: 'health' })}>Ver todas <span>→</span></button></div>
+          {!snapshot ? <Skeleton lines={3} /> : <div className="provider-list">{snapshot.sources.slice(0, 6).map((source) => {
+            const itemStatus = sourceStatus(source.status);
+            return <div className="provider-item" key={`${source.nome}-${source.modulo}`}><span className="provider-mark"><Icon.globe /></span><span className="provider-copy"><strong>{source.nome}</strong><small>{source.servicoExterno || source.tipo}</small></span><span className={`provider-state ${itemStatus.className}`}>{itemStatus.label}</span></div>;
+          })}</div>}
+        </section>
+
+        <section className="rail-plan-card"><div><span className="rail-plan-kicker">SEU PLANO</span><strong>{user.plan.toUpperCase()}</strong><small>{usage ? `${used} de ${daily} análises usadas hoje` : 'Entre para consultar seus limites'}</small></div><div className="plan-meter"><i style={{ width: `${daily ? Math.min(100, used / daily * 100) : 0}%` }} /></div><button type="button" onClick={() => setView({ k: 'plans' })}>Ver planos <span>→</span></button></section>
+      </aside>
     </div>
   );
+}
+
+function relativeTime(value: string) {
+  const then = new Date(value).getTime();
+  if (!Number.isFinite(then)) return '';
+  const hours = Math.max(0, Math.floor((Date.now() - then) / 3_600_000));
+  if (hours < 1) return 'agora';
+  if (hours < 24) return `há ${hours} h`;
+  return `há ${Math.floor(hours / 24)} d`;
 }

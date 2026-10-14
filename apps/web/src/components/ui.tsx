@@ -12,33 +12,44 @@ export { Icon };
 
 // --------------------------------------------------------------------- marca
 /**
- * O símbolo: um olho de traço fino com a íris no azul da marca.
+ * O símbolo: o lobo geométrico em facetas planas (identidade v3.0).
  *
  * A geometria é a mesma do `public/logo-mark.svg` e as cores são as mesmas
- * tokens da interface — o teste `ui.test.mts` compara as duas e falha se
- * divergirem, que é como se garante que o logótipo do browser e o do React
- * são a mesma marca.
+ * da marca — o teste `ui.test.mts` compara as duas e falha se divergirem,
+ * que é como se garante que o logótipo do browser e o do React são a mesma
+ * marca.
  */
 export function Mark({ size = 30, className }: { size?: number; className?: string }) {
   return (
     <svg className={className} width={size} height={size} viewBox="0 0 32 32" role="img" aria-label="ARGOS">
       <defs>
-        <linearGradient id="argos-pupila" x1="0" y1="0" x2="0.35" y2="1">
-          <stop offset="0" stopColor="#2E9BFF" />
-          <stop offset="1" stopColor="#1B6EF3" />
-        </linearGradient>
         <linearGradient id="argos-fundo" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#101828" />
-          <stop offset="1" stopColor="#05070C" />
+          <stop offset="0" stopColor="#0E3B2F" />
+          <stop offset="1" stopColor="#071F19" />
         </linearGradient>
       </defs>
       <rect width="32" height="32" rx="6.9" fill="url(#argos-fundo)" />
-      <circle cx="16" cy="16" r="13.7" fill="none" stroke="#9AA7BD" strokeOpacity=".30" strokeWidth="1.4" />
-      <path d="M4.4 16C7.5 11.6 11.5 9.3 16 9.3s8.5 2.3 11.6 6.7c-3.1 4.4-7.1 6.7-11.6 6.7S7.5 20.4 4.4 16Z"
-        fill="none" stroke="#9AA7BD" strokeOpacity=".92" strokeWidth="1.5" strokeLinejoin="round" />
-      <circle cx="16" cy="16" r="6.2" fill="none" stroke="#9AA7BD" strokeOpacity=".72" strokeWidth="1.1" />
-      <circle cx="16" cy="16" r="3.2" fill="url(#argos-pupila)" />
-      <circle cx="18.3" cy="13.7" r="1.05" fill="#FFFFFF" fillOpacity=".85" />
+      <g stroke="none">
+        <path d="M7 3.5 L12.5 6 L8 12.5 Z" fill="#4E7A66" />
+        <path d="M25 3.5 L19.5 6 L24 12.5 Z" fill="#4E7A66" />
+        <path d="M8.7 6.2 L11.3 7.1 L9.4 11.3 Z" fill="#2FE08F" />
+        <path d="M23.3 6.2 L20.7 7.1 L22.6 11.3 Z" fill="#2FE08F" />
+        <path d="M12.5 6 L19.5 6 L16 10.5 Z" fill="#EAF7F0" />
+        <path d="M8 12.5 L16 10.5 L11.5 15 Z" fill="#EAF7F0" />
+        <path d="M24 12.5 L16 10.5 L20.5 15 Z" fill="#EAF7F0" />
+        <path d="M16 10.5 L16 15.5 L11.5 15 Z" fill="#EAF7F0" />
+        <path d="M16 10.5 L16 15.5 L20.5 15 Z" fill="#EAF7F0" />
+        <path d="M8 12.5 L11.5 15 L8.8 21 Z" fill="#A9DCC3" />
+        <path d="M24 12.5 L20.5 15 L23.2 21 Z" fill="#A9DCC3" />
+        <path d="M8.8 21 L16 17.5 L11.5 27.5 Z" fill="#A9DCC3" />
+        <path d="M23.2 21 L16 17.5 L20.5 27.5 Z" fill="#A9DCC3" />
+        <path d="M11.5 27.5 L16 24.5 L16 29 Z" fill="#4E7A66" />
+        <path d="M20.5 27.5 L16 24.5 L16 29 Z" fill="#4E7A66" />
+        <path d="M13.5 18 L18.5 18 L16 25 Z" fill="#EAF7F0" />
+        <path d="M14.2 22.3 L17.8 22.3 L16 24.3 Z" fill="#071F19" />
+        <path d="M10.3 15.3 L13.2 15.8 L11 18 Z" fill="#2FE08F" />
+        <path d="M21.7 15.3 L18.8 15.8 L21 18 Z" fill="#2FE08F" />
+      </g>
     </svg>
   );
 }

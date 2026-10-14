@@ -1,27 +1,6 @@
-/**
- * Espaço de trabalho do ARGOS.
- *
- * A aplicação é uma **área de trabalho**, não uma pilha de páginas: barra no
- * topo, ícones agrupados pelo que se quer fazer, e ferramentas que abrem em
- * **janelas** que se arrastam, redimensionam, minimizam e fecham. Ter o
- * domínio e o IP abertos ao mesmo tempo é metade do que uma investigação
- * precisa — em páginas que se substituem, comparar dois alvos obriga a andar
- * para trás a perder o que se tinha escrito.
- *
- * Quatro decisões:
- *
- *  1. **A organização continua a vir do `ia.ts`.** A lateral, o painel, a
- *     busca e os atalhos leem dela; nada aqui inventa ordem nem categoria.
- *  2. **O primeiro ecrã continua a ser o painel.** Quem entra quer investigar,
- *     não ler um índice: a janela do painel abre sozinha.
- *  3. **A navegação nunca aparece duas vezes.** Abaixo de 1200px é a gaveta
- *     (hamburger) mais a barra inferior de quatro destinos; a partir de
- *     1200px a gaveta dá lugar a uma lateral fixa de 280px e a barra
- *     inferior desaparece. É o CSS que decide o papel da lateral e é ele que
- *     anima a gaveta — em JavaScript só fica o `drawer` aberto ou fechado.
- *  4. **Telemóvel não é um desktop ao pequenino.** As janelas ocupam a área
- *     toda, os alvos de toque têm 44px e a barra inferior tem 68px.
- */
+/** Estrutura principal do ARGOS: sidebar no desktop, navegação inferior no
+ * Android e uma área de conteúdo única. Rotas e grupos continuam a usar os
+ * componentes e o catálogo reais do projeto. */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactElement } from 'react';
 import type { SVGProps } from 'react';
@@ -481,7 +460,7 @@ export default function AppShell({
           telemóvel é a gaveta que desliza. A animação é do CSS. */}
       <aside className="sidebar" data-open={drawer} aria-label="Navegação principal">
         <div className="side-brand">
-          <Brand size={30} subtitle="Fontes abertas" />
+          <Brand size={30} subtitle="Inteligência social" />
         </div>
         {conteudoLateral}
       </aside>
@@ -518,7 +497,7 @@ export default function AppShell({
             whileTap={{ scale: 0.98 }}
             transition={{ type: 'spring', stiffness: 420, damping: 24 }}
           >
-            <Brand size={26} subtitle="Fontes abertas" />
+            <Brand size={26} subtitle="Inteligência social" />
           </motion.button>
           <button className="topbar-busca only-wide" type="button" onClick={irParaBusca}>
             <Icon.search />
@@ -572,117 +551,7 @@ export default function AppShell({
           </details>
         </header>
 
-        {/* ------------------------------------------------------- área de trabalho */}
-        <main className="desktop" ref={areaRef}>
-          <AnimatePresence>
-            {ordem.length === 0 && (
-              <motion.div
-                className="desk-hint"
-                key="dica"
-                initial={{ opacity: 0, y: 22, scale: 0.97 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -10, scale: 0.97 }}
-                transition={{ type: 'spring', stiffness: 140, damping: 18, delay: 0.35 }}
-              >
-                <Icon.target />
-                <p className="t-sm">Escolhe uma ferramenta na lateral para a abrir. Várias podem ficar abertas ao mesmo tempo.</p>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          <AnimatePresence>
-            {ordem.map((k, i) => {
-              const j = abertas[k];
-              if (!j) return null;
-              return (
-                <Janela
-                  key={k}
-                  titulo={tituloDe(j.vista)}
-                  icone={iconeDe(j.vista)}
-                  geom={j.geom}
-                  espaco={espaco}
-                  z={20 + i}
-                  ativa={ativa === k}
-                  max={j.max}
-                  min={j.min}
-                  onFocar={() => focar(k)}
-                  onFechar={() => fechar(k)}
-                  onMin={() => alternarMin(k)}
-                  onMax={() => alternarMax(k)}
-                  onGeom={(g) => porGeom(k, g)}
-                >
-                  {conteudo(j.vista)}
-                </Janela>
-              );
-            })}
-          </AnimatePresence>
-        </main>
-
-        {/* --------------------------------------------------------- barra de tarefas */}
-        <footer className="taskbar only-desk">
-          <div className="task-list">
-            <AnimatePresence initial={false} mode="popLayout">
-              {ordem.map((k) => {
-                const j = abertas[k];
-                if (!j) return null;
-                const Ico = iconeDe(j.vista);
-                return (
-                  <motion.button
-                    key={k}
-                    className="task-item"
-                    type="button"
-                    layout
-                    data-ativa={ativa === k && !j.min ? 'true' : 'false'}
-                    onClick={() => focar(k)}
-                    title={tituloDe(j.vista)}
-                    initial={{ opacity: 0, scale: 0.7, y: 14 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.7, y: 14 }}
-                    whileTap={{ scale: 0.94 }}
-                    transition={{ type: 'spring', stiffness: 420, damping: 30 }}
-                  >
-                    <Ico /> <span className="task-name">{tituloDe(j.vista)}</span>
-                  </motion.button>
-                );
-              })}
-            </AnimatePresence>
-          </div>
-          <span className="grow" />
-          {usage && <span className="task-quota">{usage.today}/{usage.daily}</span>}
-          <span className="task-copy">{wa?.copyright ?? '© 2026 SR. Amorim'} · Todos os direitos reservados.</span>
-        </footer>
-      </div>
-
-      {/* ------------------------------------------------------------ canal de contacto */}
-      <div className="dock only-desk" aria-label="Contacto">
-        {wa && (
-          <motion.a
-            className="dock-btn"
-            href={wa.link}
-            target="_blank"
-            rel="noopener noreferrer"
-            title={wa.label}
-            aria-label={wa.label}
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.92 }}
-            transition={{ type: 'spring', stiffness: 420, damping: 18 }}
-          >
-            <Icon.phone />
-          </motion.a>
-        )}
-        <motion.a
-          className="dock-btn"
-          href="https://github.com/sramorim/argus"
-          target="_blank"
-          rel="noopener noreferrer"
-          title="Código-fonte"
-          aria-label="Código-fonte"
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.92 }}
-          transition={{ type: 'spring', stiffness: 420, damping: 18 }}
-        >
-          <Icon.code />
-        </motion.a>
+        <main className="content-area" data-view={view.k}>{conteudo(view)}</main>
       </div>
 
       {/* ---------------------------------------------------------- barra inferior */}
@@ -692,7 +561,7 @@ export default function AppShell({
             key={t.id}
             className="tab"
             type="button"
-            aria-current={view.k === t.v.k}
+            aria-current={view.k === t.v.k || (view.k === 'tool' && t.v.k === 'nova')}
             onClick={() => go(t.v)}
             whileTap={{ scale: 0.94 }}
             transition={{ type: 'spring', stiffness: 420, damping: 22 }}
@@ -709,62 +578,6 @@ export default function AppShell({
         ))}
       </nav>
 
-      {/* ------------------------------------------------------------------ atalho rápido */}
-      {/* O botão flutuante é o caminho de um clique para o que se faz a toda a
-          hora. Abre para cima, sobre a barra de tarefas, e fecha-se sozinho com
-          Escape — é um menu, e um menu que fica aberto a tapar o ecrã é pior
-          do que não o ter. */}
-      <div className="fab-wrap">
-        <AnimatePresence>
-          {fabAberto && (
-            <motion.div
-              className="fab-menu"
-              key="menu"
-              initial={{ opacity: 0, scale: 0.7, y: 16 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.7, y: 16 }}
-              transition={{ type: 'spring', stiffness: 320, damping: 26, mass: 0.6 }}
-            >
-              {ATALHOS.map((a, i) => {
-                const v: View = { k: 'tool', id: a.id };
-                return (
-                  <motion.button
-                    key={a.id}
-                    className="fab-item"
-                    type="button"
-                    title={a.nome}
-                    onClick={() => { go(v); setFabAberto(false); }}
-                    initial={{ opacity: 0, y: 12, scale: 0.8 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 8, scale: 0.8 }}
-                    transition={{ type: 'spring', stiffness: 400, damping: 28, delay: i * 0.03 }}
-                    whileTap={{ scale: 0.96 }}
-                  >
-                    {a.icon({})}
-                    <span>{a.nome}</span>
-                  </motion.button>
-                );
-              })}
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        <motion.button
-          className="fab"
-          type="button"
-          aria-label={fabAberto ? 'Fechar atalhos' : 'Abrir atalhos'}
-          aria-expanded={fabAberto}
-          onClick={() => setFabAberto((a) => !a)}
-          animate={{ rotate: fabAberto ? 135 : 0 }}
-          whileTap={{ scale: 0.92 }}
-          transition={{ type: 'spring', stiffness: 340, damping: 24 }}
-        >
-          <span className="animate-spin-slow fab-anel" aria-hidden />
-          <span className="animate-fab-glow fab-nucleo" aria-hidden>
-            <Icon.plus />
-          </span>
-        </motion.button>
-      </div>
     </div>
   );
 }

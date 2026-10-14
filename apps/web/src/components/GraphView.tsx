@@ -19,15 +19,17 @@ import type { Graph, GraphNode } from '../api';
 import { CONF_LABEL, CONF_HINT } from '../api';
 import { Icon } from './Icons';
 
-/* As cores dos nós saem da paleta do Design System: o accent para o alvo, uma
-   rampa de azuis e neutros para o resto, e o âmbar do estado de aviso para
-   carteira e conta. Nenhuma cor nova foi inventada. */
+/* As cores dos nós saem da paleta do Design System v3.0 (tema claro): o accent
+   para o alvo, uma rampa de esmeraldas e neutros escuros para o resto, e o
+   âmbar escuro do estado de aviso para carteira e conta. Nenhuma cor nova foi
+   inventada; os pontos claros do tema escuro viraram tinta escura legível
+   sobre fundo branco. */
 const NODE_COLOR: Record<string, string> = {
-  seed: '#2E9BFF', pessoa: '#FFFFFF', username: '#FFFFFF', conta: '#F5A623',
-  email: '#9BD4FF', telefone: '#B9A5D9', dominio: '#6FC0FF', ip: '#5F6B84',
-  servico: '#7A879F', empresa: '#9AA7BD', socio: '#8C97AB', endereco: '#8492A8',
-  wallet: '#F5A623', portfolio: '#6FC0FF', cve: '#2E9BFF', pacote: '#B9A5D9',
-  breach: '#2E9BFF', documento: '#7A879F', hashtag: '#C7B48C',
+  seed: '#0E9F6E', pessoa: '#10181D', username: '#2A343C', conta: '#B26A00',
+  email: '#046C4E', telefone: '#7C6AAE', dominio: '#178A5B', ip: '#5F6B84',
+  servico: '#7A879F', empresa: '#6E7B86', socio: '#8C97AB', endereco: '#8492A8',
+  wallet: '#B26A00', portfolio: '#178A5B', cve: '#0E9F6E', pacote: '#7C6AAE',
+  breach: '#046C4E', documento: '#7A879F', hashtag: '#8A7748',
 };
 const TYPE_LABEL: Record<string, string> = {
   pessoa: 'pessoa', username: 'username', conta: 'conta', email: 'email', telefone: 'telefone',
@@ -197,10 +199,10 @@ export default function GraphView({ graph }: { graph: Graph; onPick?: (n: GraphN
                 <circle cx={p.x} cy={p.y} r={22} fill="transparent" />
                 <circle
                   cx={p.x} cy={p.y} r={r} fill={color} opacity={isSeed ? 1 : 0.88}
-                  stroke={active ? '#fff' : achado ? 'transparent' : color} strokeWidth={active ? 2 : 1}
+                  stroke={active ? '#10181D' : achado ? 'transparent' : color} strokeWidth={active ? 2 : 1}
                 />
                 {n.hop >= 1 && (
-                  <text x={p.x} y={p.y + r + 12} fontSize="10" fill="#9AA7BD" textAnchor="middle">
+                  <text x={p.x} y={p.y + r + 12} fontSize="10" fill="#4A5A66" textAnchor="middle">
                     {n.value.length > 28 ? `${n.value.slice(0, 27)}…` : n.value}
                   </text>
                 )}

@@ -524,29 +524,29 @@ function abreCamadas(t: { caixa: Element; html: () => string }) {
 /** O CSS sem os comentários: é o que o navegador aplica. */
 const semComentarios = (css: string): string => css.replace(/\/\*[\s\S]*?\*\//g, '');
 
-test('a paleta é a do Design System — azul profesional, sem verde Matrix', () => {
+test('a paleta é a do Design System — tema claro com accent esmeralda', () => {
   const css = readFileSync(join(SRC, 'styles.css'), 'utf8');
   // Lê o valor pelo nome do token, sem depender do alinhamento de espaços.
   const token = (nome: string) => new RegExp(nome + '\\s*:\\s*(#[0-9A-Fa-f]{3,8})').exec(css)?.[1];
-  // Os valores são os da ficha (Design System v1.0). O que este teste protege
-  // não é a moda: é que o accent continue a ser azul e a continue a ser o
-  // mesmo em toda a aplicação.
+  // Os valores são os da ficha (Design System v3.0 "lobo claro"). O que este
+  // teste protege não é a moda: é que o accent continue a ser o mesmo em toda
+  // a aplicação.
   const esperado: Record<string, string> = {
-    '--bg': '#05070C',
-    '--bg-2': '#030509',
-    '--surface': '#0A0F1C',
-    '--surface-2': '#101828',
-    '--surface-3': '#16213A',
-    '--line': '#1B2540',
-    '--line-strong': '#2B3B63',
-    '--blue': '#2E9BFF',
-    '--blue-2': '#1B6EF3',
-    '--t-1': '#FFFFFF',
-    '--t-2': '#9AA7BD',
-    '--t-3': '#5F6B84',
-    '--erro': '#F0524F',
-    '--ok': '#2FD27D',
-    '--aviso': '#F5A623',
+    '--bg': '#FFFFFF',
+    '--bg-2': '#F4F6F8',
+    '--surface': '#FFFFFF',
+    '--surface-2': '#F1F4F7',
+    '--surface-3': '#E5EAF0',
+    '--line': '#E0E7ED',
+    '--line-strong': '#C2CDD6',
+    '--blue': '#0E9F6E',
+    '--blue-2': '#046C4E',
+    '--t-1': '#10181D',
+    '--t-2': '#4A5A66',
+    '--t-3': '#6E7B86',
+    '--erro': '#D43A33',
+    '--ok': '#149A63',
+    '--aviso': '#B26A00',
   };
   for (const [nome, valor] of Object.entries(esperado)) {
     assert.equal(token(nome), valor, `${nome} devia ser ${valor}, obtive ${token(nome)}`);
@@ -568,9 +568,9 @@ test('o Design System está implementado: gradientes, medidas e micro-label', ()
   const css = semComentarios(readFileSync(join(SRC, 'styles.css'), 'utf8'));
 
   // CTA e hero são os gradientes exactos da ficha.
-  assert.match(css, /--grad-cta:\s*linear-gradient\(135deg,\s*#1B6EF3 0%,\s*#2E9BFF 100%\)/,
+  assert.match(css, /--grad-cta:\s*linear-gradient\(135deg,\s*#046C4E 0%,\s*#0E9F6E 100%\)/,
     'o gradiente do CTA não é o da ficha');
-  assert.match(css, /--grad-hero:\s*radial-gradient\(120% 90% at 80% 10%,\s*#122B52 0%,\s*#05070C 60%\)/,
+  assert.match(css, /--grad-hero:\s*radial-gradient\(120% 90% at 80% 10%,\s*#DCEFE6 0%,\s*#FFFFFF 60%\)/,
     'o gradiente do hero não é o da ficha');
 
   // Medidas: alvo de toque 44, botão e campo 52, cartão 20 de raio, 68 de barra.
@@ -922,6 +922,10 @@ test('toda variável de produção de que o código precisa está no render.yaml
     // Nome alternativo do token do Apify (é o que a documentação oficial usa).
     // Aceitamos os dois por isso não precisa de estar no Blueprint.
     'APIFY_TOKEN',
+    // Aliases aceites pelo config.ts: DATABASE_URL é o alias simples de ARGUS_DB,
+    // WHATSAPP_NUMBER é o alias de ARGUS_CONTACTO_WHATSAPP. O Blueprint declara
+    // as chaves canónicas por isso os aliases não precisam de estar lá.
+    'DATABASE_URL', 'WHATSAPP_NUMBER',
   ]);
 
   const declaradas = new Set([...yml.matchAll(/^\s*-\s*key:\s*([A-Z_][A-Z0-9_]*)/gm)].map((m) => m[1]!));

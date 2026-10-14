@@ -7,7 +7,7 @@
  * nada, e este ficheiro não finge que protege.
  */
 import { useEffect, useState } from 'react';
-import { api, type PlanId, ApiError, PLAN_NAME } from '../api';
+import { api, type PixIntent, type PlanId, ApiError, PLAN_NAME } from '../api';
 import { Icon } from '../components/Icons';
 import { Empty, Note, SearchInput, Skeleton, useToast } from '../components/ui';
 
@@ -29,6 +29,7 @@ interface AdminState {
 
 export default function Admin() {
   const [st, setSt] = useState<AdminState | null>(null);
+  const [pixIntents, setPixIntents] = useState<PixIntent[]>([]);
   const [q, setQ] = useState('');
   const [err, setErr] = useState('');
   /* Limite a escrever, por pessoa: o campo é uncontrolled para quem não está
@@ -36,7 +37,14 @@ export default function Admin() {
   const [limites, setLimites] = useState<Record<string, string>>({});
   const toast = useToast();
 
-  const load = () => api.admin().then(setSt).catch((e) => setErr((e as ApiError).message));
+  const load = async () => {
+    try {
+      const [state, pix] = await Promise.all([api.admin(), api.adminPixIntents()]);
+      setSt(state);
+      setPixIntents(pix.intents);
+      setErr('');
+    } catch (e) { setErr((e as ApiError).message); }
+  };
   useEffect(() => { load(); }, []);
 
   const setPlan = async (id: string, plan: PlanId) => {
@@ -56,6 +64,20 @@ export default function Admin() {
     try {
       await api.adminSetPlan(id, 'pro', true, null);
       toast('ok', `PRO vitalício ativado para ${email}.`);
+      load();
+    } catch (e) { toast('err', (e as ApiError).message); }
+  };
+  const aprovarPix = async (intent: PixIntent) => {
+    try {
+      await api.adminApprovePixIntent(intent.id);
+      toast('ok', `Pro liberado para ${intent.email}.`);
+      load();
+    } catch (e) { toast('err', (e as ApiError).message); }
+  };
+  const dispensarPix = async (intent: PixIntent) => {
+    try {
+      await api.adminDismissPixIntent(intent.id);
+      toast('ok', `Aviso Pix de ${intent.email} arquivado.`);
       load();
     } catch (e) { toast('err', (e as ApiError).message); }
   };
@@ -134,6 +156,43 @@ export default function Admin() {
               </Note>
             </div>
           </div>
+
+          <section className="card" aria-labelledby="pix-admin-title">
+            <div className="card-head pix-admin-head">
+              <span id="pix-admin-title">Avisos de pagamento Pix</span>
+              <span className="tag tag-pro">{pixIntents.length} pendente{pixIntents.length === 1 ? '' : 's'}</span>
+            </div>
+            <p className="t-sm muted" style={{ marginBottom: 12 }}>
+              Estes avisos são gerados quando alguém toca em JA PAGUEI. Confira o comprovante no WhatsApp antes de liberar o acesso.
+            </p>
+            {pixIntents.length === 0 ? (
+              <Empty icon={Icon.check} title="Nenhum aviso pendente">Quando uma pessoa informar o pagamento, o pedido aparece aqui.</Empty>
+            ) : (
+              <div className="pix-admin-list">
+                {pixIntents.map((p) => (
+                  <article className="pix-admin-item" key={p.id}>
+                    <div className="pix-admin-person">
+                      <strong>{p.name}</strong>
+                      <span className="t-sm muted" style={{ overflowWrap: 'anywhere' }}>{p.email}</span>
+                      <span className="t-xs dim">{PLAN_NAME[p.plan_id]} · R$ {p.amount_brl.toFixed(2).replace('.', ',')} · vitalício</span>
+                    </div>
+                    <div className="pix-admin-meta">
+                      <span className="t-xs dim">Último aviso {new Date(p.last_clicked_at).toLocaleString('pt-BR')}</span>
+                      <span className="t-xs dim">{p.clicks} clique{p.clicks === 1 ? '' : 's'}</span>
+                    </div>
+                    <div className="pix-admin-actions">
+                      <button className="btn btn-sm btn-primary" type="button" onClick={() => aprovarPix(p)}>
+                        <Icon.check width={14} height={14} /> Conferi · liberar Pro
+                      </button>
+                      <button className="btn btn-sm btn-quiet" type="button" onClick={() => dispensarPix(p)}>
+                        arquivar aviso
+                      </button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
+          </section>
 
           <div className="card">
             <div className="card-head">Utilizadores</div>
