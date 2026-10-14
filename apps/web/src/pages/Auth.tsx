@@ -42,18 +42,18 @@ export default function Auth({ onDone }: { onDone: () => void }) {
   };
 
   return (
-    <div className="card" style={{ maxWidth: 420, margin: '0 auto' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
-        <Mark size={34} />
-        <div>
-          <div className="brand-name">ARGOS</div>
-          <div className="t-xs dim">{mode === 'register' ? 'criar conta' : 'entrar'}</div>
-        </div>
+    <div className="card auth-card" style={{ maxWidth: 420, margin: '0 auto' }}>
+      <div className="auth-head">
+        <Mark size={64} className="auth-mark" />
+        <div className="brand-name auth-brand">ARGOS</div>
+        <div className="auth-brand-sub">SOCIAL INTELLIGENCE</div>
+        <h1 className="auth-title">{mode === 'register' ? 'Criar sua conta' : 'Bem-vindo de volta'}</h1>
+        <p className="auth-subtitle">{mode === 'register' ? 'É rápido, sem cartão e sem trial que expira.' : 'Acesse sua conta para continuar.'}</p>
       </div>
 
-      <div className="tabs" style={{ marginBottom: 16 }}>
-        <button role="tab" type="button" aria-selected={mode === 'register'} onClick={() => { setMode('register'); setErr(''); }}>Criar conta</button>
+      <div className="tabs auth-tabs">
         <button role="tab" type="button" aria-selected={mode === 'login'} onClick={() => { setMode('login'); setErr(''); }}>Entrar</button>
+        <button role="tab" type="button" aria-selected={mode === 'register'} onClick={() => { setMode('register'); setErr(''); }}>Criar conta</button>
       </div>
 
       <form onSubmit={submit} noValidate>
