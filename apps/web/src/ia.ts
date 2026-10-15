@@ -97,6 +97,7 @@ export const VISTAS = [
   { id: 'account', nome: 'Conta', icon: Icon.user },
   { id: 'definicoes', nome: 'Definições', icon: Icon.settings },
   { id: 'admin', nome: 'Administração', icon: Icon.shield },
+  { id: 'dm', nome: 'Área DM', icon: Icon.crown },
 ] as const;
 
 /** Todas as ferramentas declaradas na IA, por ordem, sem repetições. */

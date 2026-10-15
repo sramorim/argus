@@ -44,6 +44,7 @@ import Health from './Health';
 import Radar from './Radar';
 import Perfil from './Perfil';
 import Definicoes from './Definicoes';
+import DM from './DM';
 
 export type View =
   | { k: 'dashboard' } | { k: 'nova' }
@@ -52,7 +53,8 @@ export type View =
      da DataLikers, e vive em Conta › Gerenciar limites. O vestígio ficava aqui
      como um destino que nada conseguia abrir. */
   | { k: 'plans' } | { k: 'account' } | { k: 'admin' } | { k: 'history' }
-  | { k: 'health' } | { k: 'radar' } | { k: 'perfil' } | { k: 'definicoes' };
+  | { k: 'health' } | { k: 'radar' } | { k: 'perfil' } | { k: 'definicoes' }
+  | { k: 'dm' };
 
 /**
  * Os destinos da barra inferior: o que se usa a toda a hora, mais a busca
@@ -272,7 +274,7 @@ export default function AppShell({
   });
 
   const pct = usage?.daily ? Math.min(100, (usage.today / usage.daily) * 100) : 0;
-  const visivel = (id: string) => (user.isAdmin ? true : id !== 'admin');
+  const visivel = (id: string) => (user.isAdmin ? true : id !== 'admin' && id !== 'dm');
   const apps = VISTAS.filter((v) => visivel(v.id));
 
   const iconeDe = (v: View): ((p: SVGProps<SVGSVGElement>) => ReactElement) => {
@@ -300,6 +302,7 @@ export default function AppShell({
       case 'plans': return 'Planos';
       case 'account': return 'Conta';
       case 'admin': return 'Administração';
+      case 'dm': return 'Área DM';
       case 'history': return 'Histórico';
       case 'health': return 'Estado do Sistema';
       case 'radar': return 'Radar de Presença';
@@ -318,6 +321,7 @@ export default function AppShell({
       case 'plans': return <Plans user={user} />;
       case 'account': return <Account user={user} onLogout={onLogout} onLimites={irParaLimites} />;
       case 'admin': return <Admin />;
+      case 'dm': return <DM />;
       case 'history': return <History setView={go} />;
       case 'health': return <Health />;
       case 'radar': return <Radar setView={go} />;
