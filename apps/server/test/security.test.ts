@@ -122,6 +122,7 @@ await t('TOOL_LOCKS nao referencia ferramentas inexistentes', async () => {
   await import('../src/tools/presenca.ts');
   await import('../src/tools/domain-infra.ts');
   await import('../src/tools/contato.ts');
+  await import('../src/tools/apify.ts');
   const { allTools } = await import('../src/registry.ts');
   const ids = new Set(allTools().map((x) => x.id));
   const orfaos = Object.keys(TOOL_LOCKS).filter((k) => !ids.has(k));
@@ -380,6 +381,8 @@ const FERRAMENTAS_SOCIAIS = [
   'email-intel', 'phone-intel', 'telegram-intel',
   // Presença por cadastro (socialscan, MIT) — substitui as pagas Apify/DataLikers.
   'social-presence',
+  // Apify (serviço externo pago, pay-per-event) — Pro
+  'instagram-osint', 'tiktok-osint', 'facebook-osint', 'x-osint',
 ];
 /** As 25 ferramentas de OSINT técnico/infraestrutura que a limpeza tirou. */
 const FERRAMENTAS_REMOVIDAS = [

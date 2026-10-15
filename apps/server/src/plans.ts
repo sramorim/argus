@@ -144,4 +144,10 @@ export const TOOL_LOCKS: Record<string, LockedTool['minPlan']> = {
   'phone-intel': 'free',       // libphonenumber local + pesquisa web (Bing RSS) do número
   'email-intel': 'free',       // MX + Gravatar públicos; HIBP só com a chave do dono no servidor
   'telegram-intel': 'free',    // página pública t.me, a mesma que qualquer visitante vê
+
+  // Pro — Apify (serviço externo pago, pay-per-event)
+  'instagram-osint': 'pro',    // Apify Instagram Profile Scraper (actor oficial)
+  'tiktok-osint': 'pro',       // Clockworks TikTok Profile Scraper (actor de terceiros)
+  'facebook-osint': 'pro',     // Apify Facebook Posts Scraper (actor oficial)
+  'x-osint': 'pro',            // APIdojo Tweet Scraper (actor de terceiros, exige plano pago na API)
 };
