@@ -22,7 +22,7 @@ import { Icon, CATEGORY_ICON } from '../components/Icons';
 import { Empty, SearchInput, Skeleton } from '../components/ui';
 import MapaConexoes from '../components/MapaConexoes';
 import Globo from '../components/Globo';
-import { GRUPOS, porGrupo, buscar, NOME_PLANO, ICONE_FERRAMENTA } from '../ia';
+import { GRUPOS, porGrupo, buscar, NOME_PLANO, ICONE_FERRAMENTA, COR_FERRAMENTA, COR_GRUPO, type CorAzulejo } from '../ia';
 import type { View } from './AppShell';
 
 interface Execucao { id: string; tool_id: string; input: string; created_at: string; bytes: number }
@@ -174,29 +174,29 @@ export default function Dashboard({
     : null;
 
   /* Os quatro caminhos do banner e dos atalhos do telemóvel — todos destinos reais. */
-  const caminhos: { id: string; titulo: string; sub: string; curto: string; icone: Ico; v: View }[] = [
-    { id: 'coleta', titulo: 'Coleta', sub: 'Fontes abertas', curto: 'Nova investigação', icone: Icon.investigar, v: { k: 'nova' } },
-    { id: 'analise', titulo: 'Análise', sub: 'Cruzamento de fontes', curto: 'Perfil unificado', icone: Icon.perfilCartao, v: { k: 'perfil' } },
-    { id: 'conexoes', titulo: 'Conexões', sub: 'Mapeamento visual', curto: 'Ver conexões', icone: Icon.conexoes, v: { k: 'inv' } },
-    { id: 'relatorios', titulo: 'Relatórios', sub: 'Resultados claros', curto: 'Histórico', icone: Icon.history, v: { k: 'history' } },
+  const caminhos: { id: string; titulo: string; sub: string; curto: string; icone: Ico; v: View; cor: CorAzulejo }[] = [
+    { id: 'coleta', titulo: 'Coleta', sub: 'Fontes abertas', curto: 'Nova investigação', icone: Icon.investigar, v: { k: 'nova' }, cor: 'vermelho' },
+    { id: 'analise', titulo: 'Análise', sub: 'Cruzamento de fontes', curto: 'Perfil unificado', icone: Icon.perfilCartao, v: { k: 'perfil' }, cor: 'azul' },
+    { id: 'conexoes', titulo: 'Conexões', sub: 'Mapeamento visual', curto: 'Ver conexões', icone: Icon.conexoes, v: { k: 'inv' }, cor: 'roxo' },
+    { id: 'relatorios', titulo: 'Relatórios', sub: 'Resultados claros', curto: 'Histórico', icone: Icon.history, v: { k: 'history' }, cor: 'verde' },
   ];
 
   const indicadores = [
     {
-      id: 'exec', v: usage ? String(usage.today) : '—', l: 'Execuções hoje', icone: Icon.activity,
+      id: 'exec', cor: 'vermelho' as CorAzulejo, v: usage ? String(usage.today) : '—', l: 'Execuções hoje', icone: Icon.activity,
       sub: usage ? <>{`${usage.today}/${usage.daily}`} da cota</> : null, serie: serieExec, abrir: { k: 'history' } as View,
     },
     {
-      id: 'fontes', v: saude ? String(prontas) : '—', l: 'Fontes ativas', icone: Icon.server,
+      id: 'fontes', cor: 'azul' as CorAzulejo, v: saude ? String(prontas) : '—', l: 'Fontes ativas', icone: Icon.server,
       sub: saude ? <><span className="ponto" data-e={prontas ? 'ok' : 'nc'} /> de {saude.linhas.length} online</> : null,
       serie: null, abrir: { k: 'health' } as View,
     },
     {
-      id: 'ent', v: entidades === null ? '—' : String(entidades), l: 'Entidades mapeadas', icone: Icon.layers,
+      id: 'ent', cor: 'roxo' as CorAzulejo, v: entidades === null ? '—' : String(entidades), l: 'Entidades mapeadas', icone: Icon.layers,
       sub: sessoes ? <>em {sessoes.length} {sessoes.length === 1 ? 'sessão' : 'sessões'}</> : null, serie: serieEnt, abrir: { k: 'perfil' } as View,
     },
     {
-      id: 'sess', v: sessoes ? String(sessoes.length) : '—', l: 'Sessões guardadas', icone: Icon.network,
+      id: 'sess', cor: 'verde' as CorAzulejo, v: sessoes ? String(sessoes.length) : '—', l: 'Sessões guardadas', icone: Icon.network,
       sub: <>últimos 7 dias</>, serie: serieSess, abrir: { k: 'inv' } as View,
     },
   ];
@@ -243,7 +243,7 @@ export default function Dashboard({
             <nav className="dash-pilares" aria-label="Caminhos">
               {caminhos.map((c) => (
                 <button key={c.id} className="dash-pilar" type="button" onClick={() => setView(c.v)}>
-                  <span className="dash-pilar-ico"><c.icone /></span>
+                  <span className="dash-pilar-ico" data-cor={c.cor}><c.icone /></span>
                   <span className="dash-pilar-txt">
                     <span className="dash-pilar-t">{c.titulo}</span>
                     <span className="dash-pilar-s">{c.sub}</span>
@@ -257,7 +257,7 @@ export default function Dashboard({
           <nav className="dash-acoes" aria-label="Atalhos">
             {caminhos.map((c) => (
               <button key={c.id} className="dash-acao" type="button" onClick={() => setView(c.v)}>
-                <c.icone />
+                <span className="dash-acao-ico" data-cor={c.cor}><c.icone /></span>
                 <span>{c.curto}</span>
               </button>
             ))}
@@ -272,7 +272,7 @@ export default function Dashboard({
                   <span className="stat-v num">{s.v}</span>
                   <span className="stat-l">{s.l}</span>
                   {s.sub && <span className="stat-sub">{s.sub}</span>}
-                  {s.serie ? <Linha valores={s.serie} /> : <span className="stat-ico"><s.icone /></span>}
+                  {s.serie ? <Linha valores={s.serie} /> : <span className="stat-ico" data-cor={s.cor}><s.icone /></span>}
                 </button>
               ))}
             </div>
@@ -281,7 +281,7 @@ export default function Dashboard({
           {/* ---------- Mapa de conexões ---------- */}
           <section className="card dash-card dash-mapa" aria-label="Mapa de conexões">
             <header className="dash-card-head">
-              <span className="dash-card-ico"><Icon.network /></span>
+              <span className="dash-card-ico" data-cor="roxo"><Icon.network /></span>
               <div className="grow">
                 <h2 className="card-title">Mapa de Conexões</h2>
                 <p className="card-sub">
@@ -430,7 +430,7 @@ export default function Dashboard({
                   onClick={() => setView({ k: 'tool', id: t.id })}>
                   {t.lock === 'locked' && <span className="tag tag-pro tool-badge">PRO</span>}
                   <div className="tool-top">
-                    <span className="tool-glyph"><Cat /></span>
+                    <span className="tool-glyph" data-cor={COR_FERRAMENTA[t.id] ?? 'cinza'}><Cat /></span>
                     <span className="grow" style={{ minWidth: 0 }}>
                       <span className="tool-name">{t.name}</span>
                     </span>
@@ -451,7 +451,7 @@ export default function Dashboard({
               return (
                 <article className="card layer-card" key={g.id}>
                   <div className="layer-card-head">
-                    <span className="layer-card-ico"><G /></span>
+                    <span className="layer-card-ico" data-cor={COR_GRUPO[g.id] ?? 'cinza'}><G /></span>
                     <div style={{ minWidth: 0, flex: 1 }}>
                       <div className="card-title">{g.nome}</div>
                       <div className="card-sub">{g.resumo}</div>

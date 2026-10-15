@@ -178,3 +178,18 @@ export const ICONE_FERRAMENTA: Record<string, (p: SVGProps<SVGSVGElement>) => Re
 };
 
 export const NOME_PLANO: Record<PlanId, string> = { free: 'Free', pro: 'Pro', pro_max: 'Pro Max' };
+
+/**
+ * Cor do azulejo de cada ícone, como no mockup aprovado: cada tipo de busca
+ * tem a sua tinta clara com o ícone na cor forte. O vermelho da marca fica
+ * para o que é "alvo" (pessoa, investigação, exposição).
+ */
+export type CorAzulejo = 'vermelho' | 'azul' | 'roxo' | 'verde' | 'laranja' | 'cinza';
+export const COR_FERRAMENTA: Record<string, CorAzulejo> = {
+  'graph-investigation': 'vermelho', 'username-finder': 'azul', 'username-intel': 'azul',
+  'social-search': 'roxo', 'datalikers': 'laranja', 'apify': 'laranja',
+  'domain-infra': 'azul', 'paste-search': 'vermelho',
+};
+export const COR_GRUPO: Record<string, CorAzulejo> = {
+  identidade: 'azul', social: 'roxo', apify: 'laranja', infraestrutura: 'verde', exposicao: 'vermelho', investigar: 'vermelho',
+};

@@ -13,7 +13,7 @@ import { CanaisOficiais } from '../components/CanaisOficiais';
 import { Brand, PlanTag, Skeleton } from '../components/ui';
 import { Icon } from '../components/Icons';
 import Globo from '../components/Globo';
-import { GRUPOS } from '../ia';
+import { GRUPOS, COR_GRUPO } from '../ia';
 
 const PASSOS = [
   { n: '1', t: 'Diz o alvo', d: 'Username, nome, domínio, e-mail, telefone, IP ou URL. O tipo é detetado sozinho.' },
@@ -118,7 +118,7 @@ export function Landing({ onStart, tools }: { onStart: () => void; tools: ToolPu
                       <span className="lp-grupo-nome">{g.nome} <small className="lp-grupo-n">{reais.length}</small></span>
                       <span className="lp-grupo-d">{g.resumo}</span>
                     </span>
-                    <span className="lp-grupo-ico"><Ico /></span>
+                    <span className="lp-grupo-ico" data-cor={COR_GRUPO[g.id] ?? 'cinza'}><Ico /></span>
                   </button>
                 </li>
               );
