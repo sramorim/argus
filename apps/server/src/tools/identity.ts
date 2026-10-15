@@ -4,24 +4,15 @@ import { SourceLog, finding, type Finding } from '../net/provenance.ts';
 import { safeFetch } from '../net/ssrf.ts';
 
 // ---------------- USERNAME FINDER ----------------
-type Strategy = 'api' | 'status' | 'content';
+type Strategy = 'status' | 'content';
 
 interface Platform { id: string; label: string; url: (u: string) => string; strategy: Strategy; note?: string }
 
 const PLATFORMS: Platform[] = [
-  { id: 'github', label: 'GitHub', url: (u) => `https://api.github.com/users/${encodeURIComponent(u)}`, strategy: 'api' },
-  { id: 'gitlab', label: 'GitLab', url: (u) => `https://gitlab.com/${encodeURIComponent(u)}`, strategy: 'content' },
   { id: 'reddit', label: 'Reddit', url: (u) => `https://www.reddit.com/user/${encodeURIComponent(u)}/about.json`, strategy: 'status' },
   { id: 'telegram', label: 'Telegram', url: (u) => `https://t.me/${encodeURIComponent(u)}`, strategy: 'content' },
   { id: 'twitch', label: 'Twitch', url: (u) => `https://www.twitch.tv/${encodeURIComponent(u)}`, strategy: 'content' },
   { id: 'pinterest', label: 'Pinterest', url: (u) => `https://www.pinterest.com/${encodeURIComponent(u)}/`, strategy: 'content' },
-  { id: 'patreon', label: 'Patreon', url: (u) => `https://www.patreon.com/${encodeURIComponent(u)}`, strategy: 'content' },
-  { id: 'soundcloud', label: 'SoundCloud', url: (u) => `https://soundcloud.com/${encodeURIComponent(u)}`, strategy: 'content' },
-  { id: 'keybase', label: 'Keybase', url: (u) => `https://keybase.io/${encodeURIComponent(u)}`, strategy: 'status' },
-  // Medium responde 200 a TUDO (SPA). Decide-se pelo og:title, como as outras SPAs:
-  { id: 'medium', label: 'Medium', url: (u) => `https://medium.com/@${encodeURIComponent(u)}`, strategy: 'content' },
-  { id: 'npm', label: 'npm', url: (u) => `https://www.npmjs.com/~${encodeURIComponent(u)}`, strategy: 'content' },
-  { id: 'hackernews', label: 'Hacker News', url: (u) => `https://news.ycombinator.com/user?id=${encodeURIComponent(u)}`, strategy: 'status' },
 ];
 
 /*
@@ -84,8 +75,8 @@ registerTool({
   id: 'username-finder',
   name: 'Localizador de Username',
   category: 'pessoa',
-  summary: 'Procura o username onde dá para confirmar do servidor e dá o link direto de Instagram, Facebook, TikTok e X para conferir.',
-  longDesc: 'Confirma o username onde o servidor consegue verificar sem bloqueio (GitHub, GitLab, Reddit, Telegram, Twitch, Pinterest, Keybase e mais), separando CONFIRMADO de INDICADO e nunca tratando "a pagina carregou" como "o perfil existe". Instagram, Facebook, TikTok e X bloqueiam a verificacao a partir de servidores (e por isso que existem servicos pagos); para esses, mostra o link direto do perfil para voce abrir e conferir, sem inventar resultado.',
+  summary: 'Procura o username em redes sociais e dá o link direto de Instagram, Facebook, TikTok e X para conferir.',
+  longDesc: 'Confirma o username em Reddit, Telegram, Twitch e Pinterest, separando CONFIRMADO de INDICADO. Instagram, Facebook, TikTok e X bloqueiam servidores — para esses, mostra o link direto do perfil para voce abrir e conferir na hora, sem inventar resultado.',
   minPlan: 'free',
   freeTier: true,
   legalGate: 'lgpd',
@@ -109,22 +100,10 @@ registerTool({
       } catch { baselines.set(p.id, { status: 0, len: -1, marker: '' }); }
     });
 
-    /*
-     * `GITHUB_TOKEN` é do dono do serviço (Environment no Render), não do
-     * utilizador que pesquisa. A API pública do GitHub permite 60 pedidos por
-     * hora por endereço IP; com um token o limite sobe para 5000. Sem token a
-     * ferramenta continua a funcionar — só passa a poder esgotar o limite
-     * partilhado, e nesse caso o GitHub devolve 403 e a linha de fonte diz
-     * exatamente isso. Nunca se inventa um resultado para tapar a falha.
-     */
-    const ghToken = (process.env.GITHUB_TOKEN ?? '').trim();
-    const cabecalhos = (p: { id: string }): Record<string, string> =>
-      p.id === 'github' && ghToken ? { authorization: `Bearer ${ghToken}` } : {};
-
     const results = await Promise.all(PLATFORMS.map(async (p) => {
       const url = p.url(user);
       try {
-        const r = await safeFetch(url, { timeoutMs: 10_000, maxBytes: 900_000, headers: cabecalhos(p) });
+        const r = await safeFetch(url, { timeoutMs: 10_000, maxBytes: 900_000 });
         return { p, r };
       } catch (e) {
         return { p, r: null, err: String((e as Error).message) };
@@ -136,20 +115,6 @@ registerTool({
       const url = p.url(user);
       if (!r) { log.error(p.id, p.label, url, err ?? 'erro'); continue; }
 
-      if (p.strategy === 'api') {
-        if (r.status === 200 && r.body.includes('"login"')) {
-          let perfil = url;
-          try { perfil = (JSON.parse(r.body) as { html_url?: string }).html_url ?? url; } catch { /* resposta inesperada */ }
-          log.ok(p.id, p.label, url, r.ms, 1);
-          found[p.id] = { label: p.label, url: perfil, conf: 'confirmed', via: 'API oficial' };
-        } else if (p.id === 'github' && r.status === 403 && ghToken) {
-          // Token presente e recusado: diz-se o que é, sem esconder a linha.
-          log.empty(p.id, p.label, url, r.ms, 'GitHub recusou o token do servidor (403) — a chave pode ter expirado');
-        } else if (p.id === 'github' && r.status === 403) {
-          log.empty(p.id, p.label, url, r.ms, 'GitHub limitou os pedidos sem chave (60/hora por IP) — configure GITHUB_TOKEN no servidor');
-        } else { log.empty(p.id, p.label, url, r.ms, 'perfil inexistente (HTTP ' + r.status + ')'); }
-        continue;
-      }
       if (p.strategy === 'status') {
         if (r.status === 200) {
           const norm = normalize(r.body);
@@ -235,7 +200,7 @@ registerTool({
     }
     log.note('Instagram, Facebook, TikTok e X bloqueiam a verificação a partir de servidores — para esses, o link direto abre o perfil para você conferir. Nada é inventado.');
     if (!Object.keys(found).length) log.note('Nenhuma plataforma confirmada. Pode nao existir, ou o username e diferente por plataforma.');
-    log.note('"Confirmado" = API oficial, HTTP inequivoco, ou titulo/descricao do perfil diferentes dos de um username inexistente. "Indicado" = so o corpo da pagina difere (pode ser falso positivo).');
+    log.note('"Confirmado" = HTTP inequivoco ou titulo/descricao do perfil diferentes dos de um username inexistente. "Indicado" = so o corpo da pagina difere (pode ser falso positivo).');
     log.local(1, 'Geracao de username aleatorio para baseline e comparacao de marcadores');
     return { findings: out, log };
   },
