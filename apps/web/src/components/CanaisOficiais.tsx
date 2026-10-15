@@ -24,6 +24,10 @@ export function CanaisOficiais({ contacto, titulo = true }: { contacto: Contacto
             </a>
           </li>
         ))}
+        {/* O X já tem lugar no rodapé; o link entra quando houver conta (ARGUS_X no servidor). */}
+        {!canais.some((c) => c.id === 'x') && (
+          <li><span className="canal-breve" aria-label="X (em breve)" title="X — em breve">X</span></li>
+        )}
       </ul>
     </nav>
   );
