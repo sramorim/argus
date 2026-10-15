@@ -11,9 +11,6 @@ interface Platform { id: string; label: string; url: (u: string) => string; stra
 const PLATFORMS: Platform[] = [
   { id: 'github', label: 'GitHub', url: (u) => `https://api.github.com/users/${encodeURIComponent(u)}`, strategy: 'api' },
   { id: 'gitlab', label: 'GitLab', url: (u) => `https://gitlab.com/${encodeURIComponent(u)}`, strategy: 'content' },
-  { id: 'x', label: 'X (Twitter)', url: (u) => `https://x.com/${encodeURIComponent(u)}`, strategy: 'status' },
-  { id: 'instagram', label: 'Instagram', url: (u) => `https://www.instagram.com/${encodeURIComponent(u)}/`, strategy: 'content' },
-  { id: 'tiktok', label: 'TikTok', url: (u) => `https://www.tiktok.com/@${encodeURIComponent(u)}`, strategy: 'content' },
   { id: 'reddit', label: 'Reddit', url: (u) => `https://www.reddit.com/user/${encodeURIComponent(u)}/about.json`, strategy: 'status' },
   { id: 'telegram', label: 'Telegram', url: (u) => `https://t.me/${encodeURIComponent(u)}`, strategy: 'content' },
   { id: 'twitch', label: 'Twitch', url: (u) => `https://www.twitch.tv/${encodeURIComponent(u)}`, strategy: 'content' },
@@ -25,6 +22,19 @@ const PLATFORMS: Platform[] = [
   { id: 'medium', label: 'Medium', url: (u) => `https://medium.com/@${encodeURIComponent(u)}`, strategy: 'content' },
   { id: 'npm', label: 'npm', url: (u) => `https://www.npmjs.com/~${encodeURIComponent(u)}`, strategy: 'content' },
   { id: 'hackernews', label: 'Hacker News', url: (u) => `https://news.ycombinator.com/user?id=${encodeURIComponent(u)}`, strategy: 'status' },
+];
+
+/*
+ * Redes que bloqueiam a verificação a partir de servidores de datacenter
+ * (é por isso que existem serviços pagos de scraping). Em vez de inventar um
+ * resultado ou falhar em silêncio, o ARGOS dá o LINK DIRETO do perfil para a
+ * pessoa abrir e conferir à mão — honesto e útil.
+ */
+const CONFERIR: { id: string; label: string; url: (u: string) => string }[] = [
+  { id: 'instagram', label: 'Instagram', url: (u) => `https://www.instagram.com/${encodeURIComponent(u)}/` },
+  { id: 'facebook', label: 'Facebook', url: (u) => `https://www.facebook.com/${encodeURIComponent(u)}` },
+  { id: 'tiktok', label: 'TikTok', url: (u) => `https://www.tiktok.com/@${encodeURIComponent(u)}` },
+  { id: 'x', label: 'X (Twitter)', url: (u) => `https://x.com/${encodeURIComponent(u)}` },
 ];
 
 /** Normaliza o corpo para comparar comprimentos sem ruido de ids/timestamps. */
@@ -74,8 +84,8 @@ registerTool({
   id: 'username-finder',
   name: 'Localizador de Username',
   category: 'pessoa',
-  summary: 'Procura um username em 15 plataformas, distinguindo confirmado de apenas indicado.',
-  longDesc: 'Verifica o mesmo username em 15 plataformas com tres estrategias: API oficial (GitHub), codigo HTTP (X, Keybase, Hacker News) e comparacao contra um username inexistente gerado ao acaso (SPAs como Instagram, TikTok, GitLab). Separa CONFIRMADO de INDICADO e nunca trata "a pagina carregou" como "o perfil existe": nas SPAs compara-se o que a rede social DIZ ao visitante (titulo, og:title, h1), nao o tamanho da pagina.',
+  summary: 'Procura o username onde dá para confirmar do servidor e dá o link direto de Instagram, Facebook, TikTok e X para conferir.',
+  longDesc: 'Confirma o username onde o servidor consegue verificar sem bloqueio (GitHub, GitLab, Reddit, Telegram, Twitch, Pinterest, Keybase e mais), separando CONFIRMADO de INDICADO e nunca tratando "a pagina carregou" como "o perfil existe". Instagram, Facebook, TikTok e X bloqueiam a verificacao a partir de servidores (e por isso que existem servicos pagos); para esses, mostra o link direto do perfil para voce abrir e conferir, sem inventar resultado.',
   minPlan: 'free',
   freeTier: true,
   legalGate: 'lgpd',
@@ -157,6 +167,18 @@ registerTool({
       // content diff (baseline ja buscada em paralelo acima)
       const base = baselines.get(p.id) ?? { status: 0, len: -1, marker: '' };
       if (r.status >= 400) { log.empty(p.id, p.label, url, r.ms, 'HTTP ' + r.status); continue; }
+      if (p.id === 'telegram') {
+        // t.me devolve uma página para QUALQUER username; só há conta quando
+        // existe o bloco `tgme_page_title`. Decidir por isto (e não pelo
+        // tamanho da página) elimina o falso positivo do Telegram.
+        if (/tgme_page_title/i.test(r.body)) {
+          log.ok(p.id, p.label, url, r.ms, 1, 'página pública t.me com perfil');
+          found[p.id] = { label: p.label, url, conf: 'confirmed', via: 'página pública t.me/<user> existe' };
+        } else {
+          log.empty(p.id, p.label, url, r.ms, 'sem conta pública no Telegram');
+        }
+        continue;
+      }
       if (base.len <= 0) {
         log.skipped(p.id, p.label, url, 'baseline indisponivel, nao compativel com comparacao');
         continue;
@@ -200,7 +222,18 @@ registerTool({
       out.push(finding('plataforma', v.label, v.url, [id],
         { confidence: v.conf, link: v.url, kind: v.conf === 'confirmed' ? 'fact' : 'inference',
           attrs: { plataforma: v.label, url: v.url, username: user } }));
+      // Alimenta a grelha "Perfis encontrados" do resultado (como no mockup).
+      if (v.conf === 'confirmed') {
+        out.push(finding('encontrado', v.label, { platform: v.label, url: v.url, username: user },
+          [id], { confidence: 'corroborated', link: v.url }));
+      }
     }
+    // Redes que bloqueiam servidores: o link direto para conferir à mão.
+    for (const c of CONFERIR) {
+      const url = c.url(user);
+      out.push(finding('conferir', c.label, url, ['local'], { kind: 'claim', confidence: 'weak', link: url }));
+    }
+    log.note('Instagram, Facebook, TikTok e X bloqueiam a verificação a partir de servidores — para esses, o link direto abre o perfil para você conferir. Nada é inventado.');
     if (!Object.keys(found).length) log.note('Nenhuma plataforma confirmada. Pode nao existir, ou o username e diferente por plataforma.');
     log.note('"Confirmado" = API oficial, HTTP inequivoco, ou titulo/descricao do perfil diferentes dos de um username inexistente. "Indicado" = so o corpo da pagina difere (pode ser falso positivo).');
     log.local(1, 'Geracao de username aleatorio para baseline e comparacao de marcadores');

@@ -152,28 +152,47 @@ function PerfisEncontrados({ findings }: { findings: Finding[] }) {
       return { id: f.id, nome: v.platform ?? f.label, url: v.url ?? f.link ?? '', user: v.username ?? '' };
     })
     .filter((p) => /^https?:\/\//.test(p.url));
-  if (!perfis.length) return null;
-  const user = perfis[0]!.user;
+  // Redes que bloqueiam servidores: link direto para conferir à mão.
+  const conferir = findings
+    .filter((f) => f.group === 'conferir')
+    .map((f) => ({ id: f.id, nome: f.label, url: (f.link ?? (typeof f.value === 'string' ? f.value : '')) }))
+    .filter((p) => /^https?:\/\//.test(p.url));
+  if (!perfis.length && !conferir.length) return null;
+  const user = perfis[0]?.user ?? '';
   return (
     <section className="perfis" aria-labelledby="perfis-titulo">
       <div className="perfis-head">
         <span className="perfis-avatar" aria-hidden="true"><Icon.user /></span>
         <div>
           {user && <div className="perfis-user">@{user}</div>}
-          <h3 id="perfis-titulo" className="perfis-titulo">Perfis encontrados <span>({perfis.length})</span></h3>
+          <h3 id="perfis-titulo" className="perfis-titulo">{perfis.length ? <>Perfis encontrados <span>({perfis.length})</span></> : 'Perfis'}</h3>
         </div>
       </div>
-      <ul className="perfis-grade">
-        {perfis.map((p) => (
-          <li key={p.id}>
-            <a href={p.url} target="_blank" rel="noopener noreferrer" title={p.url}>
-              <span className="perfis-ini" aria-hidden="true">{p.nome.replace(/[^\p{L}\p{N}]/gu, '').charAt(0).toUpperCase() || '?'}</span>
-              <span className="perfis-nome">{p.nome}</span>
-              <Icon.link className="perfis-link" />
-            </a>
-          </li>
-        ))}
-      </ul>
+      {perfis.length > 0 && (
+        <ul className="perfis-grade">
+          {perfis.map((p) => (
+            <li key={p.id}>
+              <a href={p.url} target="_blank" rel="noopener noreferrer" title={p.url}>
+                <span className="perfis-ini" aria-hidden="true">{p.nome.replace(/[^\p{L}\p{N}]/gu, '').charAt(0).toUpperCase() || '?'}</span>
+                <span className="perfis-nome">{p.nome}</span>
+                <Icon.link className="perfis-link" />
+              </a>
+            </li>
+          ))}
+        </ul>
+      )}
+      {conferir.length > 0 && (
+        <div className="perfis-conferir">
+          <div className="perfis-conferir-t">Conferir à mão <span>(bloqueiam verificação de servidor)</span></div>
+          <ul className="perfis-chips">
+            {conferir.map((p) => (
+              <li key={p.id}>
+                <a href={p.url} target="_blank" rel="noopener noreferrer">{p.nome}<Icon.link width={12} height={12} /></a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </section>
   );
 }
