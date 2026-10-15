@@ -38,7 +38,6 @@ import ToolPage, { MODULOS } from './ToolPage';
 import Investigations from './Investigations';
 import Plans from './Plans';
 import Account from './Account';
-import GerenciarLimites from './GerenciarLimites';
 import Admin from './Admin';
 import History from './History';
 import Health from './Health';
@@ -105,11 +104,6 @@ export default function AppShell({
   const [drawer, setDrawer] = useState(false);
   /** Busca global (Ctrl/⌘+K): abre por cima de tudo, a partir de qualquer ecrã. */
   const [busca, setBusca] = useState(false);
-  /* Conta › Gerenciar limites. Vive aqui e não como rota própria para não
-     aparecer na barra de tarefas como se fosse mais um ecrã do produto: é uma
-     secção da Conta, acedida pelo modal de limite e pelo botão da secção
-     Assinatura. */
-  const [limitesAberto, setLimitesAberto] = useState(false);
   const wa = useContacto();
   /* Uma só decisão para todo o ecrã: se o sistema pede menos movimento, as
      molas daqui abaixo desaparecem todas. */
@@ -217,9 +211,6 @@ export default function AppShell({
     setView(v);
     abrir(v);
     setDrawer(false);
-    // Sair da Conta fecha a secção de limites: regressar sem querer a uma
-    // página de limits que ficou aberta por baixo seria confuso.
-    setLimitesAberto(false);
   }, [abrir, setView]);
   useEffect(() => {
     const k = chave(view);
@@ -489,14 +480,11 @@ export default function AppShell({
   );
 
   /**
-   * Abre Conta › Gerenciar limites.
-   *
-   * É o destino do modal de limite, e o único sítio do produto onde se pede
-   * uma chave. Mantém-se a origem ({ de: 'limite' }) para que a Conta saiba
-   * que veio de ali — é isso que permite ao botão "voltar" devolver a pessoa
-   * ao sítio onde ela estava em vez de a deixar no escuro.
+   * Destino do modal de limite diário e do botão da Assinatura: a página de
+   * Planos. O limite que a pessoa encontra hoje é a cota do plano — resolve-se
+   * com o Pro, não com créditos de serviços pagos (que saíram do produto).
    */
-  const irParaLimites = () => setLimitesAberto(true);
+  const irParaLimites = () => setView({ k: 'plans' });
 
   return (
     <div className="shell">
@@ -524,12 +512,6 @@ export default function AppShell({
       )}
 
       <div className="col">
-        {limitesAberto && (
-          <main className="desktop desktop-limites">
-            <GerenciarLimites onVoltar={() => setLimitesAberto(false)} />
-          </main>
-        )}
-
         {/* ---------------------------------------------------------- barra superior */}
         <header className="topbar">
           <button className="icon-btn only-narrow" onClick={() => setDrawer(true)} aria-label="Abrir menu" type="button">

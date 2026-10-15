@@ -32,9 +32,8 @@ import '../src/tools/username-intel.ts';
 import '../src/tools/paste.ts';
 import '../src/tools/graph.ts';
 import '../src/tools/social-search.ts';
-import '../src/tools/apify.ts';
-import '../src/tools/datalikers.ts';
 import '../src/tools/domain-infra.ts';
+import '../src/tools/presenca.ts';
 
 let pass = 0, fail = 0;
 function ok(cond: boolean, msg: string, extra = '') {
@@ -74,7 +73,6 @@ function factos(o: Opcoes = {}): Factos {
     seedType,
     nos: o.nos ?? 22,
     clis: o.clis ?? clisDe(seedType),
-    apifyToken: o.apifyToken ?? false,
   };
 }
 
@@ -98,7 +96,7 @@ function todos(p: Plano): string[] {
 
 // ============================================================ 8 fases
 console.log('\n── AS 8 FASES ───────────────────────────────────────────────────');
-eq(FASES, ['Discovery', 'OSINT', 'Social', 'Apify', 'Normalization', 'Correlation', 'Intelligence', 'Snapshots'],
+eq(FASES, ['Discovery', 'OSINT', 'Social', 'Cadastro', 'Normalization', 'Correlation', 'Intelligence', 'Snapshots'],
   'a ordem das 8 fases é a do spec');
 eq(MODOS, ['QUICK', 'FULL', 'CUSTOM'], 'os três modos');
 for (const m of MODOS) {
@@ -185,13 +183,9 @@ eq(tranca.estado, 'BLOQUEADA', 'paste-search é Pro: no free está BLOQUEADA');
 ok(tranca.motivo!.includes('plano free não inclui') && tranca.motivo!.includes('Pro'),
   'a tranca diz o plano actual e o que é preciso', tranca.motivo);
 
-const apifySemToken = ferramenta(plano('FULL', undefined, factos({ seedType: 'username' })), 'Apify', 'apify');
-eq(apifySemToken.estado, 'BLOQUEADA', 'Apify sem APIFY_API_TOKEN está BLOQUEADA');
-eq(apifySemToken.motivo, '`APIFY_API_TOKEN` em falta', 'falta nomear a variável exacta');
-
-const apifyComToken = ferramenta(plano('FULL', undefined, factos({ seedType: 'username', apifyToken: true })), 'Apify', 'apify');
-eq(apifyComToken.estado, 'PRONTO', 'Apify com token está PRONTO');
-ok((apifyComToken.nota ?? '').includes('pay-per-event'), 'PRONTO avisa que custa dinheiro', apifyComToken.nota);
+const spFree = ferramenta(plano('FULL', undefined, factos({ seedType: 'username' })), 'Cadastro', 'social-presence');
+eq(spFree.estado, 'PRONTO', 'social-presence está PRONTO no Free, sem chave nem custo');
+ok((spFree.nota ?? '').includes('grátis') || (spFree.nota ?? '').includes('sem chave'), 'a nota deixa claro que é grátis', spFree.nota);
 
 const infraDominio = ferramenta(plano('FULL', undefined, factos({ seedType: 'dominio' })), 'Discovery', 'domain-infra');
 eq(infraDominio.estado, 'PRONTO', 'domain-infra (RDAP+DNS+CT, fontes abertas) está PRONTO sem chave nem CLI');
@@ -211,14 +205,12 @@ eq(usernameCli.id, 'username-intel', 'a ferramenta existe');
 ok(usernameSemCli.estado === 'BLOQUEADA' && (usernameSemCli.motivo ?? '').includes('verificação'),
   'sem verificação dos registos não se marca como PRONTO', usernameSemCli.motivo);
 
-const apifyNoPlano = plano('FULL', undefined, factos({ seedType: 'servico', apifyToken: true }));
-eq(fase(apifyNoPlano, 'Apify').estado, 'PRONTO', 'aplicabilidade: serviço é aceite pelo Apify');
-eq(fase(plano('FULL', undefined, factos({ seedType: 'cve' })), 'Apify').estado, 'BLOQUEADA',
-  'aplicabilidade: um CVE não é um alvo para scraping');
+const socialNoPlano = plano('FULL', undefined, factos({ seedType: 'username' }));
+eq(fase(socialNoPlano, 'Cadastro').estado, 'PRONTO', 'aplicabilidade: username é aceite pela fase Cadastro (grátis, sem chave)');
 
-const estadoFase = fase(plano('FULL', undefined, factos({ seedType: 'dominio' })), 'Apify');
+const estadoFase = fase(plano('FULL', undefined, factos({ seedType: 'cve' })), 'Cadastro');
 eq(estadoFase.estado, 'BLOQUEADA', 'fase sem ferramentas aplicáveis fica BLOQUEADA');
-ok((estadoFase.motivo ?? '').includes('tipo "dominio"'), 'e diz porque é que não há nada a correr', estadoFase.motivo);
+ok((estadoFase.motivo ?? '').includes('tipo "cve"'), 'e diz porque é que não há nada a correr', estadoFase.motivo);
 
 // ============================================================ validação
 console.log('\n── VALIDAÇÃO (400s) ──────────────────────────────────────────────');
@@ -282,71 +274,51 @@ const inv: InvAlvo = {
 };
 const ctx = { userId: 'u-teste', plan: 'free' as PlanId };
 
-/** Plano só com a fase Apify (uma ferramenta) e uma entrada inventada. */
-function planoApify(f: Factos): Plano {
-  const p = plano('CUSTOM', ['apify'], f);
-  const apify = ferramenta(p, 'Apify', 'apify');
-  if (apify.estado !== 'PRONTO') throw new Error(`apify tinha de estar PRONTO: ${apify.motivo}`);
-  return p;
-}
+/*
+ * Execução sobre a fase Social. As ferramentas pagas (Apify/DataLikers) saíram
+ * do catálogo; o que fica é grátis e sem chave, por isso já não há teste de
+ * "confirmar custo" nem de "token em falta". Para exercitar o motor sem rede,
+ * injeta-se uma entrada inventada na fase Social.
+ */
+const pSocialBase = plano('CUSTOM', ['social-presence'], factos({ seedType: 'username' }));
+const spRef = ferramenta(pSocialBase, 'Cadastro', 'social-presence');
+eq(spRef.estado, 'PRONTO', 'social-presence está PRONTO no Free, sem chave');
 
-const pApify = planoApify(factos({ seedType: 'username', apifyToken: true }));
-
-// 1. sem confirmação de custo não se gasta dinheiro do utilizador
-const semCusto = await executarPlano({
-  plano: pApify, progresso: null, inv, ctx, confirmarCusto: false, reexecutar: false, agora: () => AGORA,
-});
-const fApify = semCusto.fases.find((x) => x.fase === 'Apify')!;
-eq(fApify.ferramentas[0]!.estado, 'NAO_EXECUTADA', 'Apify sem confirmação: não correu, e está dito');
-ok((fApify.ferramentas[0]!.erro ?? '').includes('confirmarCusto'), 'diz exactamente o que falta', fApify.ferramentas[0]!.erro);
-eq(fApify.estado, 'BLOQUEADA', 'a fase nunca aparece como concluída');
-ok(!!fApify.executadoEm, 'a fase ficou registada com hora');
-
-// 2. o que está bloqueado no plano nem sequer é chamado
-const pBloqueada = plano('CUSTOM', ['apify'], factos({ seedType: 'username', apifyToken: false }));
-const bloqueado = await executarPlano({
-  plano: pBloqueada, progresso: null, inv, ctx, confirmarCusto: true, reexecutar: false, agora: () => AGORA,
-});
-const fBloq = bloqueado.fases.find((x) => x.fase === 'Apify')!;
-eq(fBloq.ferramentas[0]!.estado, 'NAO_EXECUTADA', 'ferramenta bloqueada no plano não é executada');
-eq(fBloq.ferramentas[0]!.erro, '`APIFY_API_TOKEN` em falta', 'e guarda o motivo do plano');
-
-// 3. uma ferramenta que o planeador desconhece dá ERRO — não dá "concluída"
-const pFalsa: Plano = {
-  ...pApify,
-  fases: [{
-    ...fase(pApify, 'Apify'),
-    ferramentas: [{ id: 'inventada', rotulo: 'Inventada', kind: 'ferramenta', estado: 'PRONTO', input: {} }],
-  }, ...pApify.fases.filter((f) => f.fase !== 'Apify')],
+const pFake: Plano = {
+  ...pSocialBase,
+  fases: pSocialBase.fases.map((f) => f.fase === 'Cadastro'
+    ? { ...f, ferramentas: [{ id: 'inventada', rotulo: 'Inventada', kind: 'ferramenta', estado: 'PRONTO', input: {} }] }
+    : f),
 };
+
+// 1. uma ferramenta que o planeador desconhece dá ERRO — não dá "concluída"
 const desconhecida = await executarPlano({
-  plano: pFalsa, progresso: null, inv, ctx, confirmarCusto: false, reexecutar: false, agora: () => AGORA,
+  plano: pFake, progresso: null, inv, ctx, confirmarCusto: false, reexecutar: false, agora: () => AGORA,
 });
-const fDesconhecida = desconhecida.fases.find((x) => x.fase === 'Apify')!;
+const fDesconhecida = desconhecida.fases.find((x) => x.fase === 'Cadastro')!;
 eq(fDesconhecida.ferramentas[0]!.estado, 'ERRO', 'ferramenta inexistente: ERRO, nunca EXECUTADA');
 ok((fDesconhecida.ferramentas[0]!.erro ?? '').includes('desconhecida'), 'com a mensagem real', fDesconhecida.ferramentas[0]!.erro);
 eq(fDesconhecida.estado, 'ERRO', 'a fase reflete o erro');
 
-// 4. re-executar só o que falta: o que já correu não repete
-const pExec = planoApify(factos({ seedType: 'username', apifyToken: true }));
-const inicio = progressoInicial(pExec);
+// 2. re-executar só o que falta: o que já correu (injetado) não repete
+const inicio = progressoInicial(pFake);
 const jaExecutada = {
   ...inicio,
-  fases: inicio.fases.map((f) => f.fase === 'Apify'
+  fases: inicio.fases.map((f) => f.fase === 'Cadastro'
     ? { ...f, ferramentas: f.ferramentas.map((x) => ({ ...x, estado: 'EXECUTADA' as const, contagem: 42, ms: 7 })) }
     : f),
 };
 const semRepetir = await executarPlano({
-  plano: pExec, progresso: jaExecutada, inv, ctx, confirmarCusto: false, reexecutar: false, agora: () => AGORA,
+  plano: pFake, progresso: jaExecutada, inv, ctx, confirmarCusto: false, reexecutar: false, agora: () => AGORA,
 });
-const registo1 = semRepetir.fases.find((x) => x.fase === 'Apify')!.ferramentas[0]!;
+const registo1 = semRepetir.fases.find((x) => x.fase === 'Cadastro')!.ferramentas[0]!;
 eq(registo1.estado, 'EXECUTADA', 'o que já correu não volta a correr');
 eq(registo1.contagem, 42, 'a contagem de quem já correu é preservada');
 
 const repetir = await executarPlano({
-  plano: pExec, progresso: jaExecutada, inv, ctx, confirmarCusto: false, reexecutar: true, agora: () => AGORA,
+  plano: pFake, progresso: jaExecutada, inv, ctx, confirmarCusto: false, reexecutar: true, agora: () => AGORA,
 });
-const registo2 = repetir.fases.find((x) => x.fase === 'Apify')!.ferramentas[0]!;
+const registo2 = repetir.fases.find((x) => x.fase === 'Cadastro')!.ferramentas[0]!;
 ok(registo2.estado !== 'EXECUTADA' || registo2.contagem !== 42,
   'reexecutar: true volta a tentar mesmo o que já tinha corrido', JSON.stringify(registo2));
 
@@ -374,9 +346,14 @@ ok((fSemNos.ferramentas[0]!.erro ?? '').length > 5, 'com o motivo', fSemNos.ferr
 
 // ============================================================ resumo
 console.log('\n── RESUMO ────────────────────────────────────────────────────────');
-const s = resumoProgresso(semCusto);
+// Um plano de uma só fase, bloqueada por o tipo de alvo não bater, para o resumo.
+const planoBloq = plano('CUSTOM', ['social-search'], factos({ seedType: 'cve' }));
+const execBloq = await executarPlano({
+  plano: planoBloq, progresso: null, inv, ctx, confirmarCusto: false, reexecutar: false, agora: () => AGORA,
+});
+const s = resumoProgresso(execBloq);
 eq(s.fases, 8, 'resumo conta fases');
-eq(s.executadas, 0, 'resumo: nada executado sem confirmação');
+eq(s.executadas, 0, 'resumo: nada executado quando a única fase está bloqueada');
 eq(s.bloqueadas, 1, 'resumo: a única fase do plano ficou bloqueada');
 eq(s.pendentes, 7, 'resumo: as 7 puladas continuam pendentes');
 ok(Object.values(ETAPAS).length === 4, 'quatro etapas do motor');
@@ -386,7 +363,7 @@ for (const [id, v] of Object.entries(ETAPAS)) {
   ok(faseDe(id) === v.fase, `etapa ${id} na fase certa`);
 }
 ok(todos(pFull).every((id) => faseDe(id) !== null), 'toda a ferramenta do plano tem fase');
-eq(CATALOGO.length, 8, 'o catálogo real é o que está registado');
+eq(CATALOGO.length, 7, 'o catálogo real é o que está registado');
 ok(Object.keys(PLANS).length === 3, 'três planos');
 
 console.log(`\n${pass} passaram, ${fail} falharam`);

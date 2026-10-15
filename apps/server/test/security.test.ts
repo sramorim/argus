@@ -119,8 +119,7 @@ await t('TOOL_LOCKS nao referencia ferramentas inexistentes', async () => {
   await import('../src/tools/paste.ts');
   await import('../src/tools/graph.ts');
   await import('../src/tools/social-search.ts');
-  await import('../src/tools/apify.ts');
-  await import('../src/tools/datalikers.ts');
+  await import('../src/tools/presenca.ts');
   await import('../src/tools/domain-infra.ts');
   await import('../src/tools/contato.ts');
   const { allTools } = await import('../src/registry.ts');
@@ -374,11 +373,13 @@ await t('investigacao guarda contagens de nos/arestas', async () => {
 
 console.log('\n── CATÁLOGO (Social Intelligence) ────────────────────────────────');
 const FERRAMENTAS_SOCIAIS = [
-  'apify', 'datalikers', 'domain-infra', 'graph-investigation',
-  'paste-search', 'social-search', 'username-finder', 'username-intel',
+  'domain-infra', 'graph-investigation', 'paste-search', 'social-search',
+  'username-finder', 'username-intel',
   // Buscas de contacto (2026-10-15, pedido do dono a partir do mockup): novas,
   // reescritas de raiz — não são as antigas phone-analyzer/email-analyzer/telegram-osint.
   'email-intel', 'phone-intel', 'telegram-intel',
+  // Presença por cadastro (socialscan, MIT) — substitui as pagas Apify/DataLikers.
+  'social-presence',
 ];
 /** As 25 ferramentas de OSINT técnico/infraestrutura que a limpeza tirou. */
 const FERRAMENTAS_REMOVIDAS = [
@@ -395,8 +396,7 @@ const carrega = async () => {
   await import('../src/tools/paste.ts');
   await import('../src/tools/graph.ts');
   await import('../src/tools/social-search.ts');
-  await import('../src/tools/apify.ts');
-  await import('../src/tools/datalikers.ts');
+  await import('../src/tools/presenca.ts');
   await import('../src/tools/domain-infra.ts');
   await import('../src/tools/contato.ts');
   return (await import('../src/registry.ts')).allTools();

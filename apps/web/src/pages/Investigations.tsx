@@ -307,7 +307,7 @@ function LinhaFase({ fase, reg, aberta, onToggle }: {
  * O painel mostra o que o planeador decidiu e o que a execução fez — e nada
  * mais. Estados vêm do servidor: `CONCLUIDA` só quando tudo correu, `ERRO` só
  * quando algo falhou, e o que não correu fica visível com o motivo concreto
- * (plano insuficiente, CLI em falta, custo do Apify por confirmar). O
+ * (plano insuficiente, CLI em falta). O
  * plano personalizado constrói-se a partir do que o servidor disse que se
  * aplica ao alvo — nunca a partir de uma lista escrita à mão no cliente.
  */
@@ -318,7 +318,6 @@ function PlanoInvestigacao({ invId, seedType }: { invId: string; seedType: strin
   const [resumo, setResumo] = useState<ResumoProgresso | null>(null);
   const [erro, setErro] = useState('');
   const [busy, setBusy] = useState(false);
-  const [custo, setCusto] = useState(false);
   const [candidatos, setCandidatos] = useState<FerramentaPlano[] | null>(null);
   const [escolhidas, setEscolhidas] = useState<string[]>([]);
   const [aberta, setAberta] = useState<string | null>(null);
@@ -334,7 +333,7 @@ function PlanoInvestigacao({ invId, seedType }: { invId: string; seedType: strin
 
   useEffect(() => {
     setPlano(null); setProgresso(null); setResumo(null); setCandidatos(null);
-    setEscolhidas([]); setAberta(null); setErro(''); setCusto(false); setBusy(false);
+    setEscolhidas([]); setAberta(null); setErro(''); setBusy(false);
     api.plano(invId).then(aplicar).catch((e) => setErro((e as ApiError).message));
   }, [invId]);
 
@@ -370,7 +369,7 @@ function PlanoInvestigacao({ invId, seedType }: { invId: string; seedType: strin
   const executar = async (reexecutar: boolean) => {
     setBusy(true);
     try {
-      const r: ExecutarResposta = await api.executarPlano(invId, { confirmarCusto: custo, reexecutar });
+      const r: ExecutarResposta = await api.executarPlano(invId, { confirmarCusto: false, reexecutar });
       setPlano(r.plano);
       setProgresso(r.progresso);
       setResumo(r.resumo);
@@ -389,7 +388,6 @@ function PlanoInvestigacao({ invId, seedType }: { invId: string; seedType: strin
     }
   };
 
-  const precisaCusto = !!plano && ferramentasDo(plano).some((f) => f.id === 'apify' && f.estado === 'PRONTO');
   const feitas = (resumo?.executadas ?? 0) > 0;
   const pct = resumo ? Math.round((resumo.concluidas / Math.max(1, resumo.fases)) * 100) : 0;
 
@@ -494,12 +492,6 @@ function PlanoInvestigacao({ invId, seedType }: { invId: string; seedType: strin
               <button className="btn btn-sm" type="button" disabled={busy} onClick={() => executar(true)}>
                 reexecutar tudo
               </button>
-            )}
-            {precisaCusto && (
-              <label className="plano-custo">
-                <input type="checkbox" checked={custo} onChange={(e) => setCusto(e.target.checked)} />
-                confirmo o custo do Apify (pay-per-event)
-              </label>
             )}
           </div>
           <p className="t-xs dim plano-nota">

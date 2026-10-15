@@ -28,8 +28,6 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { dbHealth } from './db.ts';
-import { ACTORS, estadoDe, saude as saudeApify, token, foraDeAlcance } from './net/apify.ts';
-import { saude as saudeDataLikers, token as tokenDataLikers, ENDPOINTS as ENDPOINTS_DL } from './net/datalikers.ts';
 
 export type EstadoSistema =
   | 'READY' | 'NOT_INSTALLED' | 'NOT_CONFIGURED' | 'MISSING_SECRET'
@@ -148,101 +146,6 @@ export async function saudeSistema(opts: { detalhe?: boolean } = {}): Promise<Re
   linhas.push(linhaRegisto('WhatsMyName (registo)', 'whatsmyname'));
   linhas.push(linhaRegisto('Maigret (registo)', 'maigret'));
 
-  const t = token();
-  if (!t.token) {
-    linhas.push(linha({
-      nome: 'Apify (serviço)', modulo: 'APIFY', tipo: 'api', runtime: 'API remota',
-      servicoExterno: 'api.apify.com', apikey: 'APIFY_API_TOKEN', status: 'NOT_CONFIGURED',
-      healthCheck: `${t.falta} em falta — sem pedido feito`,
-      configuracao: `${t.falta} no ambiente do servidor (backend/secret manager)`,
-    }));
-    for (const a of ACTORS) {
-      linhas.push(linha({
-        nome: a.name, modulo: 'APIFY', tipo: 'actor', runtime: 'API remota',
-        servicoExterno: `apify.com/${a.actorId}`, apikey: 'APIFY_API_TOKEN',
-        cliApi: 'REST', dependencias: 'nenhuma local',
-          status: a.enabled ? 'NOT_CONFIGURED' : 'DISABLED',
-          healthCheck: a.enabled ? `${t.falta} em falta` : 'actor desativado no registry',
-          configuracao: `${t.falta} · actor ${a.oficial ? 'oficial apify/*' : 'de terceiros'} pay-per-event${a.viaApiNaFree ? '' : ' · conta Free: só demo na Console, via API exige plano pago'}`,
-        }));
-    }
-  } else {
-    const t1 = Date.now();
-    const h = await saudeApify();
-    const status: EstadoSistema = h.status === 'READY' ? 'READY'
-      : h.status === 'NOT_CONFIGURED' ? 'MISSING_SECRET'
-      : h.status === 'ERROR' ? 'ERROR' : h.status as EstadoSistema;
-    linhas.push(linha({
-      nome: 'Apify (serviço)', modulo: 'APIFY', tipo: 'api', runtime: 'API remota',
-      servicoExterno: 'api.apify.com', apikey: 'APIFY_API_TOKEN', status,
-      healthCheck: h.nota, latenciaMs: h.latenciaMs ?? Date.now() - t1,
-      erro: h.status === 'ERROR' ? h.nota : null,
-      configuracao: `conta ${h.conta ?? 'desconhecida'} · token presente (não exposto)`,
-    }));
-    for (const a of ACTORS) {
-      const e = estadoDe(a.actorId);
-      const st: EstadoSistema = !a.enabled ? 'DISABLED'
-        : e.status === 'READY' ? 'READY'
-        : e.status === 'RATE_LIMITED' ? 'RATE_LIMITED'
-        : e.status === 'PAYMENT_REQUIRED' ? 'MISSING_SECRET'
-        : e.status === 'ERROR' ? 'ERROR' : 'NOT_CONFIGURED';
-      linhas.push(linha({
-        nome: a.name, modulo: 'APIFY', tipo: 'actor', runtime: 'API remota',
-        servicoExterno: `apify.com/${a.actorId}`, apikey: 'APIFY_API_TOKEN',
-        cliApi: 'REST', dependencias: 'nenhuma local',
-        status: st,         healthCheck: e.error ?? (e.status === 'READY' ? 'última execução OK' : 'ainda não executado'),
-        ultimoTeste: e.lastRun, erro: e.error,
-        configuracao: `actor ${a.oficial ? 'oficial apify/*' : 'de terceiros'} · pay-per-event${a.viaApiNaFree ? '' : ' · conta Free: só demo na Console, via API exige plano pago'}`,
-      }));
-    }
-  }
-
-  // ---- DataLikers (Social Intelligence) ----
-  // Três linhas: o serviço e as duas plataformas que ele cobre. O número de
-  // recursos por plataforma vem do catálogo oficial, não de uma constante à
-  // mão — se o OpenAPI mudar, a linha muda com ele.
-  const contaRecursos = (p: string) => ENDPOINTS_DL.filter((e) => e.plataforma === p).length;
-  const linhasPlataforma = (status: EstadoSistema, saudeNota: string | null, lat: number | null) => {
-    for (const p of ['instagram', 'tiktok'] as const) {
-      linhas.push(linha({
-        nome: `DataLikers · ${p === 'instagram' ? 'Instagram' : 'TikTok'}`, modulo: 'DATALIKERS',
-        tipo: 'endpoint', runtime: 'API remota', servicoExterno: `api.datalikers.com`,
-        apikey: 'DATALIKERS_API_KEY', cliApi: 'REST', dependencias: 'nenhuma local',
-        status,
-        healthCheck: saudeNota ?? `${contaRecursos(p)} endpoints REST documentados (OpenAPI Cache API 2.10.1)`,
-        latenciaMs: lat,
-        configuracao: `${contaRecursos(p)} recursos · ${p === 'instagram' ? 'perfis, media, stories, destaques, seguidores, comentários, hashtags, locais e áudios' : 'perfis, vídeos, comentários, hashtags e playlists'}`,
-      }));
-    }
-  };
-
-  const dl = tokenDataLikers();
-  if (!dl.token) {
-    linhas.push(linha({
-      nome: 'DataLikers', modulo: 'DATALIKERS', tipo: 'api', runtime: 'API remota',
-      servicoExterno: 'api.datalikers.com', apikey: 'DATALIKERS_API_KEY',
-      cliApi: 'REST', dependencias: 'nenhuma local', status: 'NOT_CONFIGURED',
-      healthCheck: `${dl.falta} em falta — sem pedido feito`,
-      configuracao: `${dl.falta} no ambiente do servidor (backend/secret manager)`,
-    }));
-    linhasPlataforma('NOT_CONFIGURED', `${dl.falta} em falta`, null);
-  } else {
-    const t1 = Date.now();
-    const h = await saudeDataLikers();
-    const status: EstadoSistema = h.status === 'READY' ? 'READY'
-      : h.status === 'NOT_CONFIGURED' ? 'MISSING_SECRET'
-      : h.status as EstadoSistema;
-    linhas.push(linha({
-      nome: 'DataLikers', modulo: 'DATALIKERS', tipo: 'api', runtime: 'API remota',
-      servicoExterno: 'api.datalikers.com', apikey: 'DATALIKERS_API_KEY',
-      cliApi: 'REST', dependencias: 'nenhuma local', status,
-      healthCheck: h.nota, latenciaMs: h.latenciaMs ?? Date.now() - t1,
-      erro: h.status === 'ERROR' ? h.nota : null,
-      configuracao: h.conta ?? 'chave presente (não exposta)',
-    }));
-    linhasPlataforma(status, h.status === 'READY' ? `${ENDPOINTS_DL.length} endpoints REST · chave aceite` : h.nota, h.latenciaMs);
-  }
-
   const porEstado: Partial<Record<EstadoSistema, number>> = {};
   for (const l of linhas) porEstado[l.status] = (porEstado[l.status] ?? 0) + 1;
   const estadoGeral = SEVERIDADE.find((s) => porEstado[s]) ?? 'READY';
@@ -260,12 +163,31 @@ export async function saudeSistema(opts: { detalhe?: boolean } = {}): Promise<Re
       : `${prontos} de ${linhas.length} dependências READY; o estado geral é o pior estado individual (${estadoGeral}) — o ARGOS funciona, mas estas faltam. Verificação em ${Date.now() - t0}ms${detalhe ? ' com detalhe (versões e serviço)' : ' (só presença e configuração; use ?detalhe=sim)'}.`,
   };
 
-  // Verificação final do /api/health: o relatório devolvido nunca contém o valor
-  // do token — nem nas linhas, nem na nota. Os campos mostram o NOME da variável
-  // (`APIFY_API_TOKEN`, `DATALIKERS_API_KEY`) e o ESTADO (READY / NOT_CONFIGURED
-  // / ...), nunca a chave. Duas passagens, uma por segredo: se por engano uma
-  // linha futura escrever qualquer um dos dois, nenhum dos dois sai daqui.
-  return foraDeAlcance(foraDeAlcance(rel, token().token), tokenDataLikers().token);
+  // Verificação final do /api/health: o relatório nunca contém o VALOR de um
+  // segredo — só o NOME da variável e o ESTADO. Rede de segurança: redige
+  // qualquer segredo do ambiente que, por engano, acabe numa linha futura.
+  return redigirSegredos(rel);
+}
+
+/** Redige do relatório o valor de qualquer segredo conhecido do ambiente. */
+const SEGREDOS_ENV = ['ARGUS_SECRET', 'HIBP_API_KEY', 'GITHUB_TOKEN'];
+function redigirSegredos<T>(valor: T): T {
+  let v: unknown = valor;
+  for (const nome of SEGREDOS_ENV) {
+    const tk = (process.env[nome] ?? '').trim();
+    if (tk.length >= 8) v = redigir(v, tk);
+  }
+  return v as T;
+}
+function redigir(valor: unknown, tk: string): unknown {
+  if (typeof valor === 'string') return valor.split(tk).join('«redigido»');
+  if (Array.isArray(valor)) return valor.map((x) => redigir(x, tk));
+  if (valor !== null && typeof valor === 'object') {
+    const out: Record<string, unknown> = {};
+    for (const [k, x] of Object.entries(valor as Record<string, unknown>)) out[k] = redigir(x, tk);
+    return out;
+  }
+  return valor;
 }
 
 /** Matriz no formato do spec: uma linha por dependência. */

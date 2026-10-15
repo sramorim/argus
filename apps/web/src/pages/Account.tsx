@@ -13,7 +13,7 @@ export default function Account({
   user, onLogout, onLimites,
 }: {
   user: User; onLogout: () => void;
-  /** Abre a secção Gerenciar limites (créditos e chave própria). */
+  /** Abre a página de Planos. */
   onLimites?: () => void;
 }) {
   const [usage, setUsage] = useState<Usage | null>(null);
@@ -82,7 +82,7 @@ export default function Account({
         </div>
         <div className="row" style={{ marginTop: 14 }}>
           <button className="btn btn-quiet" type="button" onClick={() => onLimites?.()}>
-            <Icon.activity width={16} height={16} /> Gerenciar limites
+            <Icon.crown width={16} height={16} /> Ver planos
           </button>
         </div>
         <p className="t-xs dim" style={{ marginTop: 10, lineHeight: 1.6 }}>

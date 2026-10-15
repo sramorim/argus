@@ -112,7 +112,7 @@ export const porGrupo = ia.porGrupo;
 
 /**
  * Rede falsa com o catálogo real, para os testes de UI montarem a app sem
- * servidor. As 11 ferramentas e os 6 grupos vêm do próprio código: se a
+ * servidor. As 10 ferramentas e os 5 grupos vêm do próprio código: se a
  * arquitectura de informação mudar, os testes mudam com ela.
  */
 export function stubApi(so: Record<string, unknown> = {}) {
@@ -121,8 +121,7 @@ export function stubApi(so: Record<string, unknown> = {}) {
     ['username-finder', 'Localizador de Username', 'identidade', 'free', 'Procura o username em várias plataformas.'],
     ['username-intel', 'Inteligência de Username', 'identidade', 'free', 'Três registos independentes sobre o mesmo username.'],
     ['social-search', 'Busca por Nome nas Redes', 'social', 'pro', 'Perfis públicos que mencionam um nome.'],
-    ['datalikers', 'DataLikers', 'social', 'pro', 'Perfis, publicações e seguidores de Instagram e TikTok.'],
-    ['apify', 'APIFY', 'apify', 'free', 'Actors do Apify (Instagram, TikTok, Facebook, X).'],
+    ['social-presence', 'Presença por Cadastro', 'social', 'free', 'Em que plataformas um e-mail ou username já está cadastrado.'],
     ['paste-search', 'Exposição Pública', 'exposicao', 'pro', 'Busca em sites de paste.'],
     ['domain-infra', 'Infraestrutura de Domínio', 'infraestrutura', 'free', 'RDAP, DNS público e CT de um domínio.'],
     ['email-intel', 'Busca de E-mail', 'identidade', 'free', 'Domínio, MX, Gravatar e vazamentos conhecidos.'],

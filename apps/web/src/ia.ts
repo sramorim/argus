@@ -46,22 +46,13 @@ export const GRUPOS: Grupo[] = [
   {
     id: 'social',
     nome: 'Redes e Comunicação',
-    resumo: 'Perfis e presença pública: busca por nome nas redes, Telegram e a Cache API da DataLikers (Instagram, TikTok).',
+    resumo: 'Perfis e presença pública: busca por nome nos motores, Telegram e presença por cadastro (socialscan) — tudo grátis e sem chave.',
     icon: Icon.globe,
-    // Duas portas diferentes para o mesmo sítio: o `social-search` varre o
-    // índice do motor de busca por perfis públicos, e o `datalikers` consulta
-    // a Cache API oficial da DataLikers — perfil, publicações, seguidores,
-    // comentários e hashtags. Ambas exigem chave no backend para responder.
-    ferramentas: ['social-search', 'telegram-intel', 'datalikers'],
-  },
-  {
-    id: 'apify',
-    nome: 'APIFY',
-    resumo: 'Actors pagos do Apify (Instagram, TikTok, Facebook, X) com chave só no backend.',
-    icon: Icon.link,
-    // Engine separada do núcleo: sem APIFY_API_TOKEN devolve NOT_CONFIGURED e
-    // não gasta nada; correr um actor custa dinheiro, por isso pede confirmação.
-    ferramentas: ['apify'],
+    // `social-search` varre o índice dos motores por perfis públicos;
+    // `telegram-intel` lê a página pública t.me; `social-presence` (socialscan)
+    // pergunta aos endpoints públicos de cadastro se um e-mail/username já
+    // existe. Nenhuma exige chave — as pagas (Apify/DataLikers) saíram.
+    ferramentas: ['social-search', 'telegram-intel', 'social-presence'],
   },
   {
     id: 'infraestrutura',
@@ -152,7 +143,7 @@ export function buscar(ferramentas: ToolPublic[], termo: string): ToolPublic[] {
 export const ATALHOS: { id: string; nome: string; exemplo: string; icon: (p: SVGProps<SVGSVGElement>) => ReactElement }[] = [
   { id: 'username-finder', nome: 'Localizar username', exemplo: '@alvo_demo', icon: Icon.user },
   { id: 'social-search', nome: 'Perfis que mencionam um nome', exemplo: 'Nome Exemplo', icon: Icon.globe },
-  { id: 'datalikers', nome: 'Perfil de Instagram/TikTok', exemplo: '@alvo_demo', icon: Icon.layers },
+  { id: 'social-presence', nome: 'Presença por cadastro', exemplo: 'nome@email.com', icon: Icon.layers },
   { id: 'domain-infra', nome: 'Infraestrutura de domínio', exemplo: 'exemplo.com', icon: Icon.activity },
   { id: 'paste-search', nome: 'Exposição pública', exemplo: 'example.com', icon: Icon.shield },
   { id: 'graph-investigation', nome: 'Investigação completa', exemplo: 'alvo_demo', icon: Icon.network },
@@ -171,8 +162,7 @@ export const ICONE_FERRAMENTA: Record<string, (p: SVGProps<SVGSVGElement>) => Re
   'username-finder': Icon.user,
   'username-intel': Icon.search,
   'social-search': Icon.globe,
-  'datalikers': Icon.layers,
-  'apify': Icon.link,
+  'social-presence': Icon.layers,
   'domain-infra': Icon.server,
   'email-intel': Icon.mail,
   'phone-intel': Icon.phone,
@@ -190,10 +180,10 @@ export const NOME_PLANO: Record<PlanId, string> = { free: 'Free', pro: 'Pro', pr
 export type CorAzulejo = 'vermelho' | 'azul' | 'roxo' | 'verde' | 'laranja' | 'cinza';
 export const COR_FERRAMENTA: Record<string, CorAzulejo> = {
   'graph-investigation': 'vermelho', 'username-finder': 'azul', 'username-intel': 'azul',
-  'social-search': 'roxo', 'datalikers': 'laranja', 'apify': 'laranja',
+  'social-search': 'roxo', 'social-presence': 'roxo',
   'domain-infra': 'azul', 'paste-search': 'vermelho',
   'email-intel': 'vermelho', 'phone-intel': 'laranja', 'telegram-intel': 'azul',
 };
 export const COR_GRUPO: Record<string, CorAzulejo> = {
-  identidade: 'azul', social: 'roxo', apify: 'laranja', infraestrutura: 'verde', exposicao: 'vermelho', investigar: 'vermelho',
+  identidade: 'azul', social: 'roxo', infraestrutura: 'verde', exposicao: 'vermelho', investigar: 'vermelho',
 };

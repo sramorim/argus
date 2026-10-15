@@ -16,8 +16,7 @@ await import('../src/tools/username-intel.ts');
 await import('../src/tools/paste.ts');
 await import('../src/tools/graph.ts');
 await import('../src/tools/social-search.ts');
-await import('../src/tools/apify.ts');
-await import('../src/tools/datalikers.ts');
+await import('../src/tools/presenca.ts');
 await import('../src/tools/domain-infra.ts');
 
 const BASE = process.env.AUDIT_BASE ?? 'http://127.0.0.1:8787';

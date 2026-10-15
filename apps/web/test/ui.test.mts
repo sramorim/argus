@@ -224,7 +224,7 @@ test('as categorias de ferramenta têm todas ícone e nome próprios', () => {
   // Uma por uma das ferramentas registadas no servidor (as 7 de Social
   // Intelligence): se uma nova aparecer sem categoria própria, este teste
   // falha — é para isso que ele lê o código do servidor e não uma lista feita.
-  for (const f of ['graph', 'identity', 'paste', 'social-search', 'username-intel', 'apify', 'datalikers', 'domain-infra']) {
+  for (const f of ['graph', 'identity', 'paste', 'social-search', 'username-intel', 'contato', 'presenca', 'domain-infra']) {
     const p = join(ROOT, 'apps', 'server', 'src', 'tools', `${f}.ts`);
     for (const m of readFileSync(p, 'utf8').matchAll(/category:\s*'([a-z-]+)'/g)) usadas.add(m[1]!);
   }
@@ -915,7 +915,7 @@ test('os comandos do Blueprint partem da raiz, onde estão as workspaces', () =>
 test('toda variável de produção de que o código precisa está no render.yaml', () => {
   const yml = readFileSync(join(ROOT, 'render.yaml'), 'utf8');
   const usadas = new Set<string>();
-  for (const f of ['config.ts', 'security.ts', 'index.ts', 'registry.ts', 'net/apify.ts', 'net/datalikers.ts', 'tools/contato.ts']) {
+  for (const f of ['config.ts', 'security.ts', 'index.ts', 'registry.ts', 'tools/contato.ts', 'tools/presenca.ts']) {
     const src = readFileSync(join(ROOT, 'apps', 'server', 'src', f), 'utf8');
     for (const m of src.matchAll(/process\.env\.([A-Z_][A-Z0-9_]*)/g)) usadas.add(m[1]!);
     for (const m of src.matchAll(/(?:str|bool|int|list)\('([A-Z_][A-Z0-9_]*)'/g)) usadas.add(m[1]!);
@@ -1020,7 +1020,7 @@ test('o painel mostra as 8 fases que o servidor mandou, não uma lista escrita a
   const fases = [...bloco[1].matchAll(/'([^']+)'/g)].map((m) => m[1]);
   assert.deepEqual(
     fases,
-    ['Discovery', 'OSINT', 'Social', 'Apify', 'Normalization', 'Correlation', 'Intelligence', 'Snapshots'],
+    ['Discovery', 'OSINT', 'Social', 'Cadastro', 'Normalization', 'Correlation', 'Intelligence', 'Snapshots'],
     'a ordem das 8 fases',
   );
 });
@@ -1086,14 +1086,13 @@ test('o que ficou bloqueado aparece com o motivo — nada é escondido do utiliz
   assert.match(invSrc, /<span className="tag tag-free">pulada<\/span>/, 'a fase pulada é dita, não omitida');
 });
 
-test('o custo do Apify só corre com confirmação explícita do utilizador', () => {
-  assert.match(invSrc, /confirmarCusto: custo/, 'o corpo leva o estado do custo');
-  assert.ok(!invSrc.includes('confirmarCusto: true'), 'o cliente nunca confirma custo sozinho');
-  const custo = invSrc.match(/const \[custo, setCusto\] = useState\(([^)]*)\)/);
-  assert.ok(custo, 'o estado do custo não começa indefinido');
-  assert.equal(custo![1], 'false', 'custo começa em false: sem confirmação, sem despesa');
-  // E só aparece a confirmação quando o Apify está mesmo no plano e pronto.
-  assert.match(invSrc, /precisaCusto/, 'a confirmação depende do plano ter o Apify pronto');
+test('sem ferramentas pagas, não há confirmação de custo no painel', () => {
+  // Apify e DataLikers saíram do produto: o que resta é grátis e sem chave,
+  // por isso o cliente nunca confirma custo e executa sempre sem despesa.
+  assert.ok(!/confirmarCusto: custo/.test(invSrc), 'não há mais estado de custo a enviar');
+  assert.ok(!/precisaCusto/.test(invSrc), 'não há mais confirmação de custo no painel');
+  assert.ok(!/\bapify\b/i.test(invSrc), 'o painel não menciona o Apify');
+  assert.match(invSrc, /confirmarCusto: false/, 'executar vai sempre sem custo a confirmar');
 });
 
 test('o painel do plano é honesto no ecrã: sem verde decorativo, sem window.innerWidth', () => {

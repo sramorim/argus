@@ -141,12 +141,12 @@ await t('health responde 200 e diz quantas ferramentas existem', async () => {
   const r = await new Client().get('/api/health');
   eq(r.status, 200);
   eq(r.data.ok, true);
-  eq(r.data.tools, 11, 'o catálogo é o conjunto Social Intelligence + domínio + contacto (telefone, e-mail, Telegram)');
+  eq(r.data.tools, 10, 'o catálogo: username, e-mail, telefone, Telegram, presença, pesquisa por nome, exposição, domínio e grafo');
   eq(r.data.db.writable, true, 'o disco tem de aceitar escrita');
 });
 await t('health estendido: por provider, com os campos do spec e estados honestos', async () => {
   const r = await new Client().get('/api/health');
-  ok(Array.isArray(r.data.providers) && r.data.providers.length >= 10, `só ${r.data.providers?.length} linhas de provider`);
+  ok(Array.isArray(r.data.providers) && r.data.providers.length >= 4, `só ${r.data.providers?.length} linhas de provider`);
   const estados = new Set(['READY', 'NOT_INSTALLED', 'NOT_CONFIGURED', 'MISSING_SECRET', 'INCOMPATIBLE', 'ERROR', 'RATE_LIMITED', 'DISABLED']);
   for (const p of r.data.providers) {
     ok(estados.has(p.status), `estado fora do spec: ${p.status}`);
@@ -161,10 +161,10 @@ await t('health detalhado: verifica versões sem inventar (e continua a não dev
   const r = await new Client().get('/api/health?detalhe=sim');
   eq(r.status, 200);
   ok(r.data.detalhe === true, 'modo detalhe marcado');
-  const apify = r.data.providers.find((p: any) => p.nome === 'Apify (serviço)');
-  ok(apify, 'linha do serviço Apify presente');
-  ok(apify.status === 'NOT_CONFIGURED' && apify.healthCheck.includes('APIFY_API_TOKEN'),
-    `sem token tem de ser NOT_CONFIGURED a nomear APIFY_API_TOKEN, veio ${apify.status}: ${apify.healthCheck}`);
+  const pagos = r.data.providers.filter((p: any) => /Apify|DataLikers/i.test(p.nome));
+  eq(pagos.length, 0, 'serviços pagos (Apify/DataLikers) saíram do health');
+  const sherlock = r.data.providers.find((p: any) => /Sherlock/i.test(p.nome));
+  ok(sherlock, 'o registo grátis Sherlock continua no health');
   ok(r.data.providers.every((p: any) => typeof p.ultimoTeste === 'string' || p.ultimoTeste === null),
     'último teste com data');
 });
@@ -268,7 +268,7 @@ console.log('\n── CATÁLOGO E TRANCAS ────────────�
 await t('catálogo público devolve todas as ferramentas com estado de tranca', async () => {
   const r = await new Client().get('/api/tools', UA);
   eq(r.status, 200);
-  eq(r.data.tools.length, 11, `catálogo inesperado: ${r.data.tools.length} ferramentas`);
+  eq(r.data.tools.length, 10, `catálogo inesperado: ${r.data.tools.length} ferramentas`);
   const graves = r.data.tools.filter((x: any) => x.lock === 'locked');
   const abertos = r.data.tools.filter((x: any) => x.lock === 'open');
   ok(graves.length > 0 && abertos.length > 0, 'faltam ferramentas de um dos lados');
@@ -501,7 +501,7 @@ await t('investigação de outra pessoa dá 404 (não 403 — não confirma exis
 
 // =========================================================== PLANO DE INVESTIGAÇÃO
 console.log('\n── PLANO DE INVESTIGAÇÃO (8 fases) ───────────────────────────────');
-const FASES_ESPERADAS = ['Discovery', 'OSINT', 'Social', 'Apify', 'Normalization', 'Correlation', 'Intelligence', 'Snapshots'];
+const FASES_ESPERADAS = ['Discovery', 'OSINT', 'Social', 'Cadastro', 'Normalization', 'Correlation', 'Intelligence', 'Snapshots'];
 async function planFix(seed = 'torvalds') {
   const c = new Client();
   const n = `${Date.now()}${Math.random().toString(36).slice(2, 6)}`;

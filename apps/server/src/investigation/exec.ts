@@ -21,8 +21,6 @@
 import { q } from '../db.ts';
 import { executeTool, LockedError, QuotaError, type ToolCtx } from '../registry.ts';
 import { carregar as lerRegisto, type ProviderId } from '../tools/username-intel.ts';
-import { token as tokenApify } from '../net/apify.ts';
-import { token as tokenDataLikers } from '../net/datalikers.ts';
 import { calcular } from '../intel/routes.ts';
 import { capturar, carregar as lerSnapshot, guardar, presencaDe } from '../intel/snapshots.ts';
 import { radar as radarDe } from '../intel/radar.ts';
@@ -75,8 +73,6 @@ export async function recolherFactos(inv: InvAlvo, plano: PlanId): Promise<Facto
     seedType: inv.seed_type,
     nos: contarNos(inv.id),
     clis,
-    apifyToken: !!tokenApify().token,
-    datalikersChave: !!tokenDataLikers().token,
   };
 }
 
@@ -215,14 +211,6 @@ export async function executarPlano(p: PedidoExecucao): Promise<Progresso> {
           reg.ms = Date.now() - t0;
           reg.erro = mensagem(e);
         }
-        continue;
-      }
-
-      if (entrada.id === 'apify' && !p.confirmarCusto) {
-        // Pay-per-event: gastar dinheiro do utilizador sem perguntar é inaceitável.
-        reg.estado = 'NAO_EXECUTADA';
-        reg.ms = 0;
-        reg.erro = 'custo pay-per-event não confirmado — repita com "confirmarCusto": true';
         continue;
       }
 

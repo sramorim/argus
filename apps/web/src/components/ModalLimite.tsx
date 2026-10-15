@@ -7,7 +7,8 @@
  * externa nem uma chave: leva à página de limites, onde a pessoa decide.
  *
  * O texto é o que a pessoa precisa e nada mais. Não há gateway de pagamento
- * neste produto, e o modal não finge que há.
+ * neste produto, e o modal não finge que há. O botão leva aos Planos: o
+ * limite é a cota do plano, e o Pro é que a levanta.
  */
 import { Icon } from './Icons';
 
@@ -31,7 +32,7 @@ export default function ModalLimite({
         </p>
         <div className="limite-acoes">
           <button className="btn btn-primary btn-block" type="button" onClick={onGerenciar}>
-            Ver opções de recarga
+            Ver planos
           </button>
           <button className="btn btn-quiet btn-block" type="button" onClick={onFechar}>
             Fechar

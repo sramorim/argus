@@ -29,11 +29,11 @@ export type Modo = 'QUICK' | 'FULL' | 'CUSTOM';
 export const MODOS: readonly Modo[] = ['QUICK', 'FULL', 'CUSTOM'] as const;
 
 export type FaseNome =
-  | 'Discovery' | 'OSINT' | 'Social' | 'Apify'
+  | 'Discovery' | 'OSINT' | 'Social' | 'Cadastro'
   | 'Normalization' | 'Correlation' | 'Intelligence' | 'Snapshots';
 
 export const FASES: readonly FaseNome[] = [
-  'Discovery', 'OSINT', 'Social', 'Apify',
+  'Discovery', 'OSINT', 'Social', 'Cadastro',
   'Normalization', 'Correlation', 'Intelligence', 'Snapshots',
 ] as const;
 
@@ -64,13 +64,6 @@ export interface Factos {
     ok: boolean;
     motivo: string;
   }[];
-  apifyToken: boolean;
-  /**
-   * `DATALIKERS_API_KEY` está no ambiente do servidor. Opcional de propósito:
-   * quem monta factos sem este campo (testes, scripts) não pode afirmar por
-   * engano que a chave existe — `undefined` conta como ausente.
-   */
-  datalikersChave?: boolean;
 }
 
 export interface FerramentaPlano {
@@ -174,8 +167,8 @@ export const FORA_DO_PLANO: Record<string, { fase: FaseNome; motivo: string }> =
 const DESCRICOES: Record<FaseNome, string> = {
   Discovery: 'O que o próprio alvo revela: análise direta do alvo, sem chave nem serviço pago.',
   OSINT: 'Motores externos e registos de usernames — exige os CLIs instalados ou a pesquisa coberta pelo plano.',
-  Social: 'Redes sociais: busca pública por nome e a Cache API da DataLikers (Instagram e TikTok), que exige DATALIKERS_API_KEY.',
-  Apify: 'Actors do Apify, pagos por evento: exigem APIFY_API_TOKEN e a confirmação do custo antes de correr.',
+  Social: 'Redes sociais: busca pública por nome em motores de pesquisa — grátis, sem chave.',
+  Cadastro: 'Presença por cadastro (socialscan): em que plataformas um e-mail ou username já existe — Mozilla, Pinterest, GitLab, Reddit, grátis e sem chave.',
   Normalization: 'Converte os nós do grafo em entidades canónicas e funde as que são a mesma coisa.',
   Correlation: 'Cruza as entidades: correlações, indicadores partilhados e relações derivadas.',
   Intelligence: 'Perfil unificado e cruzamento entre plataformas, sempre com a faixa de confiança.',
@@ -210,10 +203,9 @@ const POR_FASE: Record<FaseNome, DefFerramenta[]> = {
   ],
   Social: [
     { id: 'social-search', tipos: ['username', 'dominio', 'email'], input: (s) => ({ name: s }) },
-    { id: 'datalikers', tipos: ['username'], input: (s) => ({ plataforma: 'instagram', recurso: 'perfil', alvo: s }) },
   ],
-  Apify: [
-    { id: 'apify', tipos: ['username', 'servico'], input: (s) => ({ alvo: s }) },
+  Cadastro: [
+    { id: 'social-presence', tipos: ['username', 'email'], input: (s) => ({ alvo: s }) },
   ],
   Normalization: [],
   Correlation: [],
@@ -323,14 +315,8 @@ function dependencia(id: string, f: Factos): { ok: boolean; motivo?: string; not
     };
   }
 
-  if (id === 'apify') {
-    if (!f.apifyToken) return { ok: false, motivo: '`APIFY_API_TOKEN` em falta' };
-    return { ok: true, nota: 'actors pay-per-event: na execução é pedida a confirmação do custo' };
-  }
-
-  if (id === 'datalikers') {
-    if (!f.datalikersChave) return { ok: false, motivo: '`DATALIKERS_API_KEY` em falta' };
-    return { ok: true, nota: 'Cache API: um pedido por recurso, com o saldo da conta a descontar' };
+  if (id === 'social-presence') {
+    return { ok: true, nota: 'endpoints públicos de cadastro (Mozilla, Pinterest, GitLab, Reddit): grátis, sem chave' };
   }
 
   return { ok: true };

@@ -135,12 +135,11 @@ export const TOOL_LOCKS: Record<string, LockedTool['minPlan']> = {
   'graph-investigation': 'free',
   'username-finder': 'free',
   'username-intel': 'free',   // 3 registos locais (MIT/CC BY-SA), sem API paga por trás
-  'apify': 'free',           // registry aberto; sem APIFY_API_TOKEN devolve NOT_CONFIGURED, não gasta nada
 
   // Pro — pesquisa web real, com pedidos de terceiros por execução
   'paste-search': 'pro',       // pesquisa web real (Bing RSS)
   'social-search': 'pro',      // 13 pedidos de pesquisa web em paralelo (Bing RSS)
-  'datalikers': 'pro',         // Cache API da DataLikers: cada pedido desconta do saldo da conta
+  'social-presence': 'free',   // endpoints públicos de cadastro (socialscan): sem chave, sem custo
   'domain-infra': 'free',      // RDAP + DNS público + CT: fontes abertas, sem chave, custo zero
   'phone-intel': 'free',       // libphonenumber local + pesquisa web (Bing RSS) do número
   'email-intel': 'free',       // MX + Gravatar públicos; HIBP só com a chave do dono no servidor
