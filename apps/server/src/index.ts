@@ -232,6 +232,20 @@ app.get('/api/me', (c) => {
  * em código nem reconstruir o bundle (que o browser cacheia para sempre).
  * Aqui o servidor é a fonte da verdade e o cliente limitamo-nos a mostrar.
  */
+/** Canais oficiais na ordem do rodapé. Um @ escrito na variável é ignorado. */
+function canaisOficiais(): { id: string; nome: string; rotulo: string; url: string }[] {
+  const semArroba = (s: string) => s.replace(/^@+/, '').trim();
+  const { instagram, telegram, facebook, x } = config.canais;
+  const lista: { id: string; nome: string; rotulo: string; url: string }[] = [
+    { id: 'whatsapp', nome: 'WhatsApp', rotulo: config.contacto.label.replace(/^WhatsApp\s*/, ''), url: `https://wa.me/${config.contacto.whatsapp}` },
+  ];
+  if (semArroba(telegram)) lista.push({ id: 'telegram', nome: 'Telegram', rotulo: `@${semArroba(telegram)}`, url: `https://t.me/${semArroba(telegram)}` });
+  if (semArroba(instagram)) lista.push({ id: 'instagram', nome: 'Instagram', rotulo: `@${semArroba(instagram)}`, url: `https://instagram.com/${semArroba(instagram)}` });
+  if (facebook.startsWith('https://')) lista.push({ id: 'facebook', nome: 'Facebook', rotulo: 'Página oficial', url: facebook });
+  if (semArroba(x)) lista.push({ id: 'x', nome: 'X', rotulo: `@${semArroba(x)}`, url: `https://x.com/${semArroba(x)}` });
+  return lista;
+}
+
 app.get('/api/contact', (c) => c.json({
   whatsapp: config.contacto.whatsapp,
   label: config.contacto.label,
@@ -240,6 +254,7 @@ app.get('/api/contact', (c) => c.json({
   autor: config.autor.legal,
   autorLink: config.autor.link ?? null,
   copyright: config.autor.copyright,
+  canais: canaisOficiais(),
   // A chave Pix é pública por natureza (é para ser copiada e paga), mas vem
   // do servidor: escrever um UUID de pagamento no bundle do browser é a forma
   // mais rápida de cobrar a pessoa errada quando o dono trocar de chave.
@@ -564,7 +579,8 @@ app.get('/api/admin/estado', (c) => {
   const nRuns = (q('SELECT COUNT(*) c FROM runs').get() as any).c;
   const nInvs = (q('SELECT COUNT(*) c FROM investigations').get() as any).c;
   const hoje = (q('SELECT COUNT(*) c FROM usage WHERE at >= ?').get(new Date().toISOString().slice(0, 10)) as any).c;
-  return c.json({ users, nUsers, nRuns, nInvs, hoje, plans: PLAN_LIST, db: dbHealth() });
+  // O admin vê todos os planos (inclui o Pro Max antigo), mesmo os que já não se vendem.
+  return c.json({ users, nUsers, nRuns, nInvs, hoje, plans: Object.values(PLANS), db: dbHealth() });
 });
 
 app.get('/api/admin/pix-intents', (c) => {
@@ -710,6 +726,23 @@ app.post('/api/admin/user/:id/flags', async (c) => {
   }
   const fresh = q('SELECT id, is_admin, suspended FROM users WHERE id = ?').get(id);
   return c.json({ ok: true, user: fresh });
+});
+
+/*
+ * Excluir uma conta, pelo admin. Apaga o utilizador e, por ON DELETE CASCADE,
+ * as sessões, o uso, as investigações e os pedidos Pix dele — a mesma limpeza
+ * que o próprio utilizador faz em /api/auth/delete-account. Não se apaga a si
+ * próprio nem a outro administrador: para isso, primeiro tira-se o acesso.
+ */
+app.delete('/api/admin/user/:id', (c) => {
+  const u = requireAdmin(c);
+  if (u instanceof Response) return u;
+  const target = q('SELECT id, is_admin FROM users WHERE id = ?').get(c.req.param('id')) as { id: string; is_admin: number } | undefined;
+  if (!target) return c.json({ error: 'nao_encontrado' }, 404);
+  if (target.id === u.userId) return c.json({ error: 'auto_exclusao', msg: 'Não pode excluir a sua própria conta por aqui.' }, 400);
+  if (target.is_admin) return c.json({ error: 'admin_protegido', msg: 'Retire o acesso de administração antes de excluir esta conta.' }, 400);
+  q('DELETE FROM users WHERE id = ?').run(target.id);
+  return c.json({ ok: true });
 });
 
 // ---------- health ----------

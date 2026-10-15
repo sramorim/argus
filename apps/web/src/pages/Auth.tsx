@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { api, ApiError, useContacto } from '../api';
+import { CanaisOficiais } from '../components/CanaisOficiais';
 import { Icon } from '../components/Icons';
 import { Mark, Note } from '../components/ui';
 
@@ -46,7 +47,7 @@ export default function Auth({ onDone }: { onDone: () => void }) {
       <div className="auth-head">
         <Mark size={64} className="auth-mark" />
         <div className="brand-name auth-brand">ARGOS</div>
-        <div className="auth-brand-sub">SOCIAL INTELLIGENCE</div>
+        <div className="auth-brand-sub">INTELIGÊNCIA EM DADOS PÚBLICOS</div>
         <h1 className="auth-title">{mode === 'register' ? 'Criar sua conta' : 'Bem-vindo de volta'}</h1>
         <p className="auth-subtitle">{mode === 'register' ? 'É rápido, sem cartão e sem trial que expira.' : 'Acesse sua conta para continuar.'}</p>
       </div>
@@ -95,8 +96,8 @@ export default function Auth({ onDone }: { onDone: () => void }) {
         )}
 
         <div className="auth-credit">
-          <div>{wa?.copyright ?? '© 2026 Daniel Senhor Amorim'}</div>
-          {wa && <a href={wa.link} target="_blank" rel="noopener noreferrer">{wa.label}</a>}
+          <CanaisOficiais contacto={wa} titulo={false} />
+          <div>{wa?.copyright ?? '© 2026 SR. Amorim'}</div>
         </div>
       </form>
     </div>

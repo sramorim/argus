@@ -9,6 +9,7 @@
  */
 import { useEffect, useState } from 'react';
 import { api, type Plan, type ToolPublic, useContacto, periodoCurto } from '../api';
+import { CanaisOficiais } from '../components/CanaisOficiais';
 import { Brand, PlanTag, Skeleton } from '../components/ui';
 import { Icon } from '../components/Icons';
 import Globo from '../components/Globo';
@@ -172,11 +173,7 @@ export function Landing({ onStart, tools }: { onStart: () => void; tools: ToolPu
           {wa?.copyright ?? '© 2026 SR. Amorim'} · Todos os direitos reservados.
         </span>
         <span className="lp-rodape-canais">
-          {wa && (
-            <a href={wa.link} target="_blank" rel="noopener noreferrer">
-              <Icon.phone /> {wa.label}
-            </a>
-          )}
+          <CanaisOficiais contacto={wa} titulo={false} />
           <a href="https://github.com/sramorim/argus" target="_blank" rel="noopener noreferrer">
             <Icon.code /> Código
           </a>

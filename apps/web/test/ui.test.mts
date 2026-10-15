@@ -531,29 +531,30 @@ function abreCamadas(t: { caixa: Element; html: () => string }) {
 /** O CSS sem os comentários: é o que o navegador aplica. */
 const semComentarios = (css: string): string => css.replace(/\/\*[\s\S]*?\*\//g, '');
 
-test('a paleta é a do Design System — azul profesional, sem verde Matrix', () => {
+test('a paleta é a do Design System — tema claro do lobo: branco, preto e vermelho', () => {
   const css = readFileSync(join(SRC, 'styles.css'), 'utf8');
   // Lê o valor pelo nome do token, sem depender do alinhamento de espaços.
   const token = (nome: string) => new RegExp(nome + '\\s*:\\s*(#[0-9A-Fa-f]{3,8})').exec(css)?.[1];
-  // Os valores são os da ficha (Design System v1.0, redesenho azul-marinho 2026-10). O que este teste protege
-  // não é a moda: é que o accent continue a ser azul e a continue a ser o
-  // mesmo em toda a aplicação.
+  // Os valores são os da ficha (tema claro do lobo, 2026-10-15, aprovado pelo dono
+  // a partir do mockup). O que este teste protege não é a moda: é que o accent
+  // continue a ser o vermelho da marca e o mesmo em toda a aplicação.
+  // (Os tokens chamam-se --blue-* por compatibilidade; carregam o vermelho.)
   const esperado: Record<string, string> = {
-    '--bg': '#050D1F',
-    '--bg-2': '#030917',
-    '--surface': '#0A1630',
-    '--surface-2': '#0F1E3D',
-    '--surface-3': '#16294F',
-    '--line': '#1C2E55',
-    '--line-strong': '#2B4677',
-    '--blue': '#2E9BFF',
-    '--blue-2': '#1B6EF3',
-    '--t-1': '#FFFFFF',
-    '--t-2': '#A9B7D0',
-    '--t-3': '#7383A3',
-    '--erro': '#F0524F',
-    '--ok': '#2FD27D',
-    '--aviso': '#F5A623',
+    '--bg': '#FFFFFF',
+    '--bg-2': '#F4F4F6',
+    '--surface': '#FFFFFF',
+    '--surface-2': '#F5F5F7',
+    '--surface-3': '#ECECEF',
+    '--line': '#E4E4E8',
+    '--line-strong': '#CFCFD5',
+    '--blue': '#D3121B',
+    '--blue-2': '#A50E15',
+    '--t-1': '#121214',
+    '--t-2': '#45454D',
+    '--t-3': '#5F5F68',
+    '--erro': '#B42318',
+    '--ok': '#15803D',
+    '--aviso': '#B45309',
   };
   for (const [nome, valor] of Object.entries(esperado)) {
     assert.equal(token(nome), valor, `${nome} devia ser ${valor}, obtive ${token(nome)}`);
@@ -575,9 +576,9 @@ test('o Design System está implementado: gradientes, medidas e micro-label', ()
   const css = semComentarios(readFileSync(join(SRC, 'styles.css'), 'utf8'));
 
   // CTA e hero são os gradientes exactos da ficha.
-  assert.match(css, /--grad-cta:\s*linear-gradient\(135deg,\s*#1B6EF3 0%,\s*#2E9BFF 100%\)/,
+  assert.match(css, /--grad-cta:\s*linear-gradient\(135deg,\s*#B00F17 0%,\s*#D3121B 100%\)/,
     'o gradiente do CTA não é o da ficha');
-  assert.match(css, /--grad-hero:\s*radial-gradient\(120% 90% at 80% 10%,\s*#133A78 0%,\s*#050D1F 62%\)/,
+  assert.match(css, /--grad-hero:\s*radial-gradient\(120% 90% at 80% 10%,\s*#FFF1F1 0%,\s*#FFFFFF 62%\)/,
     'o gradiente do hero não é o da ficha');
 
   // Medidas: alvo de toque 44, botão e campo 52, cartão 20 de raio, 68 de barra.
@@ -941,6 +942,8 @@ test('toda variável de produção de que o código precisa está no render.yaml
     // WHATSAPP_NUMBER é o alias de ARGUS_CONTACTO_WHATSAPP. O Blueprint declara
     // as chaves canónicas por isso os aliases não precisam de estar lá.
     'DATABASE_URL', 'WHATSAPP_NUMBER',
+    // O X ainda não tem conta oficial; sem valor, o canal simplesmente não aparece.
+    'ARGUS_X',
   ]);
 
   const declaradas = new Set([...yml.matchAll(/^\s*-\s*key:\s*([A-Z_][A-Z0-9_]*)/gm)].map((m) => m[1]!));

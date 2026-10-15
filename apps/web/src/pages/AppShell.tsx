@@ -27,6 +27,7 @@ import type { ReactElement } from 'react';
 import type { SVGProps } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { type ToolPublic, type Usage, type User, useContacto } from '../api';
+import { CanaisOficiais } from '../components/CanaisOficiais';
 import { Icon, CATEGORY_ICON, CATEGORY_LABEL } from '../components/Icons';
 import Janela, { type Geom } from '../components/Janela';
 import Paleta from '../components/Paleta';
@@ -480,8 +481,8 @@ export default function AppShell({
           </button>
         </div>
         <div className="side-legal">
+          <CanaisOficiais contacto={wa} />
           <div>{wa?.copyright ?? '© 2026 SR. Amorim'}</div>
-          {wa && <a href={wa.link} target="_blank" rel="noopener noreferrer">{wa.label}</a>}
         </div>
       </div>
     </>
@@ -504,7 +505,7 @@ export default function AppShell({
           telemóvel é a gaveta que desliza. A animação é do CSS. */}
       <aside className="sidebar" data-open={drawer} aria-label="Navegação principal">
         <div className="side-brand">
-          <Brand size={40} subtitle="Inteligência digital" />
+          <Brand size={40} subtitle="Inteligência em dados públicos" />
           <div className="side-lema">OSINT · Análise · Estratégia</div>
         </div>
         {conteudoLateral}

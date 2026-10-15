@@ -102,7 +102,7 @@ export default function LoadingScreen({
             <span className="boot-halo" aria-hidden />
             <img className="boot-mark" src="/brand/argos-a-128.png" width={112} height={112} alt="" />
             <div className="boot-name">ARGOS</div>
-            <div className="boot-sub">SOCIAL INTELLIGENCE</div>
+            <div className="boot-sub">INTELIGÊNCIA EM DADOS PÚBLICOS</div>
           </div>
 
           <p className="boot-tagline">Informação revela<br />novas perspectivas.</p>

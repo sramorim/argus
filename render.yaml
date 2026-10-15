@@ -122,6 +122,15 @@ services:
       # Nota Legal, onde a identidade legal tem de aparecer.
       - key: ARGUS_AUTHOR_LEGAL
         value: Daniel Senhor Amorim
+      # Canais oficiais do rodapé. O X ainda não tem conta: sem valor, não aparece.
+      - key: ARGUS_INSTAGRAM
+        value: sr__Amorim
+      - key: ARGUS_TELEGRAM
+        value: Sr_amorim
+      - key: ARGUS_FACEBOOK_URL
+        value: https://www.facebook.com/share/1DmK9BuTh3/
+      # - key: ARGUS_X
+      #   value: usuario_no_x
       # O link do autor (site, LinkedIn…). Vazio = não aparece no rodapé.
       # - key: ARGUS_AUTHOR_LINK
       #   value: https://exemplo.com

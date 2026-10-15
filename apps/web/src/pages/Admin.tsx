@@ -121,6 +121,11 @@ export default function Admin() {
     try { await api.adminSetFlags(id, flags); toast('ok', 'Atualizado.'); load(); }
     catch (e) { toast('err', (e as ApiError).message); }
   };
+  const excluir = async (id: string, email: string) => {
+    if (!window.confirm(`Excluir a conta ${email}? Isto apaga também as investigações e o histórico dela e não pode ser desfeito.`)) return;
+    try { await api.adminDeleteUser(id); toast('ok', `${email} foi excluída.`); load(); }
+    catch (e) { toast('err', (e as ApiError).message); }
+  };
 
   const users = (st?.users ?? []).filter((u) => {
     const n = q.trim().toLowerCase();
@@ -331,6 +336,12 @@ export default function Admin() {
                               onClick={() => setFlags(u.id, { suspended: !u.suspended })}>
                               {u.suspended ? 'reativar' : 'suspender'}
                             </button>
+                            {!u.is_admin && (
+                              <button className="btn btn-sm btn-quiet btn-perigo" type="button"
+                                onClick={() => excluir(u.id, u.email)}>
+                                <Icon.trash width={14} height={14} /> excluir
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>

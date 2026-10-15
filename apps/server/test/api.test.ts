@@ -296,11 +296,21 @@ await t('ferramenta inexistente dá 404', async () => {
   const r = await c1.get('/api/tools/nao-existe', UA);
   eq(r.status, 404);
 });
+await t('contacto traz os canais oficiais com links que abrem', async () => {
+  const r = await new Client().get('/api/contact', UA);
+  eq(r.status, 200);
+  const porId = Object.fromEntries((r.data.canais ?? []).map((x: any) => [x.id, x]));
+  eq(porId.whatsapp?.url, `https://wa.me/${r.data.whatsapp}`, 'o WhatsApp do rodapé não bate com o do contacto');
+  eq(porId.telegram?.url, 'https://t.me/Sr_amorim');
+  eq(porId.instagram?.url, 'https://instagram.com/sr__Amorim');
+  ok(String(porId.facebook?.url).startsWith('https://www.facebook.com/'), 'falta a página do Facebook');
+  eq(porId.x, undefined, 'o X não tem conta definida e não devia aparecer');
+});
 await t('planos vêm com quotas coerentes', async () => {
   const r = await c1.get('/api/plans', UA);
   eq(r.status, 200);
-  eq(r.data.plans.length, 3);
-  eq(r.data.plans.map((p: any) => p.id), ['free', 'pro', 'pro_max']);
+  eq(r.data.plans.length, 2);
+  eq(r.data.plans.map((p: any) => p.id), ['free', 'pro']);
   for (const p of r.data.plans) {
     ok(p.dailyRuns > 0 && p.maxItems > 0 && p.concurrent > 0, `plano ${p.id} incompleto`);
   }
@@ -799,6 +809,26 @@ await t('admin: suspender encerra as sessões e bloqueia o acesso', async () => 
   const login = await c.post('/api/auth/login', { email: alvo.email, password: 'senhaforte123' }, UA);
   eq(login.status, 403, 'a conta suspensa conseguiu entrar');
   await admin.post(`/api/admin/user/${alvo.id}/flags`, { suspended: false }, UA);
+});
+await t('admin: excluir uma conta apaga-a e encerra o acesso; admins ficam protegidos', async () => {
+  const email = `apagar${Date.now()}@exemplo.test`;
+  const c = new Client();
+  eq((await c.post('/api/auth/register', { email, name: 'Apagar', password: 'senhaforte123' }, UA)).status, 201);
+  const st = (await admin.get('/api/admin/estado', UA)).data;
+  const alvo = st.users.find((u: any) => u.email === email);
+  ok(alvo, 'não encontrei a conta a excluir');
+  // quem não é admin não exclui ninguém
+  eq((await c.req('DELETE', `/api/admin/user/${alvo.id}`, undefined, UA)).status, 403);
+  const r = await admin.req('DELETE', `/api/admin/user/${alvo.id}`, undefined, UA);
+  eq(r.status, 200, JSON.stringify(r.data));
+  eq((await c.get('/api/me', UA)).data.user, null, 'a sessão da conta excluída continuou válida');
+  const depois = (await admin.get('/api/admin/estado', UA)).data.users.find((u: any) => u.email === email);
+  eq(depois, undefined, 'a conta continua na lista');
+  eq((await c.post('/api/auth/login', { email, password: 'senhaforte123' }, UA)).status === 200, false, 'a conta excluída ainda entra');
+  // o próprio admin não se exclui por aqui
+  const eu = st.users.find((u: any) => u.email === 'dono@argus.test');
+  eq((await admin.req('DELETE', `/api/admin/user/${eu.id}`, undefined, UA)).status, 400);
+  eq((await admin.req('DELETE', '/api/admin/user/nao-existe', undefined, UA)).status, 404);
 });
 await t('admin: plano inválido é recusado', async () => {
   const alvo = (await admin.get('/api/admin/estado', UA)).data.users?.[0];

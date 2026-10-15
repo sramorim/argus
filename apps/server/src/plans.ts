@@ -91,7 +91,12 @@ export const PLANS: Record<PlanId, Plan> = {
   },
 };
 
-export const PLAN_LIST = [PLANS.free, PLANS.pro, PLANS.pro_max];
+/*
+ * Oferta pública: Free + Pro, um plano pago só. O Pro Max continua definido
+ * para quem já o tem (o admin ainda o pode atribuir à mão), mas deixou de ser
+ * vendido e não aparece nos ecrãs de planos.
+ */
+export const PLAN_LIST = [PLANS.free, PLANS.pro];
 
 /** Qual plano e o minimo para usar uma ferramenta. */
 export type MinPlan = 'free' | 'pro' | 'pro_max';

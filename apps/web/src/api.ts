@@ -282,6 +282,13 @@ async function req<T>(url: string, init?: RequestInit): Promise<T> {
   return data as T;
 }
 
+export interface CanalOficial {
+  id: 'whatsapp' | 'telegram' | 'instagram' | 'facebook' | 'x' | string;
+  nome: string;
+  rotulo: string;
+  url: string;
+}
+
 export interface Contacto {
   whatsapp: string;
   label: string;
@@ -289,6 +296,8 @@ export interface Contacto {
   autor: string;
   autorLink: string | null;
   copyright: string;
+  /** Canais oficiais da marca (WhatsApp, Telegram, Instagram, Facebook, X), na ordem do rodapé. */
+  canais?: CanalOficial[];
   /**
    * Chave Pix de recebimento. Vem do servidor (PIX_KEY) e chega aqui para ser
    * mostrada, copiada e transformada em QR code. Não é segredo — é para o
@@ -445,6 +454,9 @@ export const api = {
     }),
   adminSetFlags: (id: string, flags: { isAdmin?: boolean; suspended?: boolean }) =>
     req<{ ok: boolean }>(`/api/admin/user/${encodeURIComponent(id)}/flags`, { method: 'POST', body: JSON.stringify(flags) }),
+  /** Exclui a conta de vez (com investigações, uso e pedidos Pix). Não serve para administradores. */
+  adminDeleteUser: (id: string) =>
+    req<{ ok: boolean }>(`/api/admin/user/${encodeURIComponent(id)}`, { method: 'DELETE' }),
   /**
    * Limite mensal de créditos partilhados para uma pessoa. `null` volta ao
    * limite do plano. É aactivate à mão de uma recarga combinada ao telefone.

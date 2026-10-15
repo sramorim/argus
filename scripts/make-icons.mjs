@@ -2,7 +2,7 @@
 /**
  * Gera os ícones e imagens da marca ARGOS a partir de UMA fonte:
  * `apps/web/public/brand/argos-a.png` (o símbolo da marca — o lobo geométrico
- * em traço neon com nós de circuito, desenhado por `scripts/make-wolf.mjs` —,
+ * geométrico preto e branco de olhos vermelhos, vetorizado do mockup aprovado —,
  * fundo transparente).
  *
  * Porquê um script: a marca tem de ser reproduzível. Se o símbolo mudar,
@@ -12,9 +12,9 @@
  * Saída em apps/web/public:
  *   brand/argos-a-128.png        símbolo pequeno, usado pela interface (Mark)
  *   favicon.png                  32x32, fundo transparente
- *   apple-touch-icon.png, icon-192.png, icon-512.png   sobre azul-marinho
+ *   apple-touch-icon.png, icon-192.png, icon-512.png   sobre branco
  *   favicon.svg, logo-mark.svg   o símbolo embutido (data URI), para <link rel=icon>
- *   logo.svg                     símbolo + palavra ARGOS + "Inteligência digital"
+ *   logo.svg                     símbolo + palavra ARGOS + "Inteligência em dados públicos"
  *   og-cover.png                 1200x630, capa para redes sociais
  */
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -26,12 +26,12 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const OUT = join(HERE, '..', 'apps', 'web', 'public');
 const FONTE = join(OUT, 'brand', 'argos-a.png');
 
-/* Cores do Design System (as mesmas de apps/web/src/styles.css). */
-const NAVY = [5, 13, 31];          // --bg       #050D1F
-const NAVY_2 = [15, 30, 61];       // --surface-2 #0F1E3D
-const ACCENT = [46, 155, 255];     // --blue     #2E9BFF
-const WHITE = [255, 255, 255];
-const SUB = [169, 183, 208];       // --t-2      #A9B7D0
+/* Cores do Design System (as mesmas de apps/web/src/styles.css — tema claro do lobo). */
+const NAVY = [255, 255, 255];      // fundo       #FFFFFF (nome antigo mantido)
+const NAVY_2 = [243, 243, 245];    // --surface-2 #F3F3F5
+const ACCENT = [211, 18, 27];      // --blue (vermelho da marca) #D3121B
+const WHITE = [18, 18, 20];        // texto principal #121214 (nome antigo mantido)
+const SUB = [95, 95, 104];         // --t-3      #5F5F68
 
 const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
 const smooth = (e0, e1, x) => { const t = clamp((x - e0) / (e1 - e0)); return t * t * (3 - 2 * t); };
@@ -112,7 +112,7 @@ function icone(size) {
       const halo = Math.max(0, 1 - d) ** 2 * 0.55;
       for (let c = 0; c < 3; c++) {
         const base = NAVY_2[c] + (NAVY[c] - NAVY_2[c]) * t;
-        png.data[i + c] = Math.round(base + (ACCENT[c] - base) * halo * 0.6);
+        png.data[i + c] = Math.round(base + (ACCENT[c] - base) * halo * 0.08);
       }
       png.data[i + 3] = 255;
     }
@@ -150,12 +150,12 @@ const mark = `${aviso}
 writeFileSync(join(OUT, 'logo-mark.svg'), mark);
 writeFileSync(join(OUT, 'favicon.svg'), mark);
 writeFileSync(join(OUT, 'logo.svg'), `${aviso}
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 272 56" width="272" height="56" role="img" aria-label="ARGOS — inteligência digital">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 272 56" width="272" height="56" role="img" aria-label="ARGOS — inteligência em dados públicos">
   ${simboloSvg(2, 6, 44)}
-  <text x="54" y="33" fill="#FFFFFF" font-family="Montserrat,system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif"
+  <text x="54" y="33" fill="#121214" font-family="Montserrat,system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif"
         font-size="26" font-weight="800" letter-spacing="4">ARGOS</text>
-  <text x="55" y="46" fill="#A9B7D0" font-family="Inter,system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif"
-        font-size="8.2" font-weight="600" letter-spacing="2.2">INTELIGÊNCIA DIGITAL</text>
+  <text x="55" y="46" fill="#5F5F68" font-family="Inter,system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif"
+        font-size="8.2" font-weight="600" letter-spacing="1.4">INTELIGÊNCIA EM DADOS PÚBLICOS</text>
 </svg>
 `);
 console.log('favicon.svg, logo-mark.svg, logo.svg');
@@ -214,7 +214,7 @@ function capa(W = 1200, H = 630) {
       const i = (W * y + x) << 2;
       const d = Math.hypot((x - cx) / (W * 0.55), (y - H * 0.38) / (H * 0.7));
       const glow = Math.max(0, 1 - d) ** 2.2;
-      for (let c = 0; c < 3; c++) png.data[i + c] = Math.round(NAVY[c] + (ACCENT[c] - NAVY[c]) * glow * 0.32);
+      for (let c = 0; c < 3; c++) png.data[i + c] = Math.round(NAVY[c] + (ACCENT[c] - NAVY[c]) * glow * 0.06);
       png.data[i + 3] = 255;
     }
   }

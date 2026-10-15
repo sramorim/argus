@@ -1,6 +1,8 @@
 /* =============================================================================
    ARGOS — Design System v1.0
-   Azul-marinho escuro, azul eléctrico, mobile-first, alta densidade sem poluição.
+   Tema claro do lobo: branco, preto e vermelho só nos detalhes. Mobile-first,
+   alta densidade sem poluição. (Os nomes --blue-* ficaram por compatibilidade:
+   hoje carregam o vermelho da marca.)
 
    Uma só fonte de verdade para cor, forma e medida. Nenhum HEX solto pelo
    resto do ficheiro: tudo o que é cor, raio ou altura sai daqui, para o
@@ -25,68 +27,68 @@
    /* ---------------------------------------------------------------- 1. tokens */
    :root {
    /* --- fundo ------------------------------------------------------------ */
-   --bg:            #050D1F;   /* bg-app     */
-   --bg-2:          #030917;   /* bg-sunken  */
+   --bg:            #FFFFFF;   /* bg-app     */
+   --bg-2:          #F4F4F6;   /* bg-sunken  */
 
    /* --- superfícies ------------------------------------------------------ */
-   --surface:       #0A1630;   /* surface-1  — a superfície dos cartões */
-   --surface-2:     #0F1E3D;   /* surface-2  — campos, gaveta, chips */
-   --surface-3:     #16294F;   /* surface-3  — realce, item activo   */
+   --surface:       #FFFFFF;   /* surface-1  — a superfície dos cartões */
+   --surface-2:     #F5F5F7;   /* surface-2  — campos, gaveta, chips */
+   --surface-3:     #ECECEF;   /* surface-3  — realce, item activo   */
 
    /* --- bordas ----------------------------------------------------------- */
-   --line:          #1C2E55;   /* border-subtle */
-   --line-strong:   #2B4677;   /* border-strong */
+   --line:          #E4E4E8;   /* border-subtle */
+   --line-strong:   #CFCFD5;   /* border-strong */
    /* Derivada: um degrau abaixo da borda subtil, para separadores internos
       (linha de tabela, divisória de cartão) que não são uma borda de peça. */
-   --line-soft:     #142344;
-   --glass:         rgba(5, 13, 31, .84);
-   --glass-border:  rgba(255, 255, 255, .07);
+   --line-soft:     #EEEEF1;
+   --glass:         rgba(255, 255, 255, .9);
+   --glass-border:  rgba(18, 18, 20, .07);
 
    /* --- azul principal --------------------------------------------------- */
-   --blue:          #2E9BFF;   /* accent      */
-   --blue-2:        #1B6EF3;   /* accent-deep */
-   --blue-dim:      rgba(46, 155, 255, .12);   /* accent-soft  */
-   --blue-line:     rgba(46, 155, 255, .34);
-   --blue-glow:     rgba(46, 155, 255, .35);   /* accent-glow  */
-   --blue-glow-strong: rgba(46, 155, 255, .62);
+   --blue:          #D3121B;   /* accent      */
+   --blue-2:        #A50E15;   /* accent-deep */
+   --blue-dim:      rgba(211, 18, 27, .07);   /* accent-soft  */
+   --blue-line:     rgba(211, 18, 27, .28);
+   --blue-glow:     rgba(211, 18, 27, .16);   /* accent-glow  */
+   --blue-glow-strong: rgba(211, 18, 27, .32);
    /* Derivada: o mesmo accent clareado, para texto pequeno e ícones finos onde
       o accent puro perde peso sobre superfície-2. Continuam a ser a mesma cor
       — é uma tonalidade, não uma cor nova. */
-   --blue-3:        #6FC0FF;
+   --blue-3:        #B00F17;
 
    /* --- textos ----------------------------------------------------------- */
-   --t-1:           #FFFFFF;   /* text-1 */
-   --t-2:           #A9B7D0;   /* text-2 */
-   --t-3:           #7383A3;   /* text-3 */
+   --t-1:           #121214;   /* text-1 */
+   --t-2:           #45454D;   /* text-2 */
+   --t-3:           #5F5F68;   /* text-3 */
    /* Derivada: text-3 escurecido, para a linha legal e as etiquetas de canto
       que têm de existir sem competir com o texto a sério. */
-   --t-4:           #5A6A8C;
+   --t-4:           #6E6E77;
 
    /* --- estados ---------------------------------------------------------- */
-   --erro:          #F0524F;   /* danger  */
-   --erro-dim:      rgba(240, 82, 79, .13);
-   --ok:            #2FD27D;   /* success */
-   --ok-dim:        rgba(47, 210, 125, .13);
-   --aviso:         #F5A623;   /* warning */
-   --aviso-dim:     rgba(245, 166, 35, .13);
-   --info:          #2E9BFF;   /* info    */
+   --erro:          #B42318;   /* danger  */
+   --erro-dim:      rgba(180, 35, 24, .08);
+   --ok:            #15803D;   /* success */
+   --ok-dim:        rgba(21, 128, 61, .09);
+   --aviso:         #B45309;   /* warning */
+   --aviso-dim:     rgba(180, 83, 9, .09);
+   --info:          #3F3F46;   /* info    */
 
    /* --- gradientes ------------------------------------------------------- */
-   --grad-cta:  linear-gradient(135deg, #1B6EF3 0%, #2E9BFF 100%);
-   --grad-hero: radial-gradient(120% 90% at 80% 10%, #133A78 0%, #050D1F 62%);
+   --grad-cta:  linear-gradient(135deg, #B00F17 0%, #D3121B 100%);
+   --grad-hero: radial-gradient(120% 90% at 80% 10%, #FFF1F1 0%, #FFFFFF 62%);
 
    /* Confiança: escala de azuis + neutro. Sem verde, sem percentagem
       inventada — o backend diz Confirmado/Corroborado/Indicado/Fraco e o
       ecrã repete essa semântica, não a converte numa nota. */
-   --c-confirmed:     #9BD4FF;
-   --c-corroborated:  #5FB0FF;
-   --c-indicated:     #2E7BC4;
-   --c-weak:          #46516B;
+   --c-confirmed:     #121214;
+   --c-corroborated:  #45454D;
+   --c-indicated:     #8E8E96;
+   --c-weak:          #C4C4CA;
 
    /* Tipos de Inteligência */
-   --intel-osint:     #2E9BFF;
-   --intel-humint:    #2FD27D;
-   --intel-imint:     #F0524F;
+   --intel-osint:     #D3121B;
+   --intel-humint:    #15803D;
+   --intel-imint:     #B45309;
 
    /* --- espaço e forma --------------------------------------------------- */
    --s-1: 4px; --s-2: 8px; --s-3: 12px; --s-4: 16px; --s-5: 22px; --s-6: 30px; --s-7: 44px; --s-8: 64px;
@@ -97,11 +99,11 @@
    --h-btn:   52px;   /* botão primário e campo */
    --h-input: 52px;
 
-   --shadow-1: 0 1px 2px rgba(0,0,0,.40);
-   --shadow-2: 0 8px 24px rgba(0,0,0,.46);
-   --shadow-3: 0 18px 44px rgba(0,0,0,.58);
-   --shadow-4: 0 32px 80px rgba(0,0,0,.72);
-   --ring: 0 0 0 3px rgba(46,155,255,.28);
+   --shadow-1: 0 1px 2px rgba(18,18,20,.06);
+   --shadow-2: 0 8px 24px rgba(18,18,20,.08);
+   --shadow-3: 0 18px 44px rgba(18,18,20,.12);
+   --shadow-4: 0 32px 80px rgba(18,18,20,.18);
+   --ring: 0 0 0 3px rgba(211,18,27,.22);
 
    --sidebar-w: 280px;   /* lateral fixa no ecrã largo */
    --drawer-w: min(320px, 84vw);
@@ -250,6 +252,19 @@ img, svg { display: block; max-width: 100%; }
 }
 .side-legal a { color: var(--t-3); transition: color var(--t-fast); }
 .side-legal a:hover { color: var(--blue-3); }
+
+/* ---- canais oficiais (rodapés) ---- */
+.canais-oficiais { display: flex; flex-direction: column; gap: 6px; margin-bottom: 6px; }
+.canais-titulo { font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--t-3); }
+.canais-oficiais ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.auth-credit .canais-oficiais ul, .lp-rodape .canais-oficiais ul { justify-content: center; }
+.canais-oficiais a {
+  display: inline-flex; align-items: center; min-height: 32px; padding: 0 12px;
+  border: 1px solid var(--line); border-radius: var(--r-full);
+  font-size: 13px; font-weight: 600; color: var(--t-2); text-decoration: none;
+  transition: border-color var(--t-fast), color var(--t-fast);
+}
+.canais-oficiais a:hover { border-color: var(--blue-line); color: var(--t-1); }
 
 /* ---- grupos expansíveis (as "camadas") ---- */
 .layer { margin-bottom: 2px; }
@@ -628,6 +643,8 @@ body.arrastando * { cursor: grabbing !important; user-select: none !important; }
 .btn-ghost { background: transparent; border-color: transparent; color: var(--blue); }
 .btn-ghost:hover:not(:disabled) { background: var(--blue-dim); color: var(--blue); }
 .btn-quiet { background: var(--surface-2); border-color: var(--line); color: var(--t-2); }
+.btn-quiet.btn-perigo { color: var(--erro); }
+.btn-quiet.btn-perigo:hover { border-color: var(--erro); }
 .btn-quiet:hover:not(:disabled) { background: var(--surface-3); color: var(--t-1); }
 .btn-sm { min-height: 36px; padding: 0 12px; font-size: 14px; border-radius: var(--r-sm); }
 .btn-sm svg { width: 15px; height: 15px; }
@@ -2716,3 +2733,103 @@ body { background: var(--bg); }
 @media (prefers-reduced-motion: reduce) {
   .tool-glyph, .dash-pilar-ico, .lp-grupo-ico { transition: none; }
 }
+
+/* ==========================================================================
+   TEMA CLARO DO LOBO (2026-10-15)
+   Os tokens no topo já são claros. Este bloco só corrige o que foi escrito
+   com cor fixa para o fundo azul-marinho (gradientes, vidros escuros, texto
+   branco sobre superfície que agora é branca) — fica no fim para ganhar.
+   ========================================================================== */
+:root { color-scheme: light; }
+::-webkit-scrollbar-thumb { background: #D4D4DA; }
+::-webkit-scrollbar-thumb:hover { background: #B9B9C0; }
+
+/* botões e etiquetas de estado: texto escuro sobre fundo claro */
+.btn-danger { color: var(--erro); border-color: rgba(180, 35, 24, .35); }
+.btn-danger:hover:not(:disabled) { color: #8F1B12; background: rgba(180, 35, 24, .12); border-color: rgba(180, 35, 24, .55); }
+.tag-ok, .estado-ready { color: var(--ok); border-color: rgba(21, 128, 61, .3); }
+.tag-warn, .estado-missing-secret, .mud-changed, .offline { color: var(--aviso); border-color: rgba(180, 83, 9, .3); }
+.tag-err, .estado-rate-limited, .mud-removed, .ferr-erro { color: var(--erro); border-color: rgba(180, 35, 24, .3); }
+.st-needs_key { color: var(--aviso); }
+.conf-high { color: var(--t-1); }
+.spin { border-color: rgba(18, 18, 20, .14); border-top-color: var(--blue); }
+.scrim, .side-scrim { background: rgba(18, 18, 20, .38); }
+
+/* grafo */
+.gedge { stroke: #D4D4DA; }
+.gedge.c-confirmed { stroke: rgba(18, 18, 20, .7); }
+.gedge.c-corroborated { stroke: rgba(18, 18, 20, .45); }
+.gedge.c-indicated { stroke: rgba(18, 18, 20, .28); }
+.gedge.c-weak { stroke: rgba(18, 18, 20, .16); }
+.c-confirmed { box-shadow: 0 0 0 3px rgba(18, 18, 20, .08); }
+.conf-ring-bg { stroke: rgba(18, 18, 20, .08); }
+.loading-progress-bar { background: rgba(18, 18, 20, .06); }
+.loading-status-pending { color: rgba(18, 18, 20, .3); }
+
+/* marca: sem brilho neon à volta do lobo */
+.auth-mark, .boot-mark, .lp-splash-lobo { filter: none; }
+
+/* lateral e barra superior */
+.sidebar { background: #FFFFFF; border-right: 1px solid var(--line); }
+.sidebar .nav-item[aria-current='true'] { background: #121214; color: #FFFFFF; border-color: transparent; box-shadow: none; }
+.sidebar .nav-item[aria-current='true'] .nav-ico { color: #FFFFFF; }
+.sidebar .nav-item[aria-current='true']::before { content: ''; position: absolute; left: 0; top: 10px; bottom: 10px; width: 3px; border-radius: 3px; background: var(--blue); }
+.sidebar .nav-item { position: relative; }
+.quota-card { background: var(--surface-2); }
+.topbar { background: rgba(255, 255, 255, .92); }
+.od-adv-head:hover { background: rgba(18, 18, 20, .03); }
+
+/* painel */
+.dash-hero { background: radial-gradient(90% 120% at 85% 0%, #FFF0F0 0%, #FFFFFF 55%); }
+.dash-pilar { background: #FFFFFF; backdrop-filter: none; }
+.dash-pilar:hover { background: var(--surface-2); }
+.spark-linha { filter: none; }
+.hero-cta .btn-primary { box-shadow: 0 10px 24px rgba(211, 18, 27, .22); }
+
+/* entrada (landing) */
+.lp { background: var(--bg); }
+.lp-splash { background: radial-gradient(120% 70% at 50% 0%, #FFF3F3 0%, var(--bg) 60%); }
+.lp-splash-nome { color: var(--t-1); }
+.lp-grupo { color: var(--t-1); background: #FFFFFF; border-color: var(--line); }
+.lp-grupo:hover { border-color: var(--blue-line); box-shadow: 0 10px 24px rgba(18, 18, 20, .08); }
+.lp-grupo-n { color: var(--blue-3); background: var(--blue-dim); }
+.lp-grupo-d { color: var(--t-3); }
+
+/* azulejos de ícone: claros, como no mockup — ícone escuro sobre cinza-claro,
+   e vermelho só no hover/destaque. Sem gradiente azul nem brilho. */
+.tool-glyph, .dash-pilar-ico, .layer-card-ico, .paleta-ico, .lp-grupo-ico,
+.dash-card-ico, .stat-ico, .dash-acao-ico {
+  background: var(--surface-2); border: 1px solid var(--line); box-shadow: none;
+}
+.tool-glyph svg, .dash-pilar-ico svg, .layer-card-ico svg, .paleta-ico svg,
+.lp-grupo-ico svg, .dash-card-ico svg, .stat-ico svg, .dash-acao svg { color: var(--t-1); filter: none; }
+.tool-card:hover .tool-glyph, .dash-pilar:hover .dash-pilar-ico,
+.lp-grupo:hover .lp-grupo-ico, .dash-acao:hover {
+  background: var(--blue-dim); border-color: var(--blue-line); box-shadow: none;
+}
+.tool-card:hover .tool-glyph svg, .dash-pilar:hover .dash-pilar-ico svg, .lp-grupo:hover .lp-grupo-ico svg { color: var(--blue); }
+#ferramentas .tool-card { background: var(--surface); border: 1px solid var(--line); }
+.od-item-q { background: var(--surface-2); }
+.boot-name { color: var(--t-1); text-shadow: none; }
+.desktop::before {
+  background-image:
+    linear-gradient(rgba(18, 18, 20, .05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(18, 18, 20, .05) 1px, transparent 1px);
+}
+.paleta-scrim { background: rgba(18, 18, 20, .38); }
+
+/* avisos Pix no admin e modo de prévia (as classes existiam sem estilo) */
+.pix-admin-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.pix-admin-list { display: grid; gap: 10px; }
+.pix-admin-item { display: grid; gap: 10px; padding: 14px; border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface); }
+.pix-admin-person { display: flex; flex-direction: column; gap: 2px; min-width: 0; font-weight: 600; }
+.pix-admin-meta { display: flex; flex-wrap: wrap; gap: 6px 12px; font-size: 13px; color: var(--t-3); }
+.pix-admin-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+@media (min-width: 640px) { .pix-admin-item { grid-template-columns: 1fr auto; align-items: center; } .pix-admin-meta { grid-column: 1; } .pix-admin-actions { grid-column: 2; grid-row: 1 / span 2; } }
+.preview-mode { min-height: 100%; }
+.preview-banner { position: sticky; top: 0; z-index: 90; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px 12px; padding: 8px 14px; background: #121214; color: #FFFFFF; font-size: 13px; text-align: center; }
+.preview-banner span { font-weight: 800; letter-spacing: .12em; color: #FF8A90; }
+.preview-banner button { min-height: 32px; padding: 0 12px; border-radius: var(--r-full); border: 1px solid rgba(255, 255, 255, .35); background: transparent; color: #FFFFFF; font: inherit; font-weight: 700; cursor: pointer; }
+.boot-halo { background: radial-gradient(circle, rgba(211, 18, 27, .07) 0%, rgba(211, 18, 27, .03) 40%, transparent 70%); }
+.boot-sweep { background: conic-gradient(from 0deg, rgba(211, 18, 27, 0) 58%, rgba(211, 18, 27, .22) 100%); }
+.dash-titulo { color: var(--t-1); }

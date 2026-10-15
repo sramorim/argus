@@ -168,6 +168,17 @@ export const config = {
     label: CONTACTO_LABEL,
   },
   /*
+   * Canais oficiais da marca, mostrados no rodapé junto do copyright.
+   * Cada um pode ser trocado por variável de ambiente sem tocar no código.
+   * O X ainda não tem conta definida: sem ARGUS_X, não aparece.
+   */
+  canais: {
+    instagram: str('ARGUS_INSTAGRAM') ?? 'sr__Amorim',
+    telegram: str('ARGUS_TELEGRAM') ?? 'Sr_amorim',
+    facebook: str('ARGUS_FACEBOOK_URL') ?? 'https://www.facebook.com/share/1DmK9BuTh3/',
+    x: str('ARGUS_X') ?? '',
+  },
+  /*
    * Chave Pix de recebimento.
    *
    * NÃO é um segredo: é mostrada ao cliente, copiada por ele e transformada em

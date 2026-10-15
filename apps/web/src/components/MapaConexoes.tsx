@@ -25,13 +25,13 @@ const ORDEM_CONF: Record<string, number> = { confirmed: 0, corroborated: 1, indi
 
 /** Cor saturada por tipo — a mesma no nó e na legenda. */
 export const COR_TIPO: Record<string, string> = {
-  pessoa: '#2E6BF0', username: '#2E6BF0', conta: '#8B5CF6', email: '#0EA5E9',
-  telefone: '#A855F7', dominio: '#0EA5E9', ip: '#64748B', servico: '#64748B',
-  empresa: '#4F46E5', socio: '#4F46E5', endereco: '#2E9BFF', documento: '#10B981',
-  hashtag: '#F59E0B', wallet: '#F59E0B', breach: '#EF4444', cve: '#EF4444',
-  pacote: '#A855F7', portfolio: '#0EA5E9',
+  pessoa: '#D3121B', username: '#D3121B', conta: '#3F3F46', email: '#E0525A',
+  telefone: '#E0525A', dominio: '#71717A', ip: '#71717A', servico: '#71717A',
+  empresa: '#121214', socio: '#121214', endereco: '#52525B', documento: '#3F3F46',
+  hashtag: '#A16207', wallet: '#A16207', breach: '#B00F17', cve: '#B00F17',
+  pacote: '#52525B', portfolio: '#71717A',
 };
-const corDe = (t: string) => COR_TIPO[t] ?? '#3B82F6';
+const corDe = (t: string) => COR_TIPO[t] ?? '#52525B';
 
 type Ico = (p: SVGProps<SVGSVGElement>) => ReactElement;
 const ICONE_TIPO: Record<string, Ico> = {
@@ -94,8 +94,8 @@ export default function MapaConexoes({ detalhe }: { detalhe: InvestigationDetail
         aria-label={`Grafo de ${detalhe.investigation.seed}: ${total} nós e ${detalhe.edges?.length ?? 0} ligações`}>
         <defs>
           <radialGradient id="mapa-halo" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="#2E9BFF" stopOpacity=".55" />
-            <stop offset="100%" stopColor="#2E9BFF" stopOpacity="0" />
+            <stop offset="0%" stopColor="#D3121B" stopOpacity=".55" />
+            <stop offset="100%" stopColor="#D3121B" stopOpacity="0" />
           </radialGradient>
           <linearGradient id="mapa-centro" x1="0" y1="0" x2="1" y2="1">
             <stop offset="0%" stopColor="#4FB0FF" />
@@ -121,7 +121,7 @@ export default function MapaConexoes({ detalhe }: { detalhe: InvestigationDetail
             return (
               <g key={n.id} className="mapa-no" data-centro="true">
                 <circle cx={p.x} cy={p.y} r={70} fill="url(#mapa-halo)" />
-                <circle cx={p.x} cy={p.y} r={36} fill="none" stroke="#2E9BFF" strokeOpacity=".55" strokeWidth={2} />
+                <circle cx={p.x} cy={p.y} r={36} fill="none" stroke="#D3121B" strokeOpacity=".55" strokeWidth={2} />
                 <circle cx={p.x} cy={p.y} r={29} fill="url(#mapa-centro)" />
                 <I x={p.x - 15} y={p.y - 15} width={30} height={30} color="#FFFFFF" strokeWidth={1.9} />
                 <text className="mapa-txt mapa-txt-centro" x={p.x} y={p.y + 58} textAnchor="middle">{corte(n.value || n.label, 30)}</text>
@@ -133,7 +133,7 @@ export default function MapaConexoes({ detalhe }: { detalhe: InvestigationDetail
           const tx = p.x + (esquerda ? -26 : 26);
           return (
             <g key={n.id} className="mapa-no">
-              <circle cx={p.x} cy={p.y} r={19} fill={corDe(n.type)} stroke="#050D1F" strokeWidth={3} />
+              <circle cx={p.x} cy={p.y} r={19} fill={corDe(n.type)} stroke="#FFFFFF" strokeWidth={3} />
               <I x={p.x - 10} y={p.y - 10} width={20} height={20} color="#FFFFFF" strokeWidth={1.9} />
               <text className="mapa-txt" x={tx} y={p.y - 2} textAnchor={esquerda ? 'end' : 'start'}>{nome}</text>
               <text className="mapa-txt-sub" x={tx} y={p.y + 15} textAnchor={esquerda ? 'end' : 'start'}>

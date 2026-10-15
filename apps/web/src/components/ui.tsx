@@ -28,7 +28,7 @@ export function Mark({ size = 30, className }: { size?: number; className?: stri
 }
 
 export function Brand({
-  size = 30, subtitle = 'Inteligência digital', className,
+  size = 30, subtitle = 'Inteligência em dados públicos', className,
 }: { size?: number; subtitle?: string; className?: string }) {
   return (
     // `brand-plain` é a variante sem a moldura da barra: a landing e o ecrã de
