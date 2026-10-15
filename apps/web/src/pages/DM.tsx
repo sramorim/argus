@@ -10,11 +10,135 @@
  * a informação crítica (Pix pendente, resumo do serviço) aparece primeiro,
  * com ações de um toque.
  */
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api, type PixIntent, type PlanId, ApiError, PLAN_NAME } from '../api';
 import { Icon } from '../components/Icons';
 import { Empty, Note, SearchInput, Skeleton, useToast } from '../components/ui';
 import { NOME_PLANO } from '../ia';
+
+/* --------------------------------------------------------- layout editor */
+
+type LayoutStatus = 'pendente' | 'manter' | 'remover' | 'melhorar' | 'implementar';
+
+interface LayoutItem {
+  id: string;
+  nome: string;
+  area: string;
+  status: LayoutStatus;
+  nota: string;
+}
+
+interface LayoutArea {
+  id: string;
+  nome: string;
+  itens: { id: string; nome: string }[];
+}
+
+const LAYOUT_AREAS: LayoutArea[] = [
+  {
+    id: 'nav', nome: 'Navegação',
+    itens: [
+      { id: 'nav-sidebar', nome: 'Sidebar (desktop)' },
+      { id: 'nav-drawer', nome: 'Gaveta lateral (mobile)' },
+      { id: 'nav-bottombar', nome: 'Barra inferior (mobile)' },
+      { id: 'nav-header', nome: 'Cabeçalho / Barra superior' },
+      { id: 'nav-brand', nome: 'Logo / Marca ARGOS' },
+      { id: 'nav-user-menu', nome: 'Menu do utilizador (avatar)' },
+    ],
+  },
+  {
+    id: 'dashboard', nome: 'Painel (Dashboard)',
+    itens: [
+      { id: 'dash-banner', nome: 'Banner / Hero' },
+      { id: 'dash-stats', nome: '4 indicadores (investigações, ferramentas, execuções, hoje)' },
+      { id: 'dash-mapa', nome: 'Mapa de Conexões' },
+      { id: 'dash-globo', nome: 'Globo 3D' },
+      { id: 'dash-perfis', nome: 'Perfis analisados' },
+      { id: 'dash-atividade', nome: 'Atividade recente' },
+      { id: 'dash-fontes', nome: 'Fontes monitoradas' },
+      { id: 'dash-busca', nome: 'Barra de busca' },
+      { id: 'dash-atalhos', nome: 'Atalhos rápidos' },
+    ],
+  },
+  {
+    id: 'ferramentas', nome: 'Ferramentas OSINT',
+    itens: [
+      { id: 'tool-username-finder', nome: 'Username Finder' },
+      { id: 'tool-username-intel', nome: 'Username Intel' },
+      { id: 'tool-email-intel', nome: 'Email Intel' },
+      { id: 'tool-phone-intel', nome: 'Phone Intel' },
+      { id: 'tool-social-search', nome: 'Social Search' },
+      { id: 'tool-telegram-intel', nome: 'Telegram Intel' },
+      { id: 'tool-social-presence', nome: 'Social Presence (socialscan)' },
+      { id: 'tool-domain-infra', nome: 'Domain Infra (RDAP/DNS/CT)' },
+      { id: 'tool-paste-search', nome: 'Paste Search' },
+      { id: 'tool-graph-investigation', nome: 'Graph Investigation' },
+    ],
+  },
+  {
+    id: 'vistas', nome: 'Páginas / Vistas',
+    itens: [
+      { id: 'vista-nova', nome: 'Nova Investigação' },
+      { id: 'vista-inv', nome: 'Investigações (lista)' },
+      { id: 'vista-history', nome: 'Histórico' },
+      { id: 'vista-health', nome: 'Estado do Sistema' },
+      { id: 'vista-radar', nome: 'Radar de Presença' },
+      { id: 'vista-perfil', nome: 'Perfil Unificado' },
+      { id: 'vista-plans', nome: 'Planos & Preços' },
+      { id: 'vista-account', nome: 'Conta do utilizador' },
+      { id: 'vista-definicoes', nome: 'Definições' },
+      { id: 'vista-admin', nome: 'Administração' },
+      { id: 'vista-dm', nome: 'Área DM' },
+    ],
+  },
+  {
+    id: 'componentes', nome: 'Componentes gerais',
+    itens: [
+      { id: 'comp-footer', nome: 'Rodapé / Canais oficiais' },
+      { id: 'comp-janela', nome: 'Sistema de janelas (Janela)' },
+      { id: 'comp-modal', nome: 'Modais / Popups' },
+      { id: 'comp-toasts', nome: 'Notificações (toasts)' },
+      { id: 'comp-plan-tag', nome: 'Etiquetas de plano (Free/Pro/Pro Max)' },
+      { id: 'comp-skeleton', nome: 'Carregamento (skeletons)' },
+      { id: 'comp-empty', nome: 'Estados vazios' },
+    ],
+  },
+  {
+    id: 'estilo', nome: 'Estilo & Tema',
+    itens: [
+      { id: 'style-cores', nome: 'Paleta de cores (azul marinho, vermelho, etc.)' },
+      { id: 'style-fontes', nome: 'Tipografia (Inter, Montserrat, JetBrains)' },
+      { id: 'style-icones', nome: 'Ícones' },
+      { id: 'style-spacing', nome: 'Espaçamentos & bordas' },
+      { id: 'style-animacoes', nome: 'Animações (framer-motion)' },
+    ],
+  },
+];
+
+const STATUS_LABELS: Record<LayoutStatus, { label: string; cor: string; emoji: string }> = {
+  pendente:    { label: 'Pendente',    cor: 'var(--t-3)',    emoji: '⏳' },
+  manter:      { label: 'Manter',      cor: '#22c55e',      emoji: '✅' },
+  remover:     { label: 'Remover',     cor: '#ef4444',      emoji: '🗑️' },
+  melhorar:    { label: 'Melhorar',    cor: '#f59e0b',      emoji: '🔧' },
+  implementar: { label: 'Implementar', cor: '#3b82f6',      emoji: '🆕' },
+};
+
+const STORAGE_KEY = 'argos_dm_layout_v1';
+
+function loadLayout(): LayoutItem[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch { /* noop */ }
+  // gera estado padrão
+  return LAYOUT_AREAS.flatMap(a =>
+    a.itens.map(i => ({ id: i.id, nome: i.nome, area: a.id, status: 'pendente' as LayoutStatus, nota: '' }))
+  );
+}
+
+function saveLayout(items: LayoutItem[]) {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); } catch { /* noop */ }
+}
 
 /* ------------------------------------------------------------------ tipos */
 
@@ -386,49 +510,236 @@ export default function DM() {
           )}
 
           {/* ====================================================== LAYOUT */}
-          {aba === 'layout' && (
-            <div className="card">
-              <div className="card-head" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Icon.layers width={18} height={18} />
-                Editor de Layout
-              </div>
-              <p className="t-sm muted" style={{ marginTop: 4 }}>
-                Modo de edição visual para marcar elementos da interface.
-              </p>
-              <div style={{
-                marginTop: 16, padding: 24, borderRadius: 12,
-                border: '2px dashed var(--line)', textAlign: 'center',
-                background: 'var(--surface)',
-              }}>
-                <Icon.layers width={40} height={40} style={{ color: 'var(--t-3)', marginBottom: 12 }} />
-                <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 6 }}>
-                  Editor de Layout — em breve
-                </div>
-                <p className="t-sm muted" style={{ maxWidth: 420, margin: '0 auto' }}>
-                  Aqui vai poder clicar em qualquer elemento da interface e marcar como
-                  "manter" ou "remover", escrever notas e exportar as alterações.
-                  Funcionalidade em desenvolvimento.
-                </p>
-              </div>
-
-              {/* Configurações rápidas que já funcionam */}
-              <div style={{ marginTop: 20 }}>
-                <div className="card-head" style={{ fontSize: 14, marginBottom: 12 }}>Ações rápidas</div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                  <button className="btn btn-sm btn-quiet" onClick={() => window.location.reload()}>
-                    <Icon.activity width={14} height={14} /> Recarregar app
-                  </button>
-                  <button className="btn btn-sm btn-quiet" onClick={() => {
-                    navigator.clipboard?.writeText(window.location.href);
-                    toast('ok', 'URL copiada.');
-                  }}>
-                    <Icon.copy width={14} height={14} /> Copiar URL
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
+          {aba === 'layout' && <LayoutEditor toast={toast} />}
         </>
+      )}
+    </div>
+  );
+}
+
+/* ============================================================ LAYOUT EDITOR */
+
+function LayoutEditor({ toast }: { toast: ReturnType<typeof useToast> }) {
+  const [items, setItems] = useState<LayoutItem[]>(loadLayout);
+  const [areaAberta, setAreaAberta] = useState<string | null>(LAYOUT_AREAS[0]?.id ?? null);
+  const [filtro, setFiltro] = useState<LayoutStatus | 'todos'>('todos');
+
+  // salva no localStorage a cada mudança
+  useEffect(() => { saveLayout(items); }, [items]);
+
+  const setStatus = useCallback((id: string, status: LayoutStatus) => {
+    setItems(prev => prev.map(i => i.id === id ? { ...i, status } : i));
+  }, []);
+
+  const setNota = useCallback((id: string, nota: string) => {
+    setItems(prev => prev.map(i => i.id === id ? { ...i, nota } : i));
+  }, []);
+
+  // contadores
+  const counts = useMemo(() => {
+    const c = { total: items.length, pendente: 0, manter: 0, remover: 0, melhorar: 0, implementar: 0 };
+    items.forEach(i => { c[i.status]++; });
+    return c;
+  }, [items]);
+
+  // exportar como texto
+  const exportar = useCallback(() => {
+    const linhas: string[] = ['# ARGOS — Revisão de Layout', `# Data: ${new Date().toLocaleDateString('pt-BR')}`, ''];
+    for (const area of LAYOUT_AREAS) {
+      const areaItems = items.filter(i => i.area === area.id && i.status !== 'pendente');
+      if (areaItems.length === 0) continue;
+      linhas.push(`## ${area.nome}`, '');
+      for (const item of areaItems) {
+        const s = STATUS_LABELS[item.status];
+        linhas.push(`- ${s.emoji} **${item.nome}** → ${s.label}`);
+        if (item.nota) linhas.push(`  💬 ${item.nota}`);
+      }
+      linhas.push('');
+    }
+    const pendentes = items.filter(i => i.status === 'pendente');
+    if (pendentes.length > 0) {
+      linhas.push(`## Pendentes (${pendentes.length})`, '');
+      pendentes.forEach(p => linhas.push(`- ⏳ ${p.nome}`));
+    }
+    const texto = linhas.join('\n');
+    navigator.clipboard?.writeText(texto).then(
+      () => toast('ok', 'Revisão copiada para a área de transferência!'),
+      () => toast('err', 'Não foi possível copiar.'),
+    );
+  }, [items, toast]);
+
+  // resetar tudo
+  const resetar = useCallback(() => {
+    const fresh = LAYOUT_AREAS.flatMap(a =>
+      a.itens.map(i => ({ id: i.id, nome: i.nome, area: a.id, status: 'pendente' as LayoutStatus, nota: '' }))
+    );
+    setItems(fresh);
+    toast('ok', 'Todas as anotações foram limpas.');
+  }, [toast]);
+
+  // filtrar por status
+  const filtrados = useMemo(() => {
+    if (filtro === 'todos') return items;
+    return items.filter(i => i.status === filtro);
+  }, [items, filtro]);
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {/* Resumo */}
+      <div className="card">
+        <div className="card-head" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Icon.layers width={18} height={18} />
+          Editor de Layout
+        </div>
+        <p className="t-sm muted" style={{ marginTop: 4 }}>
+          Marque cada elemento como <b>manter</b>, <b>remover</b>, <b>melhorar</b> ou <b>implementar</b>.
+          Escreva notas e depois exporte tudo.
+        </p>
+
+        {/* Contadores */}
+        <div style={{
+          display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 12,
+        }}>
+          {(Object.keys(STATUS_LABELS) as LayoutStatus[]).map(s => (
+            <button key={s}
+              className={`btn btn-sm ${filtro === s ? '' : 'btn-quiet'}`}
+              style={{
+                borderColor: filtro === s ? STATUS_LABELS[s].cor : undefined,
+                color: filtro === s ? STATUS_LABELS[s].cor : undefined,
+              }}
+              onClick={() => setFiltro(filtro === s ? 'todos' : s)}
+            >
+              {STATUS_LABELS[s].emoji} {STATUS_LABELS[s].label} ({counts[s]})
+            </button>
+          ))}
+        </div>
+
+        {/* Ações */}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 12 }}>
+          <button className="btn btn-sm" onClick={exportar}>
+            <Icon.copy width={14} height={14} /> Exportar revisão
+          </button>
+          <button className="btn btn-sm btn-quiet" onClick={() => window.location.reload()}>
+            <Icon.activity width={14} height={14} /> Recarregar app
+          </button>
+          <button className="btn btn-sm btn-quiet btn-perigo" onClick={resetar}>
+            <Icon.trash width={14} height={14} /> Limpar tudo
+          </button>
+        </div>
+      </div>
+
+      {/* Áreas */}
+      {LAYOUT_AREAS.map(area => {
+        const areaItems = filtrados.filter(i => i.area === area.id);
+        if (areaItems.length === 0 && filtro !== 'todos') return null;
+        const aberta = areaAberta === area.id;
+        const areaCount = items.filter(i => i.area === area.id && i.status !== 'pendente').length;
+        const areaTotal = items.filter(i => i.area === area.id).length;
+
+        return (
+          <div key={area.id} className="card" style={{ overflow: 'hidden' }}>
+            <button
+              onClick={() => setAreaAberta(aberta ? null : area.id)}
+              style={{
+                width: '100%', background: 'none', border: 'none', padding: '12px 16px',
+                cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10,
+                color: 'inherit', textAlign: 'left', fontSize: 15, fontWeight: 600,
+              }}
+            >
+              <span style={{
+                display: 'inline-flex', transition: 'transform .2s',
+                transform: aberta ? 'rotate(90deg)' : 'rotate(0deg)',
+              }}>▶</span>
+              {area.nome}
+              <span className="t-xs muted" style={{ marginLeft: 'auto', fontWeight: 400 }}>
+                {areaCount}/{areaTotal} marcados
+              </span>
+            </button>
+
+            {aberta && (
+              <div style={{ padding: '0 16px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {(filtro === 'todos'
+                  ? items.filter(i => i.area === area.id)
+                  : areaItems
+                ).map(item => (
+                  <LayoutItemRow key={item.id} item={item} setStatus={setStatus} setNota={setNota} />
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/* -------------------------------------------------------- layout item row */
+
+function LayoutItemRow({ item, setStatus, setNota }: {
+  item: LayoutItem;
+  setStatus: (id: string, s: LayoutStatus) => void;
+  setNota: (id: string, n: string) => void;
+}) {
+  const [notaAberta, setNotaAberta] = useState(false);
+  const info = STATUS_LABELS[item.status];
+
+  return (
+    <div style={{
+      padding: '10px 12px', borderRadius: 10,
+      border: `1px solid ${item.status !== 'pendente' ? info.cor + '44' : 'var(--line)'}`,
+      background: item.status !== 'pendente' ? info.cor + '08' : 'var(--surface)',
+    }}>
+      {/* Nome + status badge */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+        <span style={{ fontSize: 14, fontWeight: 500, flex: 1, minWidth: 140 }}>
+          {item.nome}
+        </span>
+        <span className="t-xs" style={{
+          padding: '2px 8px', borderRadius: 6, fontWeight: 600,
+          color: info.cor, background: info.cor + '18',
+        }}>
+          {info.emoji} {info.label}
+        </span>
+      </div>
+
+      {/* Botões de status */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 8 }}>
+        {(Object.keys(STATUS_LABELS) as LayoutStatus[]).filter(s => s !== 'pendente').map(s => (
+          <button key={s}
+            className={`btn btn-sm ${item.status === s ? '' : 'btn-quiet'}`}
+            style={{
+              fontSize: 12, padding: '3px 8px', minHeight: 28,
+              borderColor: item.status === s ? STATUS_LABELS[s].cor : undefined,
+              color: item.status === s ? STATUS_LABELS[s].cor : undefined,
+            }}
+            onClick={() => setStatus(item.id, item.status === s ? 'pendente' : s)}
+          >
+            {STATUS_LABELS[s].emoji} {STATUS_LABELS[s].label}
+          </button>
+        ))}
+        <button
+          className={`btn btn-sm ${notaAberta || item.nota ? '' : 'btn-quiet'}`}
+          style={{ fontSize: 12, padding: '3px 8px', minHeight: 28, marginLeft: 'auto' }}
+          onClick={() => setNotaAberta(!notaAberta)}
+        >
+          💬 {item.nota ? 'Nota ✓' : 'Nota'}
+        </button>
+      </div>
+
+      {/* Campo de nota */}
+      {notaAberta && (
+        <textarea
+          value={item.nota}
+          onChange={e => setNota(item.id, e.target.value)}
+          placeholder="Ex: Tirar isso, está feio · Melhorar a cor · Adicionar botão X..."
+          rows={2}
+          style={{
+            width: '100%', marginTop: 8, padding: '8px 10px', borderRadius: 8,
+            border: '1px solid var(--line)', background: 'var(--bg)',
+            color: 'inherit', fontSize: 13, resize: 'vertical',
+            fontFamily: 'inherit',
+          }}
+        />
       )}
     </div>
   );
