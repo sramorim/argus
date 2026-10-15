@@ -136,6 +136,48 @@ function FindingRow({ f }: { f: Finding }) {
   );
 }
 
+
+// ------------------------------------------------------- perfis encontrados
+/**
+ * Os perfis que existem, em grelha: um azulejo por rede, com o nome e o link.
+ * É o que a pessoa quer ver primeiro numa busca por username; a lista
+ * completa (com os não encontrados e os bloqueados) continua nos achados.
+ * Sem logótipos de terceiros: a inicial da rede num azulejo da marca.
+ */
+function PerfisEncontrados({ findings }: { findings: Finding[] }) {
+  const perfis = findings
+    .filter((f) => f.group === 'encontrado')
+    .map((f) => {
+      const v = (f.value ?? {}) as { platform?: string; url?: string; username?: string };
+      return { id: f.id, nome: v.platform ?? f.label, url: v.url ?? f.link ?? '', user: v.username ?? '' };
+    })
+    .filter((p) => /^https?:\/\//.test(p.url));
+  if (!perfis.length) return null;
+  const user = perfis[0]!.user;
+  return (
+    <section className="perfis" aria-labelledby="perfis-titulo">
+      <div className="perfis-head">
+        <span className="perfis-avatar" aria-hidden="true"><Icon.user /></span>
+        <div>
+          {user && <div className="perfis-user">@{user}</div>}
+          <h3 id="perfis-titulo" className="perfis-titulo">Perfis encontrados <span>({perfis.length})</span></h3>
+        </div>
+      </div>
+      <ul className="perfis-grade">
+        {perfis.map((p) => (
+          <li key={p.id}>
+            <a href={p.url} target="_blank" rel="noopener noreferrer" title={p.url}>
+              <span className="perfis-ini" aria-hidden="true">{p.nome.replace(/[^\p{L}\p{N}]/gu, '').charAt(0).toUpperCase() || '?'}</span>
+              <span className="perfis-nome">{p.nome}</span>
+              <Icon.link className="perfis-link" />
+            </a>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 // ------------------------------------------------------------------- painel
 export default function ResultPanel({ run }: { run: ToolRun }) {
   const toast = useToast();
@@ -181,6 +223,8 @@ export default function ResultPanel({ run }: { run: ToolRun }) {
           <button className="icon-btn" onClick={download} title="Exportar JSON" aria-label="Exportar JSON" type="button"><Icon.download /></button>
         </div>
       </div>
+
+      <PerfisEncontrados findings={run.findings} />
 
       <div className="stat-row" style={{ marginBottom: run.notes.length ? 12 : 14 }}>
         <div><div className="v num">{run.ms}<span style={{ fontSize: 11, color: 'var(--t-4)' }}> ms</span></div><div className="l">tempo</div></div>

@@ -2840,3 +2840,24 @@ form.dash-busca:focus-within { border-color: var(--blue-line); box-shadow: var(-
 .dash-busca input::placeholder { color: var(--t-3); }
 .dash-busca-ir { flex: 0 0 40px; width: 40px; height: 40px; display: grid; place-items: center; border: 0; border-radius: 10px; background: var(--blue); color: #FFFFFF; cursor: pointer; }
 .dash-busca-ir svg { color: #FFFFFF; width: 18px; height: 18px; flex: none; }
+
+/* ---- perfis encontrados (grelha, estilo "Profiles found") ---- */
+.perfis { margin-bottom: 16px; }
+.perfis-head { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.perfis-avatar { width: 44px; height: 44px; flex: none; display: grid; place-items: center; border-radius: 50%; background: var(--blue-dim); color: var(--blue); }
+.perfis-avatar svg { width: 22px; height: 22px; }
+.perfis-user { font-size: 13px; color: var(--t-3); font-weight: 600; }
+.perfis-titulo { margin: 0; font-family: var(--font-display); font-size: 17px; font-weight: 800; color: var(--t-1); }
+.perfis-titulo span { color: var(--t-3); font-weight: 700; }
+.perfis-grade { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+@media (min-width: 640px) { .perfis-grade { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); } }
+.perfis-grade a {
+  position: relative; display: flex; flex-direction: column; align-items: center; gap: 8px; min-height: 92px; padding: 14px 8px 10px;
+  border: 1px solid var(--line); border-radius: 14px; background: var(--surface); color: var(--t-1); text-decoration: none; text-align: center;
+  transition: border-color var(--t-fast), background var(--t-fast);
+}
+.perfis-grade a:hover { border-color: var(--blue-line); background: var(--blue-dim); }
+.perfis-ini { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 50%; background: #121214; color: #FFFFFF; font-family: var(--font-display); font-weight: 800; font-size: 15px; }
+.perfis-grade a:hover .perfis-ini { background: var(--blue); }
+.perfis-nome { font-size: 12.5px; font-weight: 600; line-height: 1.25; overflow-wrap: anywhere; }
+.perfis-link { position: absolute; top: 8px; right: 8px; width: 13px; height: 13px; color: var(--t-4); }
