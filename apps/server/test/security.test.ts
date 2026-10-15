@@ -122,6 +122,7 @@ await t('TOOL_LOCKS nao referencia ferramentas inexistentes', async () => {
   await import('../src/tools/apify.ts');
   await import('../src/tools/datalikers.ts');
   await import('../src/tools/domain-infra.ts');
+  await import('../src/tools/contato.ts');
   const { allTools } = await import('../src/registry.ts');
   const ids = new Set(allTools().map((x) => x.id));
   const orfaos = Object.keys(TOOL_LOCKS).filter((k) => !ids.has(k));
@@ -375,6 +376,9 @@ console.log('\n── CATÁLOGO (Social Intelligence) ────────�
 const FERRAMENTAS_SOCIAIS = [
   'apify', 'datalikers', 'domain-infra', 'graph-investigation',
   'paste-search', 'social-search', 'username-finder', 'username-intel',
+  // Buscas de contacto (2026-10-15, pedido do dono a partir do mockup): novas,
+  // reescritas de raiz — não são as antigas phone-analyzer/email-analyzer/telegram-osint.
+  'email-intel', 'phone-intel', 'telegram-intel',
 ];
 /** As 25 ferramentas de OSINT técnico/infraestrutura que a limpeza tirou. */
 const FERRAMENTAS_REMOVIDAS = [
@@ -394,6 +398,7 @@ const carrega = async () => {
   await import('../src/tools/apify.ts');
   await import('../src/tools/datalikers.ts');
   await import('../src/tools/domain-infra.ts');
+  await import('../src/tools/contato.ts');
   return (await import('../src/registry.ts')).allTools();
 };
 await t('o catalogo e exatamente o conjunto de ferramentas sociais', async () => {

@@ -68,6 +68,8 @@ export const Icon = {
   database: (p: P) => (<svg {...base(p)}><ellipse cx="12" cy="6" rx="7.4" ry="2.9" /><path d="M4.6 6v12c0 1.6 3.3 2.9 7.4 2.9s7.4-1.3 7.4-2.9V6" /><path d="M4.6 12c0 1.6 3.3 2.9 7.4 2.9s7.4-1.3 7.4-2.9" /></svg>),
   activity: (p: P) => (<svg {...base(p)}><path d="M3 12.4h4l2.4-6 4.2 12 2.4-6h5" /></svg>),
   building: (p: P) => (<svg {...base(p)}><path d="M4.6 20.4V4.6h9v15.8M13.6 10h5.8v10.4M3 20.4h18" /><path d="M7.2 8h1.4M11 8h1.4M7.2 11.4h1.4M11 11.4h1.4M7.2 14.8h1.4M11 14.8h1.4M16 13.4h1.2M16 16.8h1.2" /></svg>),
+  /* Avião de papel (enviar / mensagens) — usado para o Telegram, sem logótipo. */
+  enviar: (p: P) => (<svg {...base(p)}><path d="M21 3.6 2.8 10.8l6.6 2.4 2.4 6.6Z" /><path d="m9.4 13.2 5.2-5.2" /></svg>),
   /* Lupa com "+": começar a investigar um alvo novo. */
   investigar: (p: P) => (<svg {...base(p)}><circle cx="10.6" cy="10.6" r="6.6" /><path d="m15.6 15.6 4.6 4.6M10.6 7.8v5.6M7.8 10.6h5.6" /></svg>),
   /* Cartão de identidade: o perfil que junta tudo o que se sabe do alvo. */

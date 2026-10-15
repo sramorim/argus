@@ -123,6 +123,10 @@ services:
       - key: ARGUS_AUTHOR_LEGAL
         value: Daniel Senhor Amorim
       # Canais oficiais do rodapé. O X ainda não tem conta: sem valor, não aparece.
+      # Vazamentos na Busca de E-mail (Have I Been Pwned). Opcional: sem a chave,
+      # a busca de e-mail funciona e diz que os vazamentos precisam dela.
+      - key: HIBP_API_KEY
+        sync: false
       - key: ARGUS_INSTAGRAM
         value: sr__Amorim
       - key: ARGUS_TELEGRAM

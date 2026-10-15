@@ -142,4 +142,7 @@ export const TOOL_LOCKS: Record<string, LockedTool['minPlan']> = {
   'social-search': 'pro',      // 13 pedidos de pesquisa web em paralelo (Bing RSS)
   'datalikers': 'pro',         // Cache API da DataLikers: cada pedido desconta do saldo da conta
   'domain-infra': 'free',      // RDAP + DNS público + CT: fontes abertas, sem chave, custo zero
+  'phone-intel': 'free',       // libphonenumber local + pesquisa web (Bing RSS) do número
+  'email-intel': 'free',       // MX + Gravatar públicos; HIBP só com a chave do dono no servidor
+  'telegram-intel': 'free',    // página pública t.me, a mesma que qualquer visitante vê
 };

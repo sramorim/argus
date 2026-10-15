@@ -40,6 +40,7 @@ import './tools/social-search.ts';
 import './tools/apify.ts';
 import './tools/datalikers.ts';
 import './tools/domain-infra.ts';
+import './tools/contato.ts';
 
 const app = new Hono();
 const PORT = config.port;

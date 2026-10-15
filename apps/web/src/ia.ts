@@ -39,20 +39,20 @@ export const GRUPOS: Grupo[] = [
   {
     id: 'identidade',
     nome: 'Identidade',
-    resumo: 'Descobre quem está por trás de um username e o que os registos públicos dizem dele.',
+    resumo: 'Username, e-mail e telefone: onde aparecem e o que os registos públicos dizem deles.',
     icon: Icon.user,
-    ferramentas: ['username-finder', 'username-intel'],
+    ferramentas: ['username-finder', 'username-intel', 'email-intel', 'phone-intel'],
   },
   {
     id: 'social',
     nome: 'Redes e Comunicação',
-    resumo: 'Perfis e presença pública: busca por nome nas redes e a Cache API da DataLikers (Instagram, TikTok).',
+    resumo: 'Perfis e presença pública: busca por nome nas redes, Telegram e a Cache API da DataLikers (Instagram, TikTok).',
     icon: Icon.globe,
     // Duas portas diferentes para o mesmo sítio: o `social-search` varre o
     // índice do motor de busca por perfis públicos, e o `datalikers` consulta
     // a Cache API oficial da DataLikers — perfil, publicações, seguidores,
     // comentários e hashtags. Ambas exigem chave no backend para responder.
-    ferramentas: ['social-search', 'datalikers'],
+    ferramentas: ['social-search', 'telegram-intel', 'datalikers'],
   },
   {
     id: 'apify',
@@ -174,6 +174,9 @@ export const ICONE_FERRAMENTA: Record<string, (p: SVGProps<SVGSVGElement>) => Re
   'datalikers': Icon.layers,
   'apify': Icon.link,
   'domain-infra': Icon.server,
+  'email-intel': Icon.mail,
+  'phone-intel': Icon.phone,
+  'telegram-intel': Icon.enviar,
   'paste-search': Icon.shield,
 };
 
@@ -189,6 +192,7 @@ export const COR_FERRAMENTA: Record<string, CorAzulejo> = {
   'graph-investigation': 'vermelho', 'username-finder': 'azul', 'username-intel': 'azul',
   'social-search': 'roxo', 'datalikers': 'laranja', 'apify': 'laranja',
   'domain-infra': 'azul', 'paste-search': 'vermelho',
+  'email-intel': 'vermelho', 'phone-intel': 'laranja', 'telegram-intel': 'azul',
 };
 export const COR_GRUPO: Record<string, CorAzulejo> = {
   identidade: 'azul', social: 'roxo', apify: 'laranja', infraestrutura: 'verde', exposicao: 'vermelho', investigar: 'vermelho',

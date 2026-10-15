@@ -915,7 +915,7 @@ test('os comandos do Blueprint partem da raiz, onde estão as workspaces', () =>
 test('toda variável de produção de que o código precisa está no render.yaml', () => {
   const yml = readFileSync(join(ROOT, 'render.yaml'), 'utf8');
   const usadas = new Set<string>();
-  for (const f of ['config.ts', 'security.ts', 'index.ts', 'registry.ts', 'net/apify.ts', 'net/datalikers.ts']) {
+  for (const f of ['config.ts', 'security.ts', 'index.ts', 'registry.ts', 'net/apify.ts', 'net/datalikers.ts', 'tools/contato.ts']) {
     const src = readFileSync(join(ROOT, 'apps', 'server', 'src', f), 'utf8');
     for (const m of src.matchAll(/process\.env\.([A-Z_][A-Z0-9_]*)/g)) usadas.add(m[1]!);
     for (const m of src.matchAll(/(?:str|bool|int|list)\('([A-Z_][A-Z0-9_]*)'/g)) usadas.add(m[1]!);
