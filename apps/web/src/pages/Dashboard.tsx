@@ -13,7 +13,7 @@
  * as sustentem. Enquanto carrega mostra "—"; vazio mostra-se vazio.
  */
 import { useEffect, useState } from 'react';
-import type { ReactElement, SVGProps } from 'react';
+import type { FormEvent, ReactElement, SVGProps } from 'react';
 import {
   api, type ToolPublic, type Usage, type User, type LinhaSaude, type EstadoSaude,
   type Investigation, type InvestigationDetail,
@@ -175,10 +175,10 @@ export default function Dashboard({
 
   /* Os quatro caminhos do banner e dos atalhos do telemóvel — todos destinos reais. */
   const caminhos: { id: string; titulo: string; sub: string; curto: string; icone: Ico; v: View }[] = [
-    { id: 'coleta', titulo: 'Coleta', sub: 'Fontes abertas', curto: 'Nova investigação', icone: Icon.target, v: { k: 'nova' } },
-    { id: 'analise', titulo: 'Análise', sub: 'Cruzamento de fontes', curto: 'Perfil unificado', icone: Icon.layers, v: { k: 'perfil' } },
-    { id: 'conexoes', titulo: 'Conexões', sub: 'Mapeamento visual', curto: 'Ver conexões', icone: Icon.network, v: { k: 'inv' } },
-    { id: 'relatorios', titulo: 'Relatórios', sub: 'Resultados claros', curto: 'Histórico', icone: Icon.file, v: { k: 'history' } },
+    { id: 'coleta', titulo: 'Coleta', sub: 'Fontes abertas', curto: 'Nova investigação', icone: Icon.investigar, v: { k: 'nova' } },
+    { id: 'analise', titulo: 'Análise', sub: 'Cruzamento de fontes', curto: 'Perfil unificado', icone: Icon.perfilCartao, v: { k: 'perfil' } },
+    { id: 'conexoes', titulo: 'Conexões', sub: 'Mapeamento visual', curto: 'Ver conexões', icone: Icon.conexoes, v: { k: 'inv' } },
+    { id: 'relatorios', titulo: 'Relatórios', sub: 'Resultados claros', curto: 'Histórico', icone: Icon.history, v: { k: 'history' } },
   ];
 
   const indicadores = [
@@ -201,15 +201,28 @@ export default function Dashboard({
     },
   ];
 
+  /* A busca do topo procura um ALVO: abre a Nova investigação já com ele escrito. */
+  const [alvo, setAlvo] = useState('');
+  const buscarAlvo = (e: FormEvent) => {
+    e.preventDefault();
+    const v = alvo.trim();
+    if (!v) return;
+    try { sessionStorage.setItem('argos:initial-target', v); } catch { /* sem storage: abre vazio */ }
+    setAlvo('');
+    setView({ k: 'nova' });
+  };
+
   return (
     <div className="page dash">
       {/* ---------- Telemóvel: busca no topo ---------- */}
       {onBusca && (
-        <button className="dash-busca" type="button" onClick={onBusca}>
+        <form className="dash-busca" role="search" onSubmit={buscarAlvo}>
+          <label htmlFor="dash-alvo" className="sr-only">Buscar alvo: pessoa, e-mail, telefone ou username</label>
           <Icon.search />
-          <span>Buscar no ARGOS…</span>
-          <kbd className="kbd">Ctrl K</kbd>
-        </button>
+          <input id="dash-alvo" type="search" value={alvo} onChange={(e) => setAlvo(e.target.value)}
+            placeholder="Nome, e-mail, telefone, @user" autoComplete="off" enterKeyHint="search" />
+          <button type="submit" className="dash-busca-ir" aria-label="Investigar este alvo"><Icon.arrowRight /></button>
+        </form>
       )}
 
       <div className="dash-layout">

@@ -91,7 +91,7 @@ export default function Auth({ onDone }: { onDone: () => void }) {
 
         {mode === 'register' && (
           <p className="t-xs dim" style={{ marginTop: 12, textAlign: 'center', lineHeight: 1.55 }}>
-            Sem cartão, sem trial que expira. Só dados públicos e uso defensivo.
+            Só dados públicos e uso defensivo.
           </p>
         )}
 

@@ -2833,3 +2833,10 @@ body { background: var(--bg); }
 .boot-halo { background: radial-gradient(circle, rgba(211, 18, 27, .07) 0%, rgba(211, 18, 27, .03) 40%, transparent 70%); }
 .boot-sweep { background: conic-gradient(from 0deg, rgba(211, 18, 27, 0) 58%, rgba(211, 18, 27, .22) 100%); }
 .dash-titulo { color: var(--t-1); }
+/* Busca do topo (telemóvel): é um campo de ALVO, não um botão. */
+form.dash-busca { padding: 0 6px 0 16px; cursor: text; }
+form.dash-busca:focus-within { border-color: var(--blue-line); box-shadow: var(--ring); }
+.dash-busca input { flex: 1; min-width: 0; height: 100%; border: 0; outline: none; background: transparent; font: inherit; font-size: 15px; color: var(--t-1); }
+.dash-busca input::placeholder { color: var(--t-3); }
+.dash-busca-ir { flex: 0 0 40px; width: 40px; height: 40px; display: grid; place-items: center; border: 0; border-radius: 10px; background: var(--blue); color: #FFFFFF; cursor: pointer; }
+.dash-busca-ir svg { color: #FFFFFF; width: 18px; height: 18px; flex: none; }
