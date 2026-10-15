@@ -47,6 +47,13 @@ services:
       sizeGB: 1
 
     envVars:
+      # Versão do Node no Render. O servidor corre a partir do TypeScript
+      # (`node src/index.ts`, type-stripping nativo) e o repo exige >=22.18
+      # (ver `.node-version` = 24 e `engines`). Sem isto o Render usa o Node
+      # por omissão da plataforma — se for anterior ao 22.18 o arranque morre
+      # com "Unknown file extension .ts" e o domínio devolve 502.
+      - key: NODE_VERSION
+        value: "24"
       - key: NODE_ENV
         value: production
       - key: ARGUS_DB
@@ -72,6 +79,10 @@ services:
       # escrita à mão no bundle do browser.
       # Criar/rodar a chave no banco do próprio (ou na PSP que usar).
       - key: PIX_KEY
+        sync: false
+      - key: PIX_MERCHANT_NAME
+        sync: false
+      - key: PIX_MERCHANT_CITY
         sync: false
       # Chave da conta Apify — só o backend a lê (process.env.APIFY_API_TOKEN).
       # Sem ela a ferramenta APIFY devolve NOT_CONFIGURED e não gasta nada; com

@@ -244,7 +244,33 @@ app.get('/api/contact', (c) => c.json({
   // do servidor: escrever um UUID de pagamento no bundle do browser é a forma
   // mais rápida de cobrar a pessoa errada quando o dono trocar de chave.
   pix: config.pix || null,
+  pixNome: config.pixNome || null,
+  pixCidade: config.pixCidade || null,
 }));
+
+// O clique apenas avisa o administrador; o Pix só é aprovado após conferir
+// o comprovante recebido pelo WhatsApp.
+app.post('/api/pix/intent', async (c) => {
+  const u = requireAuth(c);
+  if (u instanceof Response) return u;
+  const body = await readJson(c);
+  if (body.planId !== 'pro') return c.json({ error: 'plano_pix_invalido', msg: 'Este pedido Pix é válido para o plano Pro.' }, 400);
+  if (u.plan === 'pro' || u.plan === 'pro_max') return c.json({ error: 'plano_ja_ativo', msg: 'Esta conta já tem um plano pago ativo.' }, 409);
+
+  const now = new Date().toISOString();
+  const pending = q(`SELECT id FROM pix_payment_intents
+    WHERE user_id = ? AND plan_id = 'pro' AND status = 'pending'
+    ORDER BY last_clicked_at DESC LIMIT 1`).get(u.userId) as { id: string } | undefined;
+  if (pending) {
+    q('UPDATE pix_payment_intents SET clicks = clicks + 1, last_clicked_at = ? WHERE id = ?').run(now, pending.id);
+    return c.json({ ok: true, id: pending.id, repeated: true });
+  }
+  const id = randomUUID();
+  q(`INSERT INTO pix_payment_intents
+    (id, user_id, plan_id, amount_brl, status, clicks, first_clicked_at, last_clicked_at)
+    VALUES(?, ?, 'pro', ?, 'pending', 1, ?, ?)`).run(id, u.userId, PLANS.pro.priceBRL, now, now);
+  return c.json({ ok: true, id, repeated: false }, 201);
+});
 
 // ---------- catálogo ----------
 app.get('/api/tools', (c) => {
@@ -539,6 +565,59 @@ app.get('/api/admin/estado', (c) => {
   const nInvs = (q('SELECT COUNT(*) c FROM investigations').get() as any).c;
   const hoje = (q('SELECT COUNT(*) c FROM usage WHERE at >= ?').get(new Date().toISOString().slice(0, 10)) as any).c;
   return c.json({ users, nUsers, nRuns, nInvs, hoje, plans: PLAN_LIST, db: dbHealth() });
+});
+
+app.get('/api/admin/pix-intents', (c) => {
+  const u = requireAdmin(c);
+  if (u instanceof Response) return u;
+  const intents = q(`SELECT p.id, p.plan_id, p.amount_brl, p.clicks,
+      p.first_clicked_at, p.last_clicked_at, u.id AS user_id, u.name, u.email, u.plan AS current_plan
+    FROM pix_payment_intents p JOIN users u ON u.id = p.user_id
+    WHERE p.status = 'pending' ORDER BY p.last_clicked_at DESC LIMIT 200`).all();
+  return c.json({ intents });
+});
+
+app.post('/api/admin/pix-intents/:id/approve', (c) => {
+  const admin = requireAdmin(c);
+  if (admin instanceof Response) return admin;
+  const intent = q('SELECT id, user_id, plan_id, status FROM pix_payment_intents WHERE id = ?')
+    .get(c.req.param('id')) as { id: string; user_id: string; plan_id: string; status: string } | undefined;
+  if (!intent) return c.json({ error: 'nao_encontrado' }, 404);
+  if (intent.status !== 'pending') return c.json({ error: 'pedido_ja_revisado', msg: 'Este pedido já foi revisado.' }, 409);
+  if (intent.plan_id !== 'pro') return c.json({ error: 'plano_pix_invalido' }, 400);
+
+  db.exec('BEGIN IMMEDIATE');
+  try {
+    const target = q('SELECT id, is_admin FROM users WHERE id = ?').get(intent.user_id) as { id: string; is_admin: number } | undefined;
+    if (!target) {
+      db.exec('ROLLBACK');
+      return c.json({ error: 'utilizador_nao_encontrado' }, 404);
+    }
+    const result = q(`UPDATE pix_payment_intents SET status = 'approved', reviewed_at = ?, reviewed_by = ?
+      WHERE id = ? AND status = 'pending'`).run(new Date().toISOString(), admin.userId, intent.id);
+    if (Number(result.changes) !== 1) {
+      db.exec('ROLLBACK');
+      return c.json({ error: 'pedido_ja_revisado', msg: 'Este pedido já foi revisado.' }, 409);
+    }
+    q(`UPDATE users SET plan = 'pro', plan_expires = NULL, role = ? WHERE id = ?`)
+      .run(target.is_admin ? 'admin' : 'pro', target.id);
+    q('DELETE FROM usage WHERE user_id = ?').run(target.id);
+    db.exec('COMMIT');
+    return c.json({ ok: true, plan: 'pro' });
+  } catch (e) {
+    db.exec('ROLLBACK');
+    throw e;
+  }
+});
+
+app.post('/api/admin/pix-intents/:id/dismiss', (c) => {
+  const admin = requireAdmin(c);
+  if (admin instanceof Response) return admin;
+  const result = q(`UPDATE pix_payment_intents SET status = 'dismissed', reviewed_at = ?, reviewed_by = ?
+    WHERE id = ? AND status = 'pending'`)
+    .run(new Date().toISOString(), admin.userId, c.req.param('id'));
+  if (Number(result.changes) !== 1) return c.json({ error: 'pedido_nao_pendente', msg: 'O pedido não está mais pendente.' }, 409);
+  return c.json({ ok: true });
 });
 
 app.post('/api/admin/user/:id/plano', async (c) => {

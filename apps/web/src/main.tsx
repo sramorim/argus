@@ -42,7 +42,7 @@ const viewToHash = (v: View2): string => {
 };
 
 const hashToView = (h: string): View2 => {
-  const p = h.replace(/^#/, '').replace(/^\/+/, '');
+  const p = h.replace(/^#/, '').replace(/^\/+/, '').split('?')[0];
   const [head, arg] = p.split('/');
   switch (head) {
     case 'ferramenta': return arg ? { k: 'tool', id: arg } : { k: 'dashboard' };
@@ -89,7 +89,7 @@ function App() {
   const [user, setUser] = useState<User | null>(null);
   const [tools, setTools] = useState<ToolPublic[]>([]);
   const [usage, setUsage] = useState<Usage | null>(null);
-  const [view, setViewState] = useState<View2>(hashToView(location.hash));
+  const [view, setViewState] = useState<View2>(hashToView(location.hash || location.pathname));
   const [loading, setLoading] = useState(true);
   const [appReady, setAppReady] = useState(false);
   const [down, setDown] = useState(false);
@@ -128,7 +128,7 @@ function App() {
   useEffect(() => { loadAll(); }, [loadAll]);
 
   useEffect(() => {
-    const on = () => setViewState(hashToView(location.hash));
+    const on = () => setViewState(hashToView(location.hash || location.pathname));
     addEventListener('hashchange', on);
     addEventListener('popstate', on);
     return () => { removeEventListener('hashchange', on); removeEventListener('popstate', on); };
@@ -161,6 +161,24 @@ function App() {
           <p className="t-sm muted">Não consigo falar com o servidor. Vê a rede e tenta outra vez.</p>
           <button className="btn btn-primary" style={{ marginTop: 16 }} type="button" onClick={() => location.reload()}>recarregar</button>
         </div>
+      </div>
+    );
+  }
+
+  // An auth-free local visual preview so Daniel can inspect the redesigned
+  // workspace before registering. This branch is stripped from production.
+  const previewMode = import.meta.env.DEV && new URLSearchParams(location.search).get('preview') === '1';
+  if (!user && previewMode) {
+    const previewUser: User = {
+      userId: 'local-visual-preview', plan: 'free', email: 'previa@argos.local',
+      name: 'Prévia do ARGOS', isAdmin: false,
+    };
+    return (
+      <div className="preview-mode">
+        <div className="preview-banner"><span>PRÉVIA LOCAL</span> Conta e métricas demonstrativas · suas investigações não são alteradas.<button type="button" onClick={() => { history.replaceState(null, '', location.pathname); location.reload(); }}>Sair da prévia</button></div>
+        <AppShell user={previewUser} tools={publicTools} usage={null} view={view} setView={setView}
+          refreshUser={() => {}}
+          onLogout={() => { history.replaceState(null, '', location.pathname); location.reload(); }} />
       </div>
     );
   }

@@ -57,7 +57,7 @@ if (isProd) {
  * o serviço escreveria no disco efemérico do contentor — apagando tudo a cada
  * deploy, sem um único aviso.
  */
-const dbPathRaw = str('ARGUS_DB') ?? (isProd ? `${RENDER_DISK_MOUNT}/argus.db` : DEV_DB);
+const dbPathRaw = str('ARGUS_DB') ?? str('DATABASE_URL') ?? (isProd ? `${RENDER_DISK_MOUNT}/argus.db` : DEV_DB);
 const dbPath = dbPathRaw.startsWith('/') || dbPathRaw.startsWith('./') || dbPathRaw.startsWith('../')
   ? dbPathRaw
   : `${process.cwd()}/${dbPathRaw}`;
@@ -136,7 +136,7 @@ function normalizarWa(v: string): { digitos: string; ok: boolean; erro?: string 
   return { digitos: d, ok: true };
 }
 
-const waBruto = str('ARGUS_CONTACTO_WHATSAPP') ?? CONTACTO_WA_DEFAULT;
+const waBruto = str('ARGUS_CONTACTO_WHATSAPP') ?? str('WHATSAPP_NUMBER') ?? CONTACTO_WA_DEFAULT;
 const wa = normalizarWa(waBruto);
 if (!wa.ok) fatal.push(`ARGUS_CONTACTO_WHATSAPP invalido: ${wa.erro}`);
 
@@ -176,6 +176,8 @@ export const config = {
    * e chega ao browser por `/api/contact`.
    */
   pix: str('PIX_KEY') ?? '',
+  pixNome: str('PIX_MERCHANT_NAME') ?? '',
+  pixCidade: str('PIX_MERCHANT_CITY') ?? '',
   // A marca é "SR. Amorim" (com ponto). O nome legal da pessoa fica no
   // ARGUS_AUTHOR_LEGAL, que não é mostrado no site.
   autor: {

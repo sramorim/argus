@@ -925,7 +925,8 @@ test('toda variável de produção de que o código precisa está no render.yaml
 
   // HOST e PORT são injected pelo Render; as de tuning e as deliberadamente
   // opcionais têm valor por omissão razoável e não precisam de ser declaradas.
-  const injetadas = new Set(['HOST', 'PORT']);
+  // NODE_VERSION é lida pela plataforma (não pelo código) para escolher o Node.
+  const injetadas = new Set(['HOST', 'PORT', 'NODE_VERSION']);
   const opcionais = new Set([
     'ARGUS_ALLOWED_ORIGINS', 'ARGUS_AUTH_MAX', 'ARGUS_AUTH_WINDOW_MIN',
     'ARGUS_COOKIE_SAMESITE', 'ARGUS_IP_MAX', 'ARGUS_REGISTER_MAX', 'ARGUS_RUN_MAX',
@@ -936,6 +937,10 @@ test('toda variável de produção de que o código precisa está no render.yaml
     // Nome alternativo do token do Apify (é o que a documentação oficial usa).
     // Aceitamos os dois por isso não precisa de estar no Blueprint.
     'APIFY_TOKEN',
+    // Aliases aceites pelo config.ts: DATABASE_URL é o alias simples de ARGUS_DB,
+    // WHATSAPP_NUMBER é o alias de ARGUS_CONTACTO_WHATSAPP. O Blueprint declara
+    // as chaves canónicas por isso os aliases não precisam de estar lá.
+    'DATABASE_URL', 'WHATSAPP_NUMBER',
   ]);
 
   const declaradas = new Set([...yml.matchAll(/^\s*-\s*key:\s*([A-Z_][A-Z0-9_]*)/gm)].map((m) => m[1]!));

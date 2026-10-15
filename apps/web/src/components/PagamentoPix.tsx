@@ -16,28 +16,66 @@
  */
 import { useMemo, useState } from 'react';
 import qrcode from 'qrcode-generator';
+import { api, type PlanId } from '../api';
 import { Icon } from './Icons';
 import { useToast } from './ui';
 
+function campoPix(id: string, valor: string): string {
+  const tamanho = new TextEncoder().encode(valor).length;
+  return `${id}${String(tamanho).padStart(2, '0')}${valor}`;
+}
+
+function crc16Pix(texto: string): string {
+  let crc = 0xffff;
+  for (const byte of new TextEncoder().encode(texto)) {
+    crc ^= byte << 8;
+    for (let bit = 0; bit < 8; bit++) crc = crc & 0x8000 ? ((crc << 1) ^ 0x1021) & 0xffff : (crc << 1) & 0xffff;
+  }
+  return crc.toString(16).toUpperCase().padStart(4, '0');
+}
+
+function payloadPix(chave: string, preco: number, nome: string, cidade: string): string | null {
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(chave)
+    && !/^\+55\d{10,11}$/.test(chave)) return null;
+  if (!nome.trim() || !cidade.trim()) return null;
+  const recebedor = nome.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/[^A-Z0-9 .-]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 25);
+  const municipio = cidade.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/[^A-Z0-9 .-]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 15);
+  if (!recebedor || !municipio) return null;
+  const contaPix = campoPix('00', 'BR.GOV.BCB.PIX') + campoPix('01', chave);
+  const adicional = campoPix('05', '***');
+  const base = campoPix('00', '01') + campoPix('26', contaPix) + campoPix('52', '0000')
+    + campoPix('53', '986') + campoPix('54', preco.toFixed(2)) + campoPix('58', 'BR')
+    + campoPix('59', recebedor) + campoPix('60', municipio) + campoPix('62', adicional) + '6304';
+  return `${base}${crc16Pix(base)}`;
+}
+
 export default function PagamentoPix({
-  chave, preco, vitalicio, numero, email, compacto = false,
+  chave, preco, vitalicio, numero, email, planId, planName, nomeRecebedor, cidadeRecebedor, compacto = false,
 }: {
   chave: string;
   preco: number;
   vitalicio: boolean;
   numero: string;
   email: string;
+  planId: PlanId;
+  planName: string;
+  nomeRecebedor: string;
+  cidadeRecebedor: string;
   /** Versão para o cartão de planos: a mesma coisa, com menos ar. */
   compacto?: boolean;
 }) {
   const toast = useToast();
   const [copiado, setCopiado] = useState(false);
+  const [enviando, setEnviando] = useState(false);
 
-  /* O conteúdo do QR é a chave tal e qual — é o que a aplicação do banco lê. */
+  /* Gera BR Code Pix EMV com valor fixo; sem dados bancários completos,
+     mantemos a cópia da chave disponível e não exibimos um QR enganoso. */
   const svg = useMemo(() => {
     try {
+      const payload = payloadPix(chave, preco, nomeRecebedor, cidadeRecebedor);
+      if (!payload) return null;
       const qr = qrcode(0, 'M');
-      qr.addData(chave);
+      qr.addData(payload);
       qr.make();
       return qr.createSvgTag({ cellSize: 4, margin: 2, scalable: true });
     } catch {
@@ -45,7 +83,7 @@ export default function PagamentoPix({
          código e o botão de copiar estão logo abaixo. Devolve-se nada e segue. */
       return null;
     }
-  }, [chave]);
+  }, [chave, preco, nomeRecebedor, cidadeRecebedor]);
 
   const precoTxt = `R$ ${preco.toFixed(2).replace('.', ',')}`;
   const periodo = vitalicio ? 'vitalício' : 'mensal';
@@ -53,8 +91,26 @@ export default function PagamentoPix({
   /* O comprovante vai escrito: o que a pessoa teve de dizer para pedir o
      plano (qual plano, que valor) e o que o dono precisa para saber a quem
      ativar (o email com que a pessoa entrou). */
-  const texto = `Olá! Paguei o plano PRO Argos (R$${preco.toFixed(2).replace('.', ',')}). Meu email no Argos é: ${email}`;
+  const texto = `Olá, paguei o plano ${planName}, segue comprovante.\nE-mail cadastrado: ${email}`;
   const waLink = `https://wa.me/${numero}?text=${encodeURIComponent(texto)}`;
+
+  const jaPaguei = async () => {
+    // Abre a janela no gesto original para os navegadores móveis não bloquearem
+    // o WhatsApp depois da resposta da API.
+    const popup = window.open('about:blank', '_blank');
+    if (popup) popup.opener = null;
+    setEnviando(true);
+    try {
+      await api.pixIntent(planId);
+      if (popup) popup.location.href = waLink;
+      else window.location.assign(waLink);
+    } catch (e) {
+      popup?.close();
+      toast('err', e instanceof Error ? e.message : 'Não foi possível registrar o aviso de pagamento. Tente de novo.');
+    } finally {
+      setEnviando(false);
+    }
+  };
 
   const copiar = async () => {
     try {
@@ -84,20 +140,19 @@ export default function PagamentoPix({
         </button>
       </div>
 
-      {svg && (
+      {svg ? (
         <div className="pix-qr" role="img" aria-label="QR code da chave Pix">
-          {/* `createSvgTag` devolve uma string SVG já com width/height 100%. */}
           <div className="pix-qr-caixa" dangerouslySetInnerHTML={{ __html: svg }} />
-          <p className="t-xs dim">Ou aponte a câmara para o código.</p>
+          <p className="t-xs dim">Pix de {precoTxt}. Escaneie pelo aplicativo do seu banco.</p>
         </div>
-      )}
+      ) : <p className="t-xs dim">Copie a chave Pix no seu banco e informe o valor de {precoTxt}. O QR Pix será exibido quando os dados do recebedor estiverem completos.</p>}
 
-      <a className="btn btn-primary btn-block" href={waLink} target="_blank" rel="noopener noreferrer">
-        <Icon.phone width={18} height={18} /> Enviar comprovante no WhatsApp
-      </a>
+      <button className="btn btn-primary btn-block" type="button" onClick={jaPaguei} disabled={enviando}>
+        <Icon.phone width={18} height={18} /> {enviando ? 'Registrando aviso…' : 'JA PAGUEI'}
+      </button>
       <p className="t-xs dim" style={{ marginTop: 8, lineHeight: 1.6 }}>
-        O WhatsApp abre com o texto já escrito — só anexar o comprovante. A ativação é
-        confirmada por nós, à mão.
+        O clique avisa a administração. No WhatsApp, anexe o comprovante; o acesso é liberado
+        manualmente depois da conferência.
       </p>
     </div>
   );

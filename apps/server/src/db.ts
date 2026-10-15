@@ -48,6 +48,18 @@ CREATE TABLE IF NOT EXISTS sessions (
   expires_at TEXT NOT NULL,
   user_agent TEXT
 );
+CREATE TABLE IF NOT EXISTS pix_payment_intents (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  plan_id TEXT NOT NULL,
+  amount_brl REAL NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending',
+  clicks INTEGER NOT NULL DEFAULT 1,
+  first_clicked_at TEXT NOT NULL,
+  last_clicked_at TEXT NOT NULL,
+  reviewed_at TEXT,
+  reviewed_by TEXT
+);
 CREATE TABLE IF NOT EXISTS user_keys (
   id TEXT PRIMARY KEY,
   user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -126,6 +138,8 @@ CREATE INDEX IF NOT EXISTS idx_nodes_inv ON nodes(inv_id);
 CREATE INDEX IF NOT EXISTS idx_edges_inv ON edges(inv_id);
 CREATE INDEX IF NOT EXISTS idx_invs_user ON investigations(user_id, updated_at);
 CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
+CREATE INDEX IF NOT EXISTS idx_pix_intents_status_time ON pix_payment_intents(status, last_clicked_at DESC);
+CREATE INDEX IF NOT EXISTS idx_pix_intents_user ON pix_payment_intents(user_id, plan_id, status);
 
 -- Créditos monthly por utilizador e ferramenta (modelo híbrido DataLikers).
 --

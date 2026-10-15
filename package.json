@@ -12,7 +12,8 @@
     "node": ">=22.18"
   },
   "scripts": {
-    "dev": "npm run dev --workspace=@argus/server",
+    "dev": "node scripts/dev.mjs",
+    "dev:api": "npm run dev --workspace=@argus/server",
     "dev:web": "npm run dev --workspace=@argus/web",
     "build": "npm run build --workspace=@argus/web",
     "start": "npm run start --workspace=@argus/server",
