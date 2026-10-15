@@ -58,8 +58,11 @@ export function Landing({ onStart, tools }: { onStart: () => void; tools: ToolPu
       </nav>
 
       {/* ---------- Banner ---------- */}
-      <header className="lp-hero">
+      <header className="lp-hero lp-splash">
         <Globo />
+        <img className="lp-splash-lobo" src="/brand/argos-a.png" width={148} height={148} alt="Lobo ARGOS" decoding="async" draggable={false} />
+        <p className="lp-splash-nome">ARGOS</p>
+        <p className="lp-splash-tag">Ferramentas OSINT para investigações digitais</p>
         <div className="lp-hero-txt">
           <p className="lp-marca">OSINT · Análise · Estratégia</p>
           <h1 className="lp-titulo">Informação<br />Revela <span>Poder</span></h1>
@@ -110,12 +113,11 @@ export function Landing({ onStart, tools }: { onStart: () => void; tools: ToolPu
               return (
                 <li key={g.id}>
                   <button type="button" className="lp-grupo" onClick={onStart}>
-                    <span className="lp-grupo-ico"><Ico /></span>
                     <span className="lp-grupo-txt">
-                      <span className="lp-grupo-nome">{g.nome}</span>
+                      <span className="lp-grupo-nome">{g.nome} <small className="lp-grupo-n">{reais.length}</small></span>
                       <span className="lp-grupo-d">{g.resumo}</span>
                     </span>
-                    <span className="lp-grupo-n" title={`${reais.length} ferramenta(s)`}>{reais.length}</span>
+                    <span className="lp-grupo-ico"><Ico /></span>
                   </button>
                 </li>
               );

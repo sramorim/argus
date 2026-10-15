@@ -2610,6 +2610,15 @@ body { background: var(--bg); }
 .lp-entrar { min-height: 44px; padding: 0 20px; }
 
 .lp-hero { position: relative; overflow: hidden; display: grid; padding-block: 36px 44px; }
+/* Splash de abertura: lobo ao centro, nome e frase — o rosto do aplicativo. */
+.lp-splash { justify-items: center; text-align: center; padding-block: 64px 60px; min-height: 92svh; align-content: start; background: radial-gradient(120% 70% at 50% 0%, #0a1830 0%, var(--bg) 62%); }
+.lp-splash .globo { position: absolute; left: 50%; top: auto; bottom: -42%; right: auto; width: min(620px, 140vw); height: auto; aspect-ratio: 2.3; transform: translateX(-50%); opacity: .65; pointer-events: none; }
+.lp-splash-lobo { position: relative; z-index: 1; width: 172px; height: 172px; filter: drop-shadow(0 0 30px rgba(46, 155, 255, .5)); }
+.lp-splash-nome { position: relative; z-index: 1; font-family: var(--font-display); font-weight: 800; font-size: 34px; letter-spacing: .44em; text-indent: .44em; margin: 22px 0 0; color: #fff; }
+.lp-splash-tag { position: relative; z-index: 1; color: var(--t-2); font-size: 15px; letter-spacing: .05em; margin: 10px 0 0; }
+.lp-splash .lp-hero-txt { max-width: 640px; margin-top: 30px; }
+.lp-splash .lp-sub { margin-inline: auto; }
+.lp-splash .lp-cta { grid-template-columns: 1fr; max-width: 380px; margin-inline: auto; }
 .lp-hero .globo { position: absolute; right: -40px; top: 0; width: 100%; height: 100%; opacity: .32; pointer-events: none; }
 .lp-hero-txt { position: relative; z-index: 1; max-width: 600px; }
 .lp-marca { font-family: var(--mono); font-size: 11.5px; letter-spacing: .28em; text-transform: uppercase; color: var(--blue-3); font-weight: 700; margin: 0; }
@@ -2631,14 +2640,15 @@ body { background: var(--bg); }
 .lp-passo-t { font-family: var(--font-display); font-weight: 700; font-size: 16.5px; }
 .lp-passo-d { color: var(--t-2); font-size: 14.5px; line-height: 1.6; margin: 6px 0 0; }
 .lp-grupos { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
-.lp-grupo { display: flex; align-items: center; gap: 14px; width: 100%; height: 100%; padding: 16px; text-align: left; color: inherit; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); transition: border-color var(--t-fast), background var(--t-fast); }
-.lp-grupo:hover { border-color: var(--blue-line); background: var(--surface-2); }
-.lp-grupo-ico { flex: 0 0 44px; height: 44px; display: grid; place-items: center; border-radius: 12px; background: var(--blue-dim); border: 1px solid var(--blue-line); }
-.lp-grupo-ico svg { width: 21px; height: 21px; color: var(--blue); }
+/* Cartões claros de ferramenta: título + resumo à esquerda, ícone à direita. */
+.lp-grupo { display: flex; align-items: center; gap: 14px; width: 100%; height: 100%; padding: 18px; text-align: left; color: #10181d; background: #f2f6fd; border: 1px solid #dbe6f5; border-radius: 22px; transition: border-color var(--t-fast), transform var(--t-fast), box-shadow var(--t-fast); }
+.lp-grupo:hover { border-color: var(--blue); transform: translateY(-1px); box-shadow: 0 10px 28px rgba(27, 110, 243, .18); }
+.lp-grupo-ico { flex: 0 0 52px; height: 52px; display: grid; place-items: center; border-radius: 16px; background: linear-gradient(135deg, var(--blue-2), var(--blue)); box-shadow: 0 6px 16px rgba(27, 110, 243, .35); }
+.lp-grupo-ico svg { width: 24px; height: 24px; color: #fff; }
 .lp-grupo-txt { flex: 1; min-width: 0; display: grid; gap: 3px; }
-.lp-grupo-nome { font-weight: 700; font-size: 15px; }
-.lp-grupo-d { color: var(--t-2); font-size: 13.5px; line-height: 1.5; }
-.lp-grupo-n { flex: 0 0 auto; min-width: 30px; height: 30px; display: grid; place-items: center; border-radius: 9px; background: var(--surface-3); color: var(--blue-3); font-weight: 700; font-size: 13.5px; font-variant-numeric: tabular-nums; }
+.lp-grupo-nome { font-weight: 800; font-size: 15.5px; letter-spacing: .02em; text-transform: uppercase; }
+.lp-grupo-n { font-size: 12px; font-weight: 700; color: var(--blue-2); background: rgba(27, 110, 243, .12); border-radius: 8px; padding: 1px 8px; margin-left: 6px; vertical-align: 2px; }
+.lp-grupo-d { color: #4a5a66; font-size: 13.5px; line-height: 1.5; }
 .lp-planos { display: grid; gap: 12px; }
 .lp-plano { display: flex; flex-direction: column; gap: 6px; padding: 22px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); }
 .lp-plano-nome { font-weight: 700; font-size: 15px; color: var(--t-2); }

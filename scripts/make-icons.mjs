@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 /**
  * Gera os ícones e imagens da marca ARGOS a partir de UMA fonte:
- * `apps/web/public/brand/argos-a.png` (o símbolo da marca — o "A" em triângulo
- * com o olho —, fundo transparente).
+ * `apps/web/public/brand/argos-a.png` (o símbolo da marca — o lobo geométrico
+ * em traço neon com nós de circuito, desenhado por `scripts/make-wolf.mjs` —,
+ * fundo transparente).
  *
  * Porquê um script: a marca tem de ser reproduzível. Se o símbolo mudar,
  * troca-se o ficheiro-fonte e `npm run icons` volta a gerar tudo — favicon,
