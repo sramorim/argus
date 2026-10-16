@@ -59,6 +59,19 @@ export default function Perfil({ setView }: { setView: (v: View) => void }) {
   const p = res?.perfil;
   const cruz = res?.cruzamento;
 
+  /**
+   * Nome legível de uma entidade a partir do seu id interno. O id (ex.:
+   * "inv_mvbeiv4p_cqvcur:n0rg39") é ruído de banco de dados — nunca se mostra.
+   * Usa o rótulo da entidade e, na falta dele, "entidade N".
+   */
+  const nomeEntidade = (id: string): string => {
+    const ents = p?.entidades ?? [];
+    const i = ents.findIndex((x) => x.id === id);
+    if (i < 0) return 'entidade';
+    const r = (ents[i].rotulo ?? '').trim();
+    return r && r !== id ? r : `entidade ${i + 1}`;
+  };
+
   return (
     <div className="page page-wide">
       <header className="card">
@@ -183,29 +196,43 @@ export default function Perfil({ setView }: { setView: (v: View) => void }) {
                 <div style={{ height: 14 }} />
               </>
             )}
-            {p.contas.length === 0 ? (
-              <p className="t-sm dim">Sem contas identificadas nas entidades desta investigação.</p>
-            ) : (
-              <div className="tbl-wrap">
-                <table className="tbl">
-                  <thead>
-                    <tr><th>Plataforma</th><th>Username</th><th>URL</th><th>Entidade</th></tr>
-                  </thead>
-                  <tbody>
-                    {p.contas.map((c, i) => (
-                      <tr key={`${c.plataforma}-${c.entidade}-${i}`}>
-                        <td data-l="plataforma">{c.plataforma}</td>
-                        <td data-l="username" className="mono t-xs" style={{ overflowWrap: 'anywhere' }}>{c.username ?? '—'}</td>
-                        <td data-l="url" className="t-xs" style={{ overflowWrap: 'anywhere', maxWidth: 280 }}>
-                          {c.url ? <a href={c.url} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--blue-3)' }}>{c.url}</a> : 'sem URL pública'}
-                        </td>
-                        <td data-l="entidade" className="mono t-xs dim" style={{ overflowWrap: 'anywhere' }}>{c.entidade}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+            {(() => {
+              // Uma conta só interessa se trouxer plataforma real, username ou
+              // URL. As vazias ("desconhecida · — · sem URL") são ruído e saem.
+              const uteis = p.contas.filter((c) =>
+                (c.username && c.username.trim())
+                || (c.url && c.url.trim())
+                || (c.plataforma && c.plataforma.toLowerCase() !== 'desconhecida'));
+              if (uteis.length === 0) {
+                return (
+                  <p className="t-sm dim">
+                    Nenhuma conta pública identificada nesta investigação. Isto é comum quando o
+                    alvo é um e-mail ou um domínio: as contas aparecem depois de correr ferramentas
+                    de redes sociais sobre o mesmo alvo.
+                  </p>
+                );
+              }
+              return (
+                <div className="tbl-wrap">
+                  <table className="tbl">
+                    <thead>
+                      <tr><th>Plataforma</th><th>Username</th><th>URL</th></tr>
+                    </thead>
+                    <tbody>
+                      {uteis.map((c, i) => (
+                        <tr key={`${c.plataforma}-${c.entidade}-${i}`}>
+                          <td data-l="plataforma">{c.plataforma && c.plataforma.toLowerCase() !== 'desconhecida' ? c.plataforma : '—'}</td>
+                          <td data-l="username" className="mono t-xs" style={{ overflowWrap: 'anywhere' }}>{c.username ?? '—'}</td>
+                          <td data-l="url" className="t-xs" style={{ overflowWrap: 'anywhere', maxWidth: 280 }}>
+                            {c.url ? <a href={c.url} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--blue-3)' }}>{c.url}</a> : 'sem URL pública'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              );
+            })()}
           </div>
 
           {/* ------------------------------------------------- identificadores */}
@@ -222,7 +249,7 @@ export default function Perfil({ setView }: { setView: (v: View) => void }) {
                       <tr key={`${i.tipo}-${i.valor}-${n}`}>
                         <td data-l="tipo" className="t-xs">{i.tipo}</td>
                         <td data-l="valor" className="mono" style={{ overflowWrap: 'anywhere' }}>{i.valor}</td>
-                        <td data-l="entidades" className="t-xs dim">{i.entidades.length} · {i.entidades.join(', ')}</td>
+                        <td data-l="entidades" className="t-xs dim">{i.entidades.length} · {i.entidades.map(nomeEntidade).join(', ')}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -264,7 +291,7 @@ export default function Perfil({ setView }: { setView: (v: View) => void }) {
                       </div>
                       <div className="t-xs muted">{c.nota}</div>
                       <div className="src-ref">
-                        evidência: {fontes(c.evidencias)} · entidades {c.entidades.join(', ')}
+                        evidência: {fontes(c.evidencias)} · entidades {c.entidades.map(nomeEntidade).join(', ')}
                       </div>
                     </div>
                   </div>
@@ -283,7 +310,7 @@ export default function Perfil({ setView }: { setView: (v: View) => void }) {
                 {res.resolucoes.map((r, i) => (
                   <div className="finding" key={`${r.a}-${r.b}-${i}`}>
                     <div className="finding-key">
-                      <div className="k" style={{ overflowWrap: 'anywhere' }}>{r.a} ↔ {r.b}</div>
+                      <div className="k" style={{ overflowWrap: 'anywhere' }}>{nomeEntidade(r.a)} ↔ {nomeEntidade(r.b)}</div>
                       <div className="m">{r.total} ponto(s) · {r.fatores.length} fator(es)</div>
                     </div>
                     <div className="finding-val">
