@@ -2877,7 +2877,10 @@ form.dash-busca:focus-within { border-color: var(--blue-line); box-shadow: var(-
 [data-cor='laranja']  { --az-fundo: #FFF2E5; --az-ico: #EA580C; }
 .tool-glyph[data-cor], .dash-pilar-ico[data-cor], .layer-card-ico[data-cor], .lp-grupo-ico[data-cor],
 .dash-card-ico[data-cor], .stat-ico[data-cor], .dash-acao-ico[data-cor] {
-  background: var(--az-fundo); border-color: transparent;
+  background: var(--az-fundo);
+  /* borda fininha na própria cor do azulejo: define melhor cada quadradinho,
+     como no mockup, sem perder a leveza do fundo claro. */
+  border: 1px solid color-mix(in srgb, var(--az-ico) 24%, transparent);
 }
 .tool-glyph[data-cor] svg, .dash-pilar-ico[data-cor] svg, .layer-card-ico[data-cor] svg, .lp-grupo-ico[data-cor] svg,
 .dash-card-ico[data-cor] svg, .stat-ico[data-cor] svg, .dash-acao .dash-acao-ico[data-cor] svg { color: var(--az-ico); }
