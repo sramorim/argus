@@ -594,6 +594,10 @@ body.arrastando * { cursor: grabbing !important; user-select: none !important; }
 .page-head { margin-bottom: var(--s-2); }
 .page-head p { color: var(--t-3); font-size: 14px; margin-top: 6px; max-width: 68ch; line-height: 1.6; }
 
+/* Abas da Área DM (owner-only). O layout é inline no componente; esta regra
+   dá-lhes o separador inferior do sistema para a fila de abas não flutuar. */
+.dm-tabs { border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+
 .tabbar { display: none; }
 
 /* ---------------------------------------------------------- 5. componentes */

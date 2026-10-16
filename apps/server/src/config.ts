@@ -211,6 +211,15 @@ export const config = {
     registerMax: int('ARGUS_REGISTER_MAX', 5),
     windowMin: int('ARGUS_AUTH_WINDOW_MIN', 15),
   },
+  /*
+   * Observabilidade de erros (Sentry), opcional.
+   *
+   * Sem SENTRY_DSN o reporter é no-op — custo zero e nenhuma chamada de rede.
+   * Com DSN, erros não tratados são enviados JÁ COM os dados sensíveis removidos
+   * (ver observability.ts). O DSN não é segredo de ingestão crítico, mas mesmo
+   * assim nunca é impresso no arranque.
+   */
+  sentryDsn: str('SENTRY_DSN'),
   fatal,
   warn,
 } as const;

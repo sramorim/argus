@@ -111,6 +111,11 @@ services:
       # a busca de e-mail funciona e diz que os vazamentos precisam dela.
       - key: HIBP_API_KEY
         sync: false
+      # Observabilidade de erros (Sentry). Opcional: vazio = reporter desligado
+      # (no-op). Com DSN, erros não tratados vão ao Sentry já SEM dados sensíveis
+      # (ver observability.ts). sync:false = o dono cola o DSN ao criar o serviço.
+      - key: SENTRY_DSN
+        sync: false
       - key: ARGUS_INSTAGRAM
         value: sr__Amorim
       - key: ARGUS_TELEGRAM

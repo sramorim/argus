@@ -427,6 +427,26 @@ export async function nominatimReverse(lat: number, lon: number, log: SourceLog)
 export interface WebHit { titulo: string; url: string; descricao?: string }
 
 /**
+ * Limpa um fragmento HTML (título/descrição de resultado) para texto seguro.
+ *
+ * A ordem importa, por duas razões que o CodeQL assinala e que são reais:
+ *  - desescapa as entidades com `&amp;` por ÚLTIMO — senão `&amp;lt;` viraria
+ *    `<` (double-unescaping), reintroduzindo marcação;
+ *  - remove as tags e, logo a seguir, QUALQUER `<`/`>` que sobre — senão um
+ *    `<scr<script>ipt>` podia sobrar como `<script>` (sanitização incompleta
+ *    numa só passagem). Depois deste passo nenhum carácter de abertura de tag
+ *    sobrevive.
+ */
+export function textoLimpo(s: string): string {
+  const semEntidades = String(s ?? '')
+    .replace(/<!\[CDATA\[|\]\]>/g, '')
+    .replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"').replace(/&#x27;|&#39;/g, "'")
+    .replace(/&amp;/g, '&');
+  return semEntidades.replace(/<[^>]*>/g, '').replace(/[<>]/g, '').trim();
+}
+
+/**
  * Pesquisa web via Bing RSS.
  *
  * Porque Bing RSS e nao outros:
@@ -449,17 +469,68 @@ export async function bingRss(query: string, log: SourceLog, srcId = 'bing'): Pr
       const u = /<link>([\s\S]*?)<\/link>/.exec(block)?.[1] ?? '';
       const d = /<description>([\s\S]*?)<\/description>/.exec(block)?.[1] ?? '';
       if (!u) continue;
-      const clean = (s: string) => s
-        .replace(/<!\[CDATA\[|\]\]>/g, '')
-        .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
-        .replace(/&quot;/g, '"').replace(/&#39;/g, "'")
-        .replace(/<[^>]+>/g, '').trim();
-      items.push({ titulo: clean(t), url: clean(u), descricao: clean(d).slice(0, 300) });
+      items.push({ titulo: textoLimpo(t), url: textoLimpo(u), descricao: textoLimpo(d).slice(0, 300) });
     }
     if (items.length) { log.ok(srcId, 'Bing RSS (pesquisa web)', url, Date.now() - t0, items.length); return items; }
     log.empty(srcId, 'Bing RSS (pesquisa web)', url, Date.now() - t0, 'sem resultados');
     return [];
   } catch (e) { log.error(srcId, 'Bing RSS (pesquisa web)', url, String((e as Error).message).slice(0, 70), Date.now() - t0); return []; }
+}
+
+/**
+ * Motor de reserva: DuckDuckGo Lite.
+ *
+ * O endpoint clássico `html.duckduckgo.com/html` devolve só a casca (ver nota em
+ * `bingRss`). O `lite.duckduckgo.com/lite/` é um interface diferente, sem JS,
+ * que ainda serve uma tabela de resultados. Os links vêm como redirect
+ * (`//duckduckgo.com/l/?uddg=<url>`), por isso extrai-se o alvo real de `uddg`.
+ *
+ * É reserva, não substituto: só corre quando o Bing não devolveu nada, e
+ * declara-se como reserva na SourceLog — o investigador vê que o resultado veio
+ * do plano B, não do motor principal.
+ */
+export async function ddgLite(query: string, log: SourceLog, srcId = 'ddg-lite'): Promise<WebHit[]> {
+  const url = `https://lite.duckduckgo.com/lite/?q=${encodeURIComponent(query)}`;
+  const t0 = Date.now();
+  try {
+    const r = await apiGet(url, {
+      timeoutMs: 12_000, maxBytes: 2_000_000,
+      headers: { 'user-agent': 'Mozilla/5.0 (compatible; ARGUS-OSINT/1.0; +https://argos.senhoramorim.com.br)' },
+    });
+    if (r.status !== 200) { log.error(srcId, 'DuckDuckGo Lite (reserva)', url, `HTTP ${r.status}`, Date.now() - t0); return []; }
+    const alvoReal = (href: string): string => {
+      const m = /[?&]uddg=([^&]+)/.exec(href);
+      if (m) { try { return decodeURIComponent(m[1]!); } catch { /* cai para o href cru */ } }
+      return href.startsWith('//') ? `https:${href}` : href;
+    };
+    const items: WebHit[] = [];
+    for (const m of r.body.matchAll(/<a[^>]+class="result-link"[^>]+href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/g)) {
+      const u = alvoReal(m[1]!);
+      if (!u || /duckduckgo\.com\/l\//.test(u)) continue;
+      items.push({ titulo: textoLimpo(m[2]!), url: u });
+      if (items.length >= 20) break;
+    }
+    if (items.length) {
+      log.ok(srcId, 'DuckDuckGo Lite (reserva)', url, Date.now() - t0, items.length, 'motor de reserva: o Bing não devolveu resultados');
+      return items;
+    }
+    log.empty(srcId, 'DuckDuckGo Lite (reserva)', url, Date.now() - t0, 'sem resultados');
+    return [];
+  } catch (e) { log.error(srcId, 'DuckDuckGo Lite (reserva)', url, String((e as Error).message).slice(0, 70), Date.now() - t0); return []; }
+}
+
+/**
+ * Busca web com reserva — é o que as ferramentas devem chamar.
+ *
+ * Tenta o Bing RSS (motor principal). Se vier vazio ou em erro, cai para o
+ * DuckDuckGo Lite. Cada tentativa deixa a sua própria linha na SourceLog, por
+ * isso o resultado nunca esconde de onde veio nem que o principal falhou.
+ * Resolve o ponto único de falha de o Bing ser a única fonte de busca.
+ */
+export async function buscaWeb(query: string, log: SourceLog, srcId = 'web'): Promise<WebHit[]> {
+  const primario = await bingRss(query, log, srcId);
+  if (primario.length) return primario;
+  return ddgLite(query, log, `${srcId}-ddg`);
 }
 
 // ---------- GitHub ----------

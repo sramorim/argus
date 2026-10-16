@@ -230,7 +230,7 @@ export default function AppShell({
     return GRUPOS.find((g) => g.ferramentas.includes((view as { id: string }).id))?.id ?? null;
   }, [view]);
 
-  const [abertos, setAbertos] = useState<Set<string>>(() => new Set(grupoDaFerramenta ? [grupoDaFerramenta] : ['investigar']));
+  const [abertos, setAbertos] = useState<Set<string>>(() => new Set(grupoDaFerramenta ? [grupoDaFerramenta] : [GRUPOS[0]?.id ?? 'investigar']));
 
   useEffect(() => {
     if (!grupoDaFerramenta) return;

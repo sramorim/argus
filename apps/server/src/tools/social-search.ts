@@ -19,7 +19,7 @@
  */
 import { registerTool } from '../registry.ts';
 import { SourceLog, finding, type Finding, type FindingValue } from '../net/provenance.ts';
-import { bingRss, type WebHit } from '../net/sources.ts';
+import { buscaWeb, type WebHit } from '../net/sources.ts';
 
 interface Rede {
   id: string;
@@ -152,7 +152,7 @@ registerTool({
     // pode impedir os outros — cada rede é registada como fonte própria.
     const resultados = await Promise.all(redes.map(async (r) => {
       const q = r.filtro ? `${alvo} ${r.filtro}` : alvo;
-      try { return { r, hits: await bingRss(q, log, r.id) }; }
+      try { return { r, hits: await buscaWeb(q, log, r.id) }; }
       catch (e) {
         log.error(r.id, 'Bing RSS (pesquisa web)', 'https://www.bing.com/search', String((e as Error).message).slice(0, 70));
         return { r, hits: [] as WebHit[] };
