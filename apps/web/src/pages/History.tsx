@@ -19,6 +19,20 @@ import type { View } from './AppShell';
 
 interface Row { id: string; tool_id: string; input: string; created_at: string; bytes: number }
 
+/**
+ * O alvo legível de uma execução: o valor que a pessoa escreveu, sem o
+ * invólucro JSON. `{"seed":"a@b.com"}` vira `a@b.com`. Se não for JSON, mostra
+ * o texto como está (cortado). É o que tira o "código" da lista.
+ */
+function alvoLegivel(input: string): string {
+  try {
+    const o = JSON.parse(input) as Record<string, unknown>;
+    const vals = Object.values(o).filter((v) => typeof v === 'string' && v.trim()) as string[];
+    if (vals.length) return vals.join(' · ').slice(0, 140);
+  } catch { /* não é JSON: cai para o texto cru */ }
+  return input.slice(0, 140) || '—';
+}
+
 /** Data e hora em pt-BR, com a granularidade que a lista usa. */
 const quando = (iso: string): string => {
   const t = Date.parse(iso);
@@ -114,7 +128,7 @@ export default function History({ setView }: { setView: (v: View) => void }) {
                   >
                     {r.tool_id}
                   </button>
-                  <div className="tl-entrada">{r.input.slice(0, 140) || '—'}</div>
+                  <div className="tl-entrada">{alvoLegivel(r.input)}</div>
                   <div className="row" style={{ marginTop: 8 }}>
                     <span className="tag">{(r.bytes / 1024).toFixed(1)} KB</span>
                     <button className="btn btn-sm btn-quiet" type="button" onClick={() => show(r.id)}>

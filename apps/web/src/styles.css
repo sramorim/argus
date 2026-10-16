@@ -1118,9 +1118,9 @@ select.input {
   .tbl tr { padding: 11px 0; border-bottom: 1px solid var(--line-soft); }
   .tbl td { display: flex; gap: 10px; padding: 3px 0; border: none; }
   .tbl td::before {
-    content: attr(data-l); flex: 0 0 76px; color: var(--t-3);
-    font-family: var(--mono); font-size: 14px; letter-spacing: .1em;
-    text-transform: uppercase; font-weight: 700;
+    content: attr(data-l); flex: 0 0 auto; min-width: 84px; color: var(--t-3);
+    font-family: var(--mono); font-size: 12px; letter-spacing: .04em;
+    text-transform: uppercase; font-weight: 700; white-space: nowrap;
   }
   .tbl td[data-l='']::before { display: none; }
 
@@ -1145,7 +1145,11 @@ select.input {
 @media (max-width: 430px) {
   body { font-size: 14.5px; }
   .page { padding: var(--s-4) var(--s-3) calc(var(--tabbar-h) + var(--s-5)); }
-  .grid-3, .grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  /* No telemóvel os cartões de ferramenta (grid-3) precisam da largura toda:
+     em duas colunas o texto parte letra a letra. Os indicadores (grid-4)
+     continuam em duas colunas, que é o que cabe bem. */
+  .grid-3 { grid-template-columns: 1fr; }
+  .grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .toasts { bottom: calc(var(--tabbar-h) + 8px); }
   .card { padding: 14px; }
   .tool-sum { -webkit-line-clamp: 2; }
