@@ -374,10 +374,11 @@ test('a lateral lista cada ferramenta e cada aplicação, uma vez só', () => {
   for (const f of tools) {
     assert.ok(lateral.includes(`data-tool="${f.id}"`), `falta na lateral a ferramenta ${f.id}`);
   }
-  // E cada aplicação da navegação. Ficam de fora duas, por razões diferentes:
-  // a administração (só o dono a vê) e "nova investigação", que na lateral é o
-  // botão grande do topo — não um item de lista. As duas continuam alcançáveis.
-  const visiveis = H.VISTAS.filter((v: any) => v.id !== 'admin' && v.id !== 'nova');
+  // E cada aplicação da navegação. Ficam de fora três, por razões diferentes:
+  // a administração e a Área DM (só o dono as vê, via `visivel()` no AppShell) e
+  // "nova investigação", que na lateral é o botão grande do topo — não um item
+  // de lista. As três continuam alcançáveis.
+  const visiveis = H.VISTAS.filter((v: any) => v.id !== 'admin' && v.id !== 'dm' && v.id !== 'nova');
   assert.ok(lateral.includes('Nova investigação'),
     'a lateral perdeu a acção principal (o botão de nova investigação)');
   for (const v of visiveis) {

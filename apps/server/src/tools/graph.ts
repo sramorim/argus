@@ -59,12 +59,44 @@ export function detectSeedType(raw: string): NodeType | null {
 
 interface PlanStep { toolId: string; input: Record<string, string>; }
 
+/**
+ * Que ferramentas fazem sentido para cada tipo de semente.
+ *
+ * Regra dura: só se agenda uma ferramenta cujo campo de entrada aceita de facto
+ * este tipo de alvo — os nomes de campo (`username`, `email`, `alvo`, `domain`,
+ * `phone`) são os que a própria ferramenta declara no seu `fields`. Nunca se
+ * executa uma ferramenta incompatível só para "ter resultado".
+ *
+ * Fora deste mapa de propósito:
+ *  - `social-search` e `paste-search` dependem 100% do Bing RSS (ponto único de
+ *    falha); ficam de fora do plano automático até existir fallback, para o
+ *    grafo não herdar essa fragilidade. Continuam acessíveis como ferramenta
+ *    direta.
+ *  - `telegram-intel` espera um handle de Telegram, não um username genérico.
+ *  - IP: nenhuma ferramenta registada aceita IP como entrada (a inteligência de
+ *    IP vive em net/sources.ts, não é um ToolDef). O salto 2 já resolve DNS de
+ *    IPs descobertos. Opção A escolhida pelo dono: sem ferramenta de salto 1.
+ */
 function planFor(type: NodeType, seed: string): PlanStep[] {
   const s = seed.trim();
   switch (type) {
     case 'username': return [
       { toolId: 'username-finder', input: { username: s } },
+      { toolId: 'username-intel', input: { username: s } },
+      { toolId: 'social-presence', input: { alvo: s } },
     ];
+    case 'email': return [
+      { toolId: 'email-intel', input: { email: s } },
+      { toolId: 'social-presence', input: { alvo: s } },
+    ];
+    case 'dominio': return [
+      { toolId: 'domain-infra', input: { domain: s } },
+    ];
+    case 'telefone': return [
+      { toolId: 'phone-intel', input: { phone: s } },
+    ];
+    // ip, servico (URL), empresa (CNPJ), endereco (CEP), wallet, cve:
+    // sem ferramenta registada compatível — não se força nada.
     default: return [];
   }
 }
