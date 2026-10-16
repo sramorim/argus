@@ -1,5 +1,7 @@
 /**
- * Landing pública do ARGOS — redesenho 2026-10 (identidade azul-marinho).
+ * Landing pública do ARGOS — tema claro do lobo (fundo branco, acento vermelho).
+ * O herói mostra o lobo geométrico da marca (argos-lobo.svg); o azul-marinho
+ * anterior foi substituído pelo tema claro (ver bloco "TEMA CLARO DO LOBO" no CSS).
  *
  * A mesma marca da app: barra com o símbolo e "Entrar", banner com o globo e
  * a frase da marca, "como funciona" em 3 passos, ferramentas agrupadas,
@@ -61,7 +63,7 @@ export function Landing({ onStart, tools }: { onStart: () => void; tools: ToolPu
       {/* ---------- Banner ---------- */}
       <header className="lp-hero lp-splash">
         <Globo />
-        <img className="lp-splash-lobo" src="/brand/argos-a.png" width={148} height={148} alt="Lobo ARGOS" decoding="async" draggable={false} />
+        <img className="lp-splash-lobo" src="/brand/argos-lobo.svg" width={148} height={148} alt="Lobo ARGOS" decoding="async" draggable={false} />
         <p className="lp-splash-nome">ARGOS</p>
         <p className="lp-splash-tag">Ferramentas OSINT para investigações digitais</p>
         <div className="lp-hero-txt">
