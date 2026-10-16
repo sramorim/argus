@@ -427,6 +427,26 @@ export async function nominatimReverse(lat: number, lon: number, log: SourceLog)
 export interface WebHit { titulo: string; url: string; descricao?: string }
 
 /**
+ * Limpa um fragmento HTML (título/descrição de resultado) para texto seguro.
+ *
+ * A ordem importa, por duas razões que o CodeQL assinala e que são reais:
+ *  - desescapa as entidades com `&amp;` por ÚLTIMO — senão `&amp;lt;` viraria
+ *    `<` (double-unescaping), reintroduzindo marcação;
+ *  - remove as tags e, logo a seguir, QUALQUER `<`/`>` que sobre — senão um
+ *    `<scr<script>ipt>` podia sobrar como `<script>` (sanitização incompleta
+ *    numa só passagem). Depois deste passo nenhum carácter de abertura de tag
+ *    sobrevive.
+ */
+export function textoLimpo(s: string): string {
+  const semEntidades = String(s ?? '')
+    .replace(/<!\[CDATA\[|\]\]>/g, '')
+    .replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"').replace(/&#x27;|&#39;/g, "'")
+    .replace(/&amp;/g, '&');
+  return semEntidades.replace(/<[^>]*>/g, '').replace(/[<>]/g, '').trim();
+}
+
+/**
  * Pesquisa web via Bing RSS.
  *
  * Porque Bing RSS e nao outros:
@@ -449,12 +469,7 @@ export async function bingRss(query: string, log: SourceLog, srcId = 'bing'): Pr
       const u = /<link>([\s\S]*?)<\/link>/.exec(block)?.[1] ?? '';
       const d = /<description>([\s\S]*?)<\/description>/.exec(block)?.[1] ?? '';
       if (!u) continue;
-      const clean = (s: string) => s
-        .replace(/<!\[CDATA\[|\]\]>/g, '')
-        .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
-        .replace(/&quot;/g, '"').replace(/&#39;/g, "'")
-        .replace(/<[^>]+>/g, '').trim();
-      items.push({ titulo: clean(t), url: clean(u), descricao: clean(d).slice(0, 300) });
+      items.push({ titulo: textoLimpo(t), url: textoLimpo(u), descricao: textoLimpo(d).slice(0, 300) });
     }
     if (items.length) { log.ok(srcId, 'Bing RSS (pesquisa web)', url, Date.now() - t0, items.length); return items; }
     log.empty(srcId, 'Bing RSS (pesquisa web)', url, Date.now() - t0, 'sem resultados');
@@ -483,9 +498,6 @@ export async function ddgLite(query: string, log: SourceLog, srcId = 'ddg-lite')
       headers: { 'user-agent': 'Mozilla/5.0 (compatible; ARGUS-OSINT/1.0; +https://argos.senhoramorim.com.br)' },
     });
     if (r.status !== 200) { log.error(srcId, 'DuckDuckGo Lite (reserva)', url, `HTTP ${r.status}`, Date.now() - t0); return []; }
-    const clean = (s: string) => s
-      .replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
-      .replace(/&quot;/g, '"').replace(/&#x27;|&#39;/g, "'").trim();
     const alvoReal = (href: string): string => {
       const m = /[?&]uddg=([^&]+)/.exec(href);
       if (m) { try { return decodeURIComponent(m[1]!); } catch { /* cai para o href cru */ } }
@@ -495,7 +507,7 @@ export async function ddgLite(query: string, log: SourceLog, srcId = 'ddg-lite')
     for (const m of r.body.matchAll(/<a[^>]+class="result-link"[^>]+href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/g)) {
       const u = alvoReal(m[1]!);
       if (!u || /duckduckgo\.com\/l\//.test(u)) continue;
-      items.push({ titulo: clean(m[2]!), url: u });
+      items.push({ titulo: textoLimpo(m[2]!), url: u });
       if (items.length >= 20) break;
     }
     if (items.length) {
