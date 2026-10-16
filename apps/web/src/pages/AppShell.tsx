@@ -540,10 +540,8 @@ export default function AppShell({
           <button className="icon-btn only-narrow" onClick={() => setBusca(true)} aria-label="Busca global" type="button">
             <Icon.search />
           </button>
-          <button className="icon-btn only-desk" type="button" aria-label="Definições" title="Definições"
-            onClick={() => go({ k: 'definicoes' })}>
-            <Icon.sliders />
-          </button>
+          {/* Definições vive só no menu do avatar (abaixo): o ícone solto aqui
+              era uma segunda porta para o mesmo ecrã. */}
           <details className="user-menu">
             <summary className="user-sum" title={user.email}>
               <span className="avatar">{iniciais}</span>

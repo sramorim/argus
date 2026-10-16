@@ -25,10 +25,17 @@ function ValueView({ v, link }: { v: unknown; link?: string }) {
   if (typeof v === 'number') return <span className="mono num">{v}</span>;
 if (typeof v === 'string') {
       const isUrl = /^https?:\/\//i.test(v);
+      // Trava de segurança: um texto gigante (ex.: um blob de dados que escapou)
+      // nunca deve inundar a tela. Acima de 2000 caracteres mostra-se o início
+      // e manda-se o resto para Exportar/Copiar — sem "monte de código" cru.
+      const LIMITE = 2000;
+      const longo = v.length > LIMITE;
+      const texto = longo ? `${v.slice(0, LIMITE)}…` : v;
       return (
         <span>
-          <span className={link || isUrl ? 'mono' : ''} style={{ overflowWrap: 'anywhere' }}>{v}</span>
-          {(link || isUrl) && (
+          <span className={link || isUrl ? 'mono' : ''} style={{ overflowWrap: 'anywhere' }}>{texto}</span>
+          {longo && <span className="dim t-xs"> (texto longo cortado — use Exportar/Copiar para o conteúdo completo)</span>}
+          {(link || isUrl) && !longo && (
             <> <a className="t-xs" style={{ color: 'var(--blue-3)' }} href={link || v} target="_blank" rel="noreferrer noopener">abrir ↗</a></>
           )}
         </span>
@@ -201,7 +208,12 @@ function PerfisEncontrados({ findings }: { findings: Finding[] }) {
 export default function ResultPanel({ run }: { run: ToolRun }) {
   const toast = useToast();
   const [tab, setTab] = useState<'achados' | 'fontes' | 'grafo'>('achados');
-  const groups = [...new Set(run.findings.map((f) => f.group))];
+  // 'grafo-completo' guarda o JSON que desenha o Grafo e 'grafo' o seu resumo:
+  // os dois alimentam a aba Grafo e a barra de números — não são achados para
+  // listar. Ficam fora da lista para não despejar código cru na tela.
+  const OCULTOS = new Set(['grafo-completo', 'grafo']);
+  const visiveis = run.findings.filter((f) => !OCULTOS.has(f.group));
+  const groups = [...new Set(visiveis.map((f) => f.group))];
   const graph = (() => {
     const gf = run.findings.find((f) => f.group === 'grafo-completo');
     if (gf?.value) { try { return JSON.parse(String(gf.value)) as Graph; } catch { return null; } }
@@ -247,7 +259,7 @@ export default function ResultPanel({ run }: { run: ToolRun }) {
 
       <div className="stat-row" style={{ marginBottom: run.notes.length ? 12 : 14 }}>
         <div><div className="v num">{run.ms}<span style={{ fontSize: 11, color: 'var(--t-4)' }}> ms</span></div><div className="l">tempo</div></div>
-        <div><div className="v num">{run.findings.length}</div><div className="l">achados</div></div>
+        <div><div className="v num">{visiveis.length}</div><div className="l">achados</div></div>
         <div><div className="v num">{ok}</div><div className="l">fontes ok</div></div>
         <div><div className="v num" style={{ color: problems ? 'var(--blue-3)' : undefined }}>{problems}</div><div className="l">com problema</div></div>
         <div><div className="v num">{empty}</div><div className="l">sem dados</div></div>
@@ -263,7 +275,7 @@ export default function ResultPanel({ run }: { run: ToolRun }) {
 
       <div className="tabs" role="tablist" style={{ marginBottom: 14 }}>
         <button role="tab" aria-selected={tab === 'achados'} onClick={() => setTab('achados')}>
-          Achados{run.findings.length ? ` (${run.findings.length})` : ''}
+          Achados{visiveis.length ? ` (${visiveis.length})` : ''}
         </button>
         <button role="tab" aria-selected={tab === 'fontes'} onClick={() => setTab('fontes')}>
           Fontes{run.sources.length ? ` (${run.sources.length})` : ''}
@@ -272,7 +284,7 @@ export default function ResultPanel({ run }: { run: ToolRun }) {
       </div>
 
       {tab === 'achados' && (
-        run.findings.length === 0 ? (
+        visiveis.length === 0 ? (
           <Empty icon={Icon.alert} title="Nenhum achado">
             As fontes foram consultadas mas nenhuma devolveu dados. Abre a matriz de fontes para ver
             exatamente o que respondeu e o que falhou.
@@ -281,8 +293,8 @@ export default function ResultPanel({ run }: { run: ToolRun }) {
           <div>
             {groups.map((g) => (
               <div className="res-group" key={g}>
-                <h4>{g}<span className="n">({run.findings.filter((f) => f.group === g).length})</span></h4>
-                {run.findings.filter((f) => f.group === g).map((f) => <FindingRow key={f.id} f={f} />)}
+                <h4>{g}<span className="n">({visiveis.filter((f) => f.group === g).length})</span></h4>
+                {visiveis.filter((f) => f.group === g).map((f) => <FindingRow key={f.id} f={f} />)}
               </div>
             ))}
           </div>
