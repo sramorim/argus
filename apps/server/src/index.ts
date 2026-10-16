@@ -19,6 +19,7 @@ import {
 import { allTools, publicTool, executeTool, getTool, dailyCount, inflightCount, lockState, LockedError } from './registry.ts';
 import { PLANS, PLAN_LIST, type PlanId, type MinPlan, isPlanId } from './plans.ts';
 import { config, configReport, configWarnings } from './config.ts';
+import { initObservability, observabilidadeLigada, reportar } from './observability.ts';
 import {
   securityHeaders, cors, bodyLimit, clientIp, csrf,
   MAX_BODY_BYTES, MAX_UPLOAD_BYTES, RateLimiter,
@@ -873,10 +874,13 @@ const pruneTimer = setInterval(() => {
 }, 2 * 3600_000);
 pruneTimer.unref();
 
+initObservability();
+
 const server = serve({ fetch: app.fetch, port: PORT, hostname: config.host }, (info) => {
   const tools = allTools().length;
   console.log(`[ARGUS] a correr em http://${config.host}:${info.port} — ${tools} ferramentas registadas`);
   console.log(`[ARGUS] ${configReport(tools)}`);
+  console.log(`[ARGUS] observabilidade: ${observabilidadeLigada() ? 'Sentry ligado (dados sensíveis removidos no envio)' : 'desligada (defina SENTRY_DSN para ligar)'}`);
   for (const w of configWarnings()) console.warn(`[ARGUS] AVISO: ${w}`);
   if (!WEB_DIST) console.warn('[ARGUS] AVISO: frontend não encontrado; só a API responde.');
 });
@@ -897,7 +901,8 @@ function shutdown(sinal: string): void {
 }
 process.on('SIGTERM', () => shutdown('SIGTERM'));
 process.on('SIGINT', () => shutdown('SIGINT'));
-process.on('unhandledRejection', (e: any) => console.error('[ARGUS] rejeição não tratada:', e?.message ?? e));
+process.on('unhandledRejection', (e: any) => { console.error('[ARGUS] rejeição não tratada:', e?.message ?? e); reportar(e, { origem: 'unhandledRejection' }); });
+process.on('uncaughtException', (e: any) => { console.error('[ARGUS] exceção não capturada:', e?.message ?? e); reportar(e, { origem: 'uncaughtException' }); });
 
 // Usado pelos testes de integração.
 export { app };

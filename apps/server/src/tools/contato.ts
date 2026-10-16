@@ -17,7 +17,7 @@ import { parsePhoneNumberFromString, type PhoneNumber } from 'libphonenumber-js/
 import { registerTool } from '../registry.ts';
 import { SourceLog, finding, type Finding } from '../net/provenance.ts';
 import { safeFetch, apiJson } from '../net/ssrf.ts';
-import { bingRss } from '../net/sources.ts';
+import { buscaWeb } from '../net/sources.ts';
 
 // ============================================================== TELEFONE
 
@@ -108,7 +108,7 @@ registerTool({
 
     // Onde o número aparece publicado (formatos que as pessoas escrevem).
     const consultas = [...new Set([`"${f.nacional}"`, `"${f.internacional}"`, `"${digitos.replace(/^55/, '')}"`])];
-    const hits = (await Promise.all(consultas.map((q, i) => bingRss(q, log, `web-${i + 1}`)))).flat();
+    const hits = (await Promise.all(consultas.map((q, i) => buscaWeb(q, log, `web-${i + 1}`)))).flat();
     const vistos = new Set<string>();
     const unicos = hits.filter((h) => !vistos.has(h.url) && vistos.add(h.url));
     if (unicos.length) {

@@ -2,7 +2,7 @@
 import { registerTool } from '../registry.ts';
 import { SourceLog, finding, type Finding } from '../net/provenance.ts';
 import { apiGet } from '../net/ssrf.ts';
-import { bingRss } from '../net/sources.ts';
+import { buscaWeb } from '../net/sources.ts';
 
 // ---------------- EXPOSIÇÃO PÚBLICA (paste + código + breaches por BYOK) ----------------
 registerTool({
@@ -50,8 +50,8 @@ registerTool({
     if (exec) {
       // Duas buscas independentes em paralelo (paste e código).
       const [hitsPaste, hitsCode] = await Promise.all([
-        bingRss(dorks[0]!.query, log, 'bing'),
-        bingRss(dorks[1]!.query, log, 'bing-codigo'),
+        buscaWeb(dorks[0]!.query, log, 'bing'),
+        buscaWeb(dorks[1]!.query, log, 'bing-codigo'),
       ]);
       const todos = [...hitsPaste, ...hitsCode];
       const vistos = new Set<string>();
