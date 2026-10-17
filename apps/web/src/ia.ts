@@ -39,14 +39,14 @@ export const GRUPOS: Grupo[] = [
   {
     id: 'identidade',
     nome: 'Identidade',
-    resumo: 'Username, e-mail e telefone: onde aparecem e o que os registos públicos dizem deles.',
+    resumo: 'Username, e-mail e telefone.',
     icon: Icon.user,
     ferramentas: ['username-finder', 'username-intel', 'email-intel', 'phone-intel'],
   },
   {
     id: 'social',
     nome: 'Redes e Comunicação',
-    resumo: 'Perfis e presença pública: busca por nome nos motores, Telegram e presença por cadastro (socialscan) — tudo grátis e sem chave.',
+    resumo: 'Nome, Telegram e cadastros.',
     icon: Icon.globe,
     // `social-search` varre o índice dos motores por perfis públicos;
     // `telegram-intel` lê a página pública t.me; `social-presence` (socialscan)
@@ -57,21 +57,21 @@ export const GRUPOS: Grupo[] = [
   {
     id: 'infraestrutura',
     nome: 'Domínio e Infraestrutura',
-    resumo: 'O que o registo e a rede dizem: RDAP, DNS público e certificados em CT.',
+    resumo: 'Sites e servidores de um domínio.',
     icon: Icon.activity,
     ferramentas: ['domain-infra'],
   },
   {
     id: 'exposicao',
     nome: 'Exposição',
-    resumo: 'O que está publicado à vista: pastes, segredos e menções públicas do alvo.',
+    resumo: 'Textos e códigos públicos.',
     icon: Icon.shield,
     ferramentas: ['paste-search'],
   },
   {
     id: 'investigar',
     nome: 'Investigação',
-    resumo: 'Correlaciona todas as ferramentas sobre um alvo e monta o grafo.',
+    resumo: 'Junta tudo sobre um alvo.',
     icon: Icon.network,
     ferramentas: ['graph-investigation'],
   },
@@ -142,12 +142,12 @@ export function buscar(ferramentas: ToolPublic[], termo: string): ToolPublic[] {
 
 /** Sugestões de atalho para o painel, por ordem de utilidade. */
 export const ATALHOS: { id: string; nome: string; exemplo: string; icon: (p: SVGProps<SVGSVGElement>) => ReactElement }[] = [
-  { id: 'username-finder', nome: 'Localizar username', exemplo: '@alvo_demo', icon: Icon.user },
-  { id: 'social-search', nome: 'Perfis que mencionam um nome', exemplo: 'Nome Exemplo', icon: Icon.globe },
+  { id: 'username-finder', nome: 'Localizar username', exemplo: '@usuario', icon: Icon.user },
+  { id: 'social-search', nome: 'Perfis que mencionam um nome', exemplo: 'Nome Sobrenome', icon: Icon.globe },
   { id: 'social-presence', nome: 'Presença por cadastro', exemplo: 'nome@email.com', icon: Icon.layers },
   { id: 'domain-infra', nome: 'Infraestrutura de domínio', exemplo: 'exemplo.com', icon: Icon.activity },
   { id: 'paste-search', nome: 'Exposição pública', exemplo: 'example.com', icon: Icon.shield },
-  { id: 'graph-investigation', nome: 'Investigação completa', exemplo: 'alvo_demo', icon: Icon.network },
+  { id: 'graph-investigation', nome: 'Investigação completa', exemplo: 'usuario', icon: Icon.network },
 ];
 
 /** Rótulo do plano, para mostrar o estado real sem inventar. */
