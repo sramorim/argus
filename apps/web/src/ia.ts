@@ -142,12 +142,12 @@ export function buscar(ferramentas: ToolPublic[], termo: string): ToolPublic[] {
 
 /** Sugestões de atalho para o painel, por ordem de utilidade. */
 export const ATALHOS: { id: string; nome: string; exemplo: string; icon: (p: SVGProps<SVGSVGElement>) => ReactElement }[] = [
-  { id: 'username-finder', nome: 'Localizar username', exemplo: '@usuario', icon: Icon.user },
-  { id: 'social-search', nome: 'Perfis que mencionam um nome', exemplo: 'Nome Sobrenome', icon: Icon.globe },
+  { id: 'username-finder', nome: 'Localizar username', exemplo: '@alvo_demo', icon: Icon.user },
+  { id: 'social-search', nome: 'Perfis que mencionam um nome', exemplo: 'Nome Exemplo', icon: Icon.globe },
   { id: 'social-presence', nome: 'Presença por cadastro', exemplo: 'nome@email.com', icon: Icon.layers },
   { id: 'domain-infra', nome: 'Infraestrutura de domínio', exemplo: 'exemplo.com', icon: Icon.activity },
   { id: 'paste-search', nome: 'Exposição pública', exemplo: 'example.com', icon: Icon.shield },
-  { id: 'graph-investigation', nome: 'Investigação completa', exemplo: 'usuario', icon: Icon.network },
+  { id: 'graph-investigation', nome: 'Investigação completa', exemplo: 'alvo_demo', icon: Icon.network },
 ];
 
 /** Rótulo do plano, para mostrar o estado real sem inventar. */
