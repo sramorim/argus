@@ -63,7 +63,7 @@ export function Landing({ onStart, tools }: { onStart: () => void; tools: ToolPu
       {/* ---------- Banner ---------- */}
       <header className="lp-hero lp-splash">
         <Globo />
-        <img className="lp-splash-lobo" src="/brand/argos-lobo.svg" width={148} height={148} alt="Lobo ARGOS" decoding="async" draggable={false} />
+        <img className="lp-splash-lobo" src="/brand/argos-lobo-prata.svg" width={148} height={148} alt="Lobo ARGOS" decoding="async" draggable={false} />
         <p className="lp-splash-nome">ARGOS</p>
         <p className="lp-splash-tag">Ferramentas OSINT para investigações digitais</p>
         <div className="lp-hero-txt">
