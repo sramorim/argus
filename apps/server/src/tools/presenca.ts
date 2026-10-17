@@ -87,7 +87,7 @@ registerTool({
   id: 'social-presence',
   name: 'Presença por Cadastro',
   category: 'pessoa',
-  summary: 'Em quais plataformas um e-mail ou username já está cadastrado, pelos endpoints públicos de registo.',
+  summary: 'Onde o e-mail ou username está cadastrado',
   longDesc: 'Reimplementa a ideia do socialscan (MIT, open source): pergunta a cada plataforma, pelo mesmo endpoint público que o formulário de cadastro usa, se um e-mail ou username já está em uso. Diz "cadastrado", "livre" ou "não verificado" — nunca de quem é a conta, e sem abrir nada. E-mail: Mozilla e Pinterest. Username: GitLab e Reddit. Tudo grátis, sem chave e sem scraping. Para mais redes por username, use o Localizador de Username.',
   minPlan: 'free',
   freeTier: true,

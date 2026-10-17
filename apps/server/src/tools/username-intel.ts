@@ -483,7 +483,7 @@ registerTool({
   id: 'username-intel',
   name: 'Inteligência de Username',
   category: 'pessoa',
-  summary: 'Três registos independentes (Sherlock, WhatsMyName, Maigret) sobre o mesmo username.',
+  summary: 'Análise de username em redes',
   longDesc: 'Cada provider tem o seu registo de sites e a sua forma de decidir: cadeias de ausência/presença do registo, status HTTP e, quando nada decide, comparação com um username de controlo pedido ao mesmo site (metodologia de baseline). Resultado por site com FOUND / NOT_FOUND / UNKNOWN / ERROR / BLOCKED, nunca "é a mesma pessoa".',
   minPlan: 'free',
   freeTier: true,

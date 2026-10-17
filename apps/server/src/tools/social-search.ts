@@ -112,7 +112,7 @@ registerTool({
   id: 'social-search',
   name: 'Busca por Nome nas Redes',
   category: 'pessoa',
-  summary: 'Procura um nome em toda a web e devolve os perfis públicos encontrados, agrupados por rede social.',
+  summary: 'Busca de nome nas redes',
   longDesc: 'Pesquisa o nome no índice do Bing (interface RSS público, sem chave) com uma consulta por rede: Instagram, Facebook, TikTok, X, Twitter, LinkedIn, YouTube, Threads, Reddit, Telegram e Pinterest — mais uma busca sem restrição em toda a web. Para cada resultado devolve o perfil, o nome, a bio e os seguidores quando aparecem no snippet. Não raspa nenhuma rede: consulta o motor de busca, que é como qualquer pessoa pesquisaria à mão. Os resultados são perfis que MENCIONAM o nome — confirmar que é a mesma pessoa depende de quem investiga, por isso a confiança começa em INDICADO.',
   minPlan: 'pro',
   freeTier: false,

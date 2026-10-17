@@ -75,7 +75,7 @@ registerTool({
   id: 'username-finder',
   name: 'Localizador de Username',
   category: 'pessoa',
-  summary: 'Procura o username em redes sociais e dá o link direto de Instagram, Facebook, TikTok e X para conferir.',
+  summary: 'Localizar username nas redes',
   longDesc: 'Confirma o username em Reddit, Telegram, Twitch e Pinterest, separando CONFIRMADO de INDICADO. Instagram, Facebook, TikTok e X bloqueiam servidores — para esses, mostra o link direto do perfil para voce abrir e conferir na hora, sem inventar resultado.',
   minPlan: 'free',
   freeTier: true,

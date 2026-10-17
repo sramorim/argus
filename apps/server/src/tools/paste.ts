@@ -9,7 +9,7 @@ registerTool({
   id: 'paste-search',
   name: 'Exposição Pública',
   category: 'ameaca',
-  summary: 'Procura o alvo em sites de paste, GitHub e código indexado, executando a busca real — e consulta breaches se tiver uma chave Leak-Lookup.',
+  summary: 'Textos e código públicos',
   longDesc: 'Gera dorks de exposição (sites de paste, código no GitHub/GitLab, segredos) e executa a pesquisa real, devolvendo os resultados com título, URL e excerto. Se tiver uma chave Leak-Lookup (BYOK), acrescenta a consulta a bases de brechas por email ou username. Sem chave, a parte de breach aparece honestamente como "precisa de chave" em vez de fingir resultados.',
   minPlan: 'pro',
   freeTier: false,

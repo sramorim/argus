@@ -252,7 +252,7 @@ registerTool({
   id: 'graph-investigation',
   name: 'Investigação (Grafo)',
   category: 'pessoa',
-  summary: 'Deteta o alvo, escolhe as ferramentas certas, executa-as e monta um grafo com proveniencia, confianca e saltos.',
+  summary: 'Investigação completa de um alvo',
   longDesc: 'Comeca por um alvo (dominio, IP, username, email, URL, telefone, carteira, CVE, CNPJ, CEP) e decide quais as ferramentas que fazem sentido. Corre-as em paralelo, junta o que encontraram num grafo onde cada no e cada ligacao dizem de que fonte vem e com que confianca, e - nos planos Pro e Pro Max - abre o que descobriu num segundo salto real (resolucoes DNS e reverse DNS). No fim guarda a investigacao, ligada ao run que a produziu, para se poder reler.',
   minPlan: 'free',
   freeTier: true,

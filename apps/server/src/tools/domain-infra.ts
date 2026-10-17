@@ -11,7 +11,7 @@ registerTool({
   id: 'domain-infra',
   name: 'Infraestrutura de Domínio',
   category: 'infra',
-  summary: 'RDAP, DNS público e certificados emitidos para um domínio — sem chave, tudo fonte aberta.',
+  summary: 'Infraestrutura de domínio',
   longDesc: 'Consulta o RDAP (registo do domínio), o DNS-over-HTTPS do Google (A, MX, TXT/SPF/DMARC) e a Certificate Transparency em duas fontes abertas (CertSpotter e crt.sh: subdomínios vistos em certificados reais). Cada bloco diz a fonte, quando e em que estado; fonte que falhou aparece como erro, nunca como dado.',
   minPlan: 'free',
   freeTier: true,

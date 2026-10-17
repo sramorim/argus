@@ -202,14 +202,11 @@ export default function ToolPage({
         <div className="tool-form-col">
           <header className="card">
             <h1 className="t-h1">{t.name}</h1>
-            <p className="t-sm muted" style={{ marginTop: 8, lineHeight: 1.7 }}>{t.longDesc}</p>
-            <div className="row" style={{ marginTop: 13, gap: 6 }}>
-              {locked
-                ? <PlanTag minPlan={t.minPlan} locked />
-                : <span className="tag tag-free">Disponível no teu plano</span>}
-              {t.legalGate === 'lgpd' && <span className="tag tag-legal">LGPD · uso defensivo</span>}
-              {t.legalGate === 'restricted' && <span className="tag">uso restrito</span>}
-            </div>
+            {locked && (
+              <div className="row" style={{ marginTop: 10, gap: 6 }}>
+                <PlanTag minPlan={t.minPlan} locked />
+              </div>
+            )}
           </header>
 
           {locked ? (
