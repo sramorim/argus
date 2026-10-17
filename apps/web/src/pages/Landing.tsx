@@ -172,7 +172,7 @@ export function Landing({ onStart, tools }: { onStart: () => void; tools: ToolPu
         <Brand size={28} className="brand-plain" />
         <span className="lp-rodape-copy">
           Um projeto do ecossistema Senhor Amorim<br />
-          {wa?.copyright ?? '© 2026 SR. Amorim'} · Todos os direitos reservados.
+          {wa?.copyright ?? '© 2026 Senhor Amorim · Todos os direitos reservados'}
         </span>
         <span className="lp-rodape-canais">
           <CanaisOficiais contacto={wa} titulo={false} />

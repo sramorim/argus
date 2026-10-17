@@ -397,10 +397,7 @@ registerTool({
     return {
       findings: out,
       log,
-      notes: [
-        `Investigação com até ${maxHops} salto(s) (plano ${ctx.plan}). Cada nó tem proveniência e confiança.`,
-        ...(savedAs ? [`Grafo gravado como ${savedAs}.`] : ['O grafo não foi gravado (ver matriz de fontes). O resultado acima está completo.']),
-      ],
+      notes: [],
     };
   },
 });

@@ -507,7 +507,7 @@ test('o painel é o primeiro ecrã e tem a acção principal em grande', () => {
 test('o rodapé leva a marca e o copyright', () => {
   const { t } = montaApp();
   const html = t.html();
-  assert.match(html, /© 2026 SR\. Amorim/, 'falta o copyright no rodapé');
+  assert.match(html, /© 2026 Senhor Amorim/, 'falta o copyright no rodapé');
   assert.match(html, /Todos os direitos reservados/);
   assert.match(html, /wa\.me\/5547997876098/, 'o WhatsApp tem de vir do servidor');
   t.desmontar();

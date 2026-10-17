@@ -101,7 +101,7 @@ services:
       - key: ARGUS_CONTACTO_WHATSAPP
         value: "5547997876098"
       - key: ARGUS_AUTHOR
-        value: SR. Amorim
+        value: Senhor Amorim
       # Nome legal da pessoa. Não é mostrado no site — fica para contratos e
       # Nota Legal, onde a identidade legal tem de aparecer.
       - key: ARGUS_AUTHOR_LEGAL

@@ -2899,3 +2899,11 @@ form.dash-busca:focus-within { border-color: var(--blue-line); box-shadow: var(-
 .perfis-chips { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
 .perfis-chips a { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 14px; border: 1px solid var(--line); border-radius: 999px; font-size: 13px; font-weight: 600; color: var(--t-1); text-decoration: none; }
 .perfis-chips a:hover { border-color: var(--blue-line); color: var(--blue); }
+
+/* ---- canais oficiais: só ícones ---- */
+.canais-oficiais a, .canal-breve {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 40px; height: 40px; padding: 0; border-radius: var(--r-full);
+}
+.canais-oficiais a { border: 1px solid var(--line); color: var(--t-2); text-decoration: none; }
+.canal-breve { border: 1px dashed var(--line); color: var(--t-3); opacity: .55; }

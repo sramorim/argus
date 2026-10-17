@@ -313,20 +313,13 @@ export default function ResultPanel({ run }: { run: ToolRun }) {
 function SourceMatrix({ run, cached, skipped }: { run: ToolRun; cached: number; skipped: number }) {
   if (!run.sources.length) {
     return (
-      <Empty icon={Icon.database} title="Sem fontes externas">
-        Esta ferramenta é cálculo local: não consultou nenhuma fonte remota. O que vê nos achados
-        foi calculado aqui, a partir do que você forneceu.
-      </Empty>
+      <Empty icon={Icon.database} title="Cálculo local" />
+
     );
   }
   return (
     <div>
-      <Note kind="info">
-        Esta é a prova de que nada foi inventado. Cada linha é uma fonte realmente consultada,
-        com o estado em que respondeu. Fonte com problema aparece como problema — nunca
-        escondida atrás de um resultado parcial.
-      </Note>
-      <div className="tbl-wrap" style={{ marginTop: 12 }}>
+      <div className="tbl-wrap">
         <table className="tbl">
           <thead>
             <tr><th>Fonte</th><th>Estado</th><th>Dados</th><th>Tempo</th><th>Nota</th></tr>
@@ -336,7 +329,6 @@ function SourceMatrix({ run, cached, skipped }: { run: ToolRun; cached: number; 
               <tr key={`${s.id}-${i}`}>
                 <td data-l="fonte">
                   <div style={{ fontWeight: 600 }}>{s.label}</div>
-                  <div className="t-xs mono dim" style={{ overflowWrap: 'anywhere', maxWidth: 300, marginTop: 2 }}>{s.url}</div>
                 </td>
                 <td data-l="estado"><span className={`st st-${s.status}`}>● {STATUS_LABEL[s.status]}</span></td>
                 <td data-l="dados" className="num">{s.count ?? '—'}</td>
@@ -346,10 +338,6 @@ function SourceMatrix({ run, cached, skipped }: { run: ToolRun; cached: number; 
             ))}
           </tbody>
         </table>
-      </div>
-      <div className="t-xs dim" style={{ marginTop: 10, display: 'flex', gap: 14, flexWrap: 'wrap' }}>
-        <span>{cached ? `${cached} do cache local (o TTL de cada fonte está na nota)` : 'sem respostas do cache'}</span>
-        {skipped > 0 && <span>{skipped} fonte(s) não consultada(s), com o motivo indicado</span>}
       </div>
     </div>
   );

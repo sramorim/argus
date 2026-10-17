@@ -73,12 +73,9 @@ export default function History({ setView }: { setView: (v: View) => void }) {
   return (
     <div className="page page-wide">
       <header className="card">
-        <div className="regra"><span className="micro">Histórico</span></div>
+        
         <h1 className="t-h1">As tuas execuções</h1>
-        <p className="t-sm muted" style={{ marginTop: 6, lineHeight: 1.6 }}>
-          {rows?.length ?? 0} execuções guardadas, com o resultado e a proveniência intactos.
-          Reler não gasta cota.
-        </p>
+        
       </header>
 
       {err && <Note kind="err">{err}</Note>}

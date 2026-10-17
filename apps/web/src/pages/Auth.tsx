@@ -97,7 +97,7 @@ export default function Auth({ onDone }: { onDone: () => void }) {
 
         <div className="auth-credit">
           <CanaisOficiais contacto={wa} titulo={false} />
-          <div>{wa?.copyright ?? '© 2026 SR. Amorim'}</div>
+          <div>{wa?.copyright ?? '© 2026 Senhor Amorim · Todos os direitos reservados'}</div>
         </div>
       </form>
     </div>

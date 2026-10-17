@@ -194,7 +194,7 @@ export const config = {
   autor: {
     nome: str('ARGUS_AUTHOR') ?? 'SR. Amorim',
     link: str('ARGUS_AUTHOR_LINK'),
-    copyright: `© ${new Date().getFullYear()} ${str('ARGUS_AUTHOR') ?? 'SR. Amorim'}`,
+    copyright: `© ${new Date().getFullYear()} ${str('ARGUS_AUTHOR') ?? 'Senhor Amorim'} · Todos os direitos reservados`,
     legal: str('ARGUS_AUTHOR_LEGAL') ?? 'Daniel Senhor Amorim',
   },
   cookie: {

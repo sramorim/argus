@@ -64,10 +64,7 @@ export default function Investigations({ view, setView }: { view: { id?: string 
     <div className="page">
       <header className="card">
         <h1 className="t-h1">Investigações</h1>
-        <p className="t-sm muted" style={{ marginTop: 6 }}>
-          Cada investigação guarda o grafo completo — nós, ligações, de que fonte veio cada um e
-          com que confiança — mais as ferramentas que a produziram. Relê-las não gasta cota.
-        </p>
+        
       </header>
 
       {err && <div style={{ marginBottom: 12 }}><Note kind="err">{err}</Note></div>}

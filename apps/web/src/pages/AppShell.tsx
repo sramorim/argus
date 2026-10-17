@@ -477,7 +477,7 @@ export default function AppShell({
         </div>
         <div className="side-legal">
           <CanaisOficiais contacto={wa} />
-          <div>{wa?.copyright ?? '© 2026 SR. Amorim'}</div>
+          <div>{wa?.copyright ?? '© 2026 Senhor Amorim · Todos os direitos reservados'}</div>
         </div>
       </div>
     </>
@@ -658,7 +658,7 @@ export default function AppShell({
           </div>
           <span className="grow" />
           {usage && <span className="task-quota">{usage.today}/{usage.daily}</span>}
-          <span className="task-copy">{wa?.copyright ?? '© 2026 SR. Amorim'} · Todos os direitos reservados.</span>
+          <span className="task-copy">{wa?.copyright ?? '© 2026 Senhor Amorim · Todos os direitos reservados'}</span>
         </footer>
       </div>
 

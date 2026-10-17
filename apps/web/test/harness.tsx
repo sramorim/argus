@@ -138,7 +138,7 @@ export function stubApi(so: Record<string, unknown> = {}) {
 
   const body = (url: string) => {
     if (url.includes('/api/contact')) {
-      return { whatsapp: '5547997876098', label: 'WhatsApp (47) 99787-6098', link: 'https://wa.me/5547997876098', marca: 'SR. Amorim', autor: 'Daniel Senhor Amorim', autorLink: null, copyright: '© 2026 SR. Amorim' };
+      return { whatsapp: '5547997876098', label: 'WhatsApp (47) 99787-6098', link: 'https://wa.me/5547997876098', marca: 'SR. Amorim', autor: 'Daniel Senhor Amorim', autorLink: null, copyright: '© 2026 Senhor Amorim · Todos os direitos reservados' };
     }
     if (url.includes('/api/me')) {
       return { user: so.user ?? null, usage: so.user ? { today: 2, daily: 15, concurrent: 1, inflight: 0 } : undefined };
